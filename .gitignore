@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+build
+dist
+.env*
+!.env.example
+.DS_Store
+Thumbs.db
+*.log
+.vscode
+.idea
+coverage
+.turbo
+tsconfig.tsbuildinfo  
