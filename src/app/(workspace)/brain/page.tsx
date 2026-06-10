@@ -53,8 +53,10 @@ export default function BrainPage() {
         title="Permanent project memory"
         description="Ideas, systems, mechanics, research, decisions, and lore. Every note links bidirectionally to specs, tasks, architecture, and code."
         actions={
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" /> New note
+          <Button asChild className="gap-2">
+            <Link href="/brain/new">
+              <Plus className="h-4 w-4" /> New note
+            </Link>
           </Button>
         }
       />
@@ -125,11 +127,13 @@ export default function BrainPage() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>Coming in S2</CardDescription>
-              <CardTitle className="mt-1 text-sm">Canvas & backlinks</CardTitle>
+              <CardDescription>Tips</CardDescription>
+              <CardTitle className="mt-1 text-sm">Editing</CardTitle>
             </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">
-              Visual canvas, backlinks panel, templates, and full markdown editing ship in session 2.
+            <CardContent className="space-y-1.5 text-xs text-muted-foreground">
+              <p>Open a note to edit, link, and tag it.</p>
+              <p>Use <code className="rounded bg-muted px-1">[[Title]]</code> to link notes together.</p>
+              <p>Use <code className="rounded bg-muted px-1">#tag</code> in the body to auto-tag.</p>
             </CardContent>
           </Card>
         </aside>
