@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { useCreateDialogs, setOpenNewStandard } from "@/lib/stores/create-dialogs";
 import { ShieldCheck, Plus, Lock, Sparkles, Pencil, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +60,15 @@ export default function StandardsPage() {
       toast.error("Failed to delete", { description: (e as Error).message });
     }
   };
+
+  const openFlag = useCreateDialogs((s) => s.standard);
+  React.useEffect(() => {
+    if (openFlag) {
+      setOpenNewStandard(false);
+      setEditorOpen(true);
+    }
+  }, [openFlag]);
+
 
   return (
     <div className="pb-10">

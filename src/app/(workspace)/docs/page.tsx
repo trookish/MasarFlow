@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { useCreateDialogs, setOpenNewDoc } from "@/lib/stores/create-dialogs";
 import Link from "next/link";
 import { BookOpen, Plus, Sparkles, Pencil, Trash2, Wand2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
@@ -32,6 +33,15 @@ export default function DocsPage() {
     await getDb().docs.delete(d.id);
     toast.success("Doc deleted");
   };
+
+  const openFlag = useCreateDialogs((s) => s.doc);
+  React.useEffect(() => {
+    if (openFlag) {
+      setOpenNewDoc(false);
+      setEditorOpen(true);
+    }
+  }, [openFlag]);
+
 
   return (
     <div className="pb-10">

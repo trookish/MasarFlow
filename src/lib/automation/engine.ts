@@ -20,6 +20,10 @@ function emit(e: AutomationEvent) {
   }
 }
 
+export function emitAutomationEvent(e: AutomationEvent) {
+  emit(e);
+}
+
 export async function tick(): Promise<AutomationEvent[]> {
   const db = getDb();
   const events: AutomationEvent[] = [];

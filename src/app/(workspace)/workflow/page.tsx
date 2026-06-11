@@ -56,6 +56,12 @@ export default function WorkflowPage() {
     }
   }, [specs, selectedSpecId]);
 
+  React.useEffect(() => {
+    const h = () => { if (!running) startSimulation(); };
+    window.addEventListener("masarflow:run-workflow", h);
+    return () => window.removeEventListener("masarflow:run-workflow", h);
+  }, [running, candidateSpec]);
+
   const startSimulation = async () => {
     if (!candidateSpec) { toast.error("Select a spec first"); return; }
     setRunning(true);

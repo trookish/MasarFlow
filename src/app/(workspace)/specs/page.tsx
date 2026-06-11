@@ -1,5 +1,6 @@
 ﻿"use client";
 import * as React from "react";
+import { useCreateDialogs, setOpenNewSpec } from "@/lib/stores/create-dialogs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FileText, Plus, Sparkles, ListTodo, Pencil, GitBranch } from "lucide-react";
@@ -64,6 +65,16 @@ export default function SpecsPage() {
     setEditing(s);
     setEditorOpen(true);
   };
+
+  const openFlag = useCreateDialogs((s) => s.spec);
+  React.useEffect(() => {
+    if (openFlag) {
+      setOpenNewSpec(false);
+      setEditing(undefined);
+      setEditorOpen(true);
+    }
+  }, [openFlag]);
+
 
   return (
     <div className="pb-10">

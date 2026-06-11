@@ -1,6 +1,8 @@
 "use client";
 import * as React from "react";
+import { useCreateDialogs, setOpenNewTask } from "@/lib/stores/create-dialogs";
 import { ListTodo, Plus, GitBranch } from "lucide-react";
+import { TaskEditorDialog } from "@/components/common/task-editor-dialog";
 import { PageHeader } from "@/components/common/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +24,8 @@ export default function TasksPage() {
   const project = useActiveProject();
   const tasks = useTasks(project?.id);
   const [view, setView] = React.useState<"board" | "list">("board");
+  const [editorOpen, setEditorOpen] = React.useState(false);
+  const [editingTask, setEditingTask] = React.useState<Task | undefined>(undefined);
 
   const grouped = React.useMemo(() => {
     const g: Record<TaskStatus, Task[]> = {
@@ -35,7 +39,18 @@ export default function TasksPage() {
     return g;
   }, [tasks]);
 
+  const openFlag = useCreateDialogs((s) => s.task);
+  React.useEffect(() => {
+    if (openFlag) {
+      setOpenNewTask(false);
+      setEditingTask(undefined);
+      setEditorOpen(true);
+    }
+  }, [openFlag]);
+
+
   return (
+    <>
     <div className="pb-10">
       <PageHeader
         icon={ListTodo}
@@ -58,7 +73,7 @@ export default function TasksPage() {
                 </button>
               ))}
             </div>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => { setEditingTask(undefined); setEditorOpen(true); }}>
               <Plus className="h-4 w-4" /> New task
             </Button>
           </div>
@@ -131,5 +146,7 @@ export default function TasksPage() {
         </div>
       )}
     </div>
+      <TaskEditorDialog open={editorOpen} onOpenChange={setEditorOpen} task={editingTask} />
+    </>
   );
 }

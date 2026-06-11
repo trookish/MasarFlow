@@ -1,4 +1,4 @@
-import { LayoutDashboard, Brain, FileText, ShieldCheck, Network, Share2, ListTodo, Bot, Workflow, BookOpen, ScrollText, Search, Settings, Box, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, Brain, FileText, ShieldCheck, Network, Share2, ListTodo, Bot, Workflow, BookOpen, ScrollText, Search, Settings, Box, Puzzle, type LucideIcon } from "lucide-react"
 
 export interface NavItem {
   id: string;

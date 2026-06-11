@@ -1,5 +1,6 @@
 ﻿"use client";
 import * as React from "react";
+import { useCreateDialogs, setOpenNewLog } from "@/lib/stores/create-dialogs";
 import { ScrollText, GitCommit, Sparkles, Plus, Filter, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,6 +54,15 @@ export default function DevLogsPage() {
     await getDb().devLogs.delete(id);
     toast.success("Dev log deleted");
   };
+
+  const openFlag = useCreateDialogs((s) => s.log);
+  React.useEffect(() => {
+    if (openFlag) {
+      setOpenNewLog(false);
+      setComposerOpen(true);
+    }
+  }, [openFlag]);
+
 
   return (
     <div className="pb-10">
