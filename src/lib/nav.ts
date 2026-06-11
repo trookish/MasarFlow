@@ -1,18 +1,4 @@
-import {
-  LayoutDashboard,
-  Brain,
-  FileText,
-  ShieldCheck,
-  Network,
-  Share2,
-  ListTodo,
-  Bot,
-  BookOpen,
-  ScrollText,
-  Search,
-  Settings,
-  type LucideIcon,
-} from "lucide-react";
+import { LayoutDashboard, Brain, FileText, ShieldCheck, Network, Share2, ListTodo, Bot, Workflow, BookOpen, ScrollText, Search, Settings, type LucideIcon } from "lucide-react";
 
 export interface NavItem {
   id: string;
@@ -87,14 +73,8 @@ export const NAV_ITEMS: NavItem[] = [
     description: "Work, dependencies, progress",
     group: "intelligence",
   },
-  {
-    id: "agents",
-    label: "AI Agents",
-    href: "/agents",
-    icon: Bot,
-    description: "Specialized collaborators",
-    group: "intelligence",
-  },
+  { id: "agents", label: "AI Agents", href: "/agents", icon: Bot, description: "Specialized collaborators", group: "intelligence" },
+  { id: "workflow", label: "AI Workflow", href: "/workflow", icon: Workflow, description: "16-step pipeline", group: "intelligence" },
   {
     id: "docs",
     label: "Documentation",
