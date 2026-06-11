@@ -5,7 +5,7 @@ import { Sparkles, Link2, GitBranch, Boxes, Lightbulb, ArrowRight } from "lucide
 import { useUi } from "@/lib/stores/ui";
 import { useActiveProject } from "@/lib/db/repos/projects";
 import { usePathname } from "next/navigation";
-import { useMemories, useTasks } from "@/lib/db/repos/misc";
+import { useMemories, useTasks, useSystems, useArchGraph } from "@/lib/db/repos/misc";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";

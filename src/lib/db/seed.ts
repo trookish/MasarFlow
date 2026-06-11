@@ -20,7 +20,7 @@ import type {
 } from "./schema";
 import { uid } from "@/lib/utils";
 
-const SEED_VERSION = 1;
+const SEED_VERSION = 2;
 const SEED_KEY = "seed_version";
 
 function daysAgo(n: number): number {
@@ -554,23 +554,55 @@ export function buildSeed(): {
   const systems: System[] = systemDefs.map((s, i) => ({ id: `sys_${i + 1}`, ...s }));
 
   const archNodes: ArchNode[] = [
-    { id: "an_1", projectId, systemId: "sys_1", type: "module", name: "Traversal.Dispatcher" },
-    { id: "an_2", projectId, systemId: "sys_1", type: "class", name: "ClimbState" },
-    { id: "an_3", projectId, systemId: "sys_1", type: "class", name: "MantleState" },
-    { id: "an_4", projectId, systemId: "sys_1", type: "class", name: "GroundedState" },
-    { id: "an_5", projectId, systemId: "sys_2", type: "module", name: "Inventory.Grid" },
-    { id: "an_6", projectId, systemId: "sys_3", type: "module", name: "Dialogue.Runner" },
-    { id: "an_7", projectId, systemId: "sys_4", type: "module", name: "SaveSystem.Manager" },
-    { id: "an_8", projectId, systemId: "sys_5", type: "module", name: "Reputation.Service" },
+    { id: "an_1", projectId, systemId: "sys_1", type: "service", name: "Traversal.Service" },
+    { id: "an_2", projectId, systemId: "sys_1", type: "module", name: "Traversal.Dispatcher" },
+    { id: "an_3", projectId, systemId: "sys_1", type: "class", name: "ClimbState" },
+    { id: "an_4", projectId, systemId: "sys_1", type: "class", name: "MantleState" },
+    { id: "an_5", projectId, systemId: "sys_1", type: "class", name: "GroundedState" },
+    { id: "an_6", projectId, systemId: "sys_1", type: "class", name: "SurfaceManifest" },
+    { id: "an_7", projectId, systemId: "sys_1", type: "so", name: "SurfaceDefinition" },
+    { id: "an_8", projectId, systemId: "sys_2", type: "module", name: "Inventory.Grid" },
+    { id: "an_9", projectId, systemId: "sys_2", type: "so", name: "ItemDefinition" },
+    { id: "an_10", projectId, systemId: "sys_3", type: "service", name: "Dialogue.Service" },
+    { id: "an_11", projectId, systemId: "sys_3", type: "module", name: "Dialogue.Runner" },
+    { id: "an_12", projectId, systemId: "sys_3", type: "class", name: "EchoLedger" },
+    { id: "an_13", projectId, systemId: "sys_3", type: "class", name: "DialogueNode" },
+    { id: "an_14", projectId, systemId: "sys_4", type: "service", name: "SaveSystem.Service" },
+    { id: "an_15", projectId, systemId: "sys_4", type: "module", name: "SaveSystem.Manager" },
+    { id: "an_16", projectId, systemId: "sys_4", type: "class", name: "SaveSerializer" },
+    { id: "an_17", projectId, systemId: "sys_5", type: "service", name: "Reputation.Service" },
+    { id: "an_18", projectId, systemId: "sys_5", type: "class", name: "Faction" },
+    { id: "an_19", projectId, systemId: null, type: "scene", name: "Scene_Cliffside" },
+    { id: "an_20", projectId, systemId: null, type: "prefab", name: "Prefab_SurfaceVolume" },
+    { id: "an_21", projectId, systemId: null, type: "prefab", name: "Prefab_NPC_Echo" },
+    { id: "an_22", projectId, systemId: null, type: "scene", name: "Scene_Hollow" },
   ];
   const archEdges: ArchEdge[] = [
-    { id: "ae_1", source: "an_2", target: "an_1", kind: "calls" },
-    { id: "ae_2", source: "an_3", target: "an_1", kind: "calls" },
-    { id: "ae_3", source: "an_4", target: "an_1", kind: "calls" },
-    { id: "ae_4", source: "an_5", target: "an_7", kind: "depends" },
-    { id: "ae_5", source: "an_6", target: "an_7", kind: "depends" },
-    { id: "ae_6", source: "an_6", target: "an_8", kind: "depends" },
-    { id: "ae_7", source: "an_8", target: "an_7", kind: "depends" },
+    { id: "ae_1", source: "an_1", target: "an_2", kind: "depends" },
+    { id: "ae_2", source: "an_3", target: "an_2", kind: "calls" },
+    { id: "ae_3", source: "an_4", target: "an_2", kind: "calls" },
+    { id: "ae_4", source: "an_5", target: "an_2", kind: "calls" },
+    { id: "ae_5", source: "an_2", target: "an_6", kind: "depends" },
+    { id: "ae_6", source: "an_6", target: "an_7", kind: "references" },
+    { id: "ae_7", source: "an_8", target: "an_15", kind: "depends" },
+    { id: "ae_8", source: "an_8", target: "an_9", kind: "references" },
+    { id: "ae_9", source: "an_10", target: "an_11", kind: "depends" },
+    { id: "ae_10", source: "an_11", target: "an_12", kind: "depends" },
+    { id: "ae_11", source: "an_11", target: "an_13", kind: "references" },
+    { id: "ae_12", source: "an_14", target: "an_15", kind: "depends" },
+    { id: "ae_13", source: "an_15", target: "an_16", kind: "calls" },
+    { id: "ae_14", source: "an_17", target: "an_15", kind: "depends" },
+    { id: "ae_15", source: "an_17", target: "an_18", kind: "references" },
+    { id: "ae_16", source: "an_10", target: "an_17", kind: "depends" },
+    { id: "ae_17", source: "an_12", target: "an_14", kind: "depends" },
+    { id: "ae_18", source: "an_19", target: "an_6", kind: "references" },
+    { id: "ae_19", source: "an_19", target: "an_1", kind: "references" },
+    { id: "ae_20", source: "an_19", target: "an_8", kind: "references" },
+    { id: "ae_21", source: "an_20", target: "an_7", kind: "references" },
+    { id: "ae_22", source: "an_22", target: "an_10", kind: "references" },
+    { id: "ae_23", source: "an_22", target: "an_11", kind: "references" },
+    { id: "ae_24", source: "an_22", target: "an_21", kind: "references" },
+    { id: "ae_25", source: "an_21", target: "an_12", kind: "references" },
   ];
 
   const docs: Doc[] = [
