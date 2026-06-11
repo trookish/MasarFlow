@@ -31,6 +31,8 @@ interface UiState {
   setSearchOpen: (v: boolean) => void;
   setProjectSwitcherOpen: (v: boolean) => void;
   setShortcutsOpen: (v: boolean) => void;
+  reducedMotion: boolean;
+  setReducedMotion: (v: boolean) => void;
 }
 
 export const useUi = create<UiState>()(
@@ -47,6 +49,7 @@ export const useUi = create<UiState>()(
       searchOpen: false,
       projectSwitcherOpen: false,
       shortcutsCheatsheetOpen: false,
+      reducedMotion: false,
       toggleLeftNav: () => set((s) => ({ leftNavCollapsed: !s.leftNavCollapsed })),
       toggleRightRail: () => set((s) => ({ rightRailCollapsed: !s.rightRailCollapsed })),
       toggleStatusBar: () => set((s) => ({ statusBarVisible: !s.statusBarVisible })),
@@ -58,6 +61,7 @@ export const useUi = create<UiState>()(
       setSearchOpen: (searchOpen) => set({ searchOpen }),
       setProjectSwitcherOpen: (projectSwitcherOpen) => set({ projectSwitcherOpen }),
       setShortcutsOpen: (shortcutsCheatsheetOpen) => set({ shortcutsCheatsheetOpen }),
+      setReducedMotion: (reducedMotion) => set({ reducedMotion }),
     }),
     {
       name: "masarflow.ui",
@@ -69,6 +73,7 @@ export const useUi = create<UiState>()(
         font: s.font,
         theme: s.theme,
         accent: s.accent,
+        reducedMotion: s.reducedMotion,
       }),
     },
   ),

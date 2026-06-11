@@ -77,6 +77,12 @@ export function NoteEditor({ noteId }: { noteId: string }) {
     return () => clearTimeout(t);
   }, [draft, saveState]);
 
+  React.useEffect(() => {
+    const h = () => { if (draft) update(draft); };
+    window.addEventListener("masarflow:request-save", h);
+    return () => window.removeEventListener("masarflow:request-save", h);
+  }, [draft]);
+
   const update = (patch: Partial<Note>) => {
     if (!draft) return;
     setDraft({ ...draft, ...patch });

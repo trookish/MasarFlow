@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/common/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useUi, ACCENTS, type AccentColor, type Density, type FontChoice } from "@/lib/stores/ui";
 import { useAi, type AgentProvider } from "@/lib/stores/ai";
@@ -177,6 +178,13 @@ export default function SettingsPage() {
             checked={ai.showReasoning}
             onChange={() => ai.setShowReasoning(!ai.showReasoning)}
           />
+          {ai.provider !== "simulated" && (
+            <div className="rounded-md border border-border p-2.5">
+              <div className="text-xs font-medium">API key for {ai.provider}</div>
+              <div className="mt-0.5 text-[10px] text-muted-foreground">Stored only in your browser. Never sent to a server.</div>
+              <Input type="password" autoComplete="off" value={ai.apiKey} onChange={(e) => ai.setApiKey(e.target.value)} placeholder="sk-..." className="mt-2 font-mono text-xs" />
+            </div>
+          )}
           <div className="grid grid-cols-3 gap-2">
             {(["fast", "normal", "slow"] as const).map((s) => (
               <button
@@ -197,12 +205,8 @@ export default function SettingsPage() {
 
         <Section title="Data" description="Your data lives in this browser. Export anytime.">
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="soft" size="sm">
-              Export JSON
-            </Button>
-            <Button variant="soft" size="sm">
-              Import JSON
-            </Button>
+            <Button variant="soft" size="sm" onClick={() => setTransferOpen("export")}><Download className="h-3.5 w-3.5" /> Export JSON</Button>
+            <Button variant="soft" size="sm" onClick={() => setTransferOpen("import")}><Upload className="h-3.5 w-3.5" /> Import JSON</Button>
             <Button
               variant="outline"
               size="sm"
@@ -225,8 +229,39 @@ export default function SettingsPage() {
             <Keyboard className="h-3.5 w-3.5" /> Open cheatsheet
           </Button>
         </Section>
+
+        <Section title="Preview" description="Live sample with your current theme, font, and density.">
+          <PreviewTile />
+          <Row
+            label="Reduced motion"
+            description="Disable transitions and animated layout. Honors OS preference by default."
+            checked={ui.reducedMotion}
+            onChange={() => ui.setReducedMotion(!ui.reducedMotion)}
+          />
+        </Section>
       </div>
       <DataTransferDialog open={transferOpen !== null} onOpenChange={(o) => { if (!o) setTransferOpen(null); }} mode={transferOpen ?? "both"} />
+    </div>
+  );
+}
+
+function PreviewTile() {
+  const accent = useUi((s) => s.accent);
+  const font = useUi((s) => s.font);
+  const density = useUi((s) => s.density);
+  return (
+    <div className="rounded-md border border-border bg-surface p-3" style={{ fontFamily: font === "inter" ? "var(--font-sans)" : font === "geist" ? "var(--font-display)" : "system-ui" }}>
+      <div className="flex items-center gap-2">
+        <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">MasarFlow</span>
+        <Badge variant="ghost" className="ml-auto capitalize">{accent}</Badge>
+      </div>
+      <div className={density === "compact" ? "mt-2 text-sm" : "mt-3 text-base"}>The quick brown fox.</div>
+      <div className="mt-2 flex items-center gap-1.5">
+        <span className="rounded-md bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">Primary</span>
+        <span className="rounded-md border border-border bg-card px-2 py-0.5 text-[10px]">Surface</span>
+        <span className="rounded-md border border-border px-2 py-0.5 text-[10px] text-muted-foreground">Muted</span>
+      </div>
     </div>
   );
 }

@@ -6,6 +6,7 @@ export function ThemeApplier({ children }: { children: React.ReactNode }) {
   const theme = useUi((s) => s.theme);
   const accent = useUi((s) => s.accent);
   const font = useUi((s) => s.font);
+  const reducedMotion = useUi((s) => s.reducedMotion);
 
   React.useEffect(() => {
     const root = document.documentElement;
@@ -22,6 +23,11 @@ export function ThemeApplier({ children }: { children: React.ReactNode }) {
     const data = ACCENTS[accent];
     root.style.setProperty("--accent-hue", String(data.hue));
   }, [accent]);
+
+  React.useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("reduced-motion", reducedMotion);
+  }, [reducedMotion]);
 
   React.useEffect(() => {
     const root = document.documentElement;
