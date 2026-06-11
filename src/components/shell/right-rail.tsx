@@ -1,16 +1,16 @@
 "use client";
 import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Sparkles, Link2, GitBranch, Boxes, Lightbulb, ArrowRight } from "lucide-react";
+import { Sparkles, Link2, GitBranch, Boxes, Lightbulb, ArrowRight, ScrollText } from "lucide-react";
 import { useUi } from "@/lib/stores/ui";
 import { useActiveProject } from "@/lib/db/repos/projects";
 import { usePathname } from "next/navigation";
-import { useMemories, useTasks, useSystems, useArchGraph } from "@/lib/db/repos/misc";
+import { useMemories, useTasks, useSystems, useArchGraph, useDevLogs } from "@/lib/db/repos/misc";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
+import { cn, formatRelativeTime } from "@/lib/utils";
 
 interface RightRailPanel {
   id: string;
@@ -143,12 +143,42 @@ const PANELS: RightRailPanel[] = [
     content: <ArchitectureImpactPanel />,
   },
   {
+    id: "dev",
+    title: "Recent dev logs",
+    icon: <ScrollText className="h-3.5 w-3.5" />,
+    content: <RecentDevPanel />,
+  },
+  {
     id: "mem",
     title: "Memory References",
     icon: <Lightbulb className="h-3.5 w-3.5" />,
     content: <MemoryReferencesPanel />,
   },
 ];
+
+function RecentDevPanel() {
+  const project = useActiveProject();
+  const devLogs = useDevLogs(project?.id);
+  const recentDev = devLogs?.slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 4) ?? [];
+  return (
+    <div className="space-y-1.5">
+      {recentDev.length === 0 ? (
+        <div className="text-xs text-muted-foreground">No dev logs yet.</div>
+      ) : (
+        recentDev.map((d) => (
+          <div key={d.id} className="rounded-md border border-border/60 bg-surface-2 p-2 text-[11px]">
+            <div className="flex items-center gap-1.5">
+              <Badge variant="outline" className="text-[9px] capitalize">{d.kind}</Badge>
+              <span className="ml-auto text-[10px] text-muted-foreground">{formatRelativeTime(d.createdAt)}</span>
+            </div>
+            <div className="mt-1 text-pretty leading-snug">{d.title}</div>
+            {d.body && <div className="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground">{d.body}</div>}
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
 
 export function RightRail() {
   const collapsed = useUi((s) => s.rightRailCollapsed);

@@ -18,7 +18,7 @@ export function SeedProvider({ children }: { children: React.ReactNode }) {
       .then(() => {
         if (!cancelled) setState({ ready: true, error: null });
       })
-      .catch((e: Error) => {
+      .then(() => { void import("@/lib/automation/engine").then((m) => m.startAutomation(30000)); }).catch((e: Error) => {
         if (!cancelled) setState({ ready: false, error: e.message });
       });
     return () => {

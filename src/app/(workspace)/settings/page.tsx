@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { Settings as SettingsIcon, Palette, Type, Bot, Keyboard, Database } from "lucide-react";
+import { Settings as SettingsIcon, Palette, Type, Bot, Keyboard, Database, Download, Upload, FileJson } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { useAi, type AgentProvider } from "@/lib/stores/ai";
 import { ACCENT_OPTIONS } from "@/components/providers/theme-provider";
 import { cn } from "@/lib/utils";
 import { resetSeed } from "@/lib/db/seed";
+import { DataTransferDialog } from "@/components/common/data-transfer-dialog";
 import { toast } from "sonner";
 
 function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
@@ -28,6 +29,7 @@ function Section({ title, description, children }: { title: string; description:
 export default function SettingsPage() {
   const ui = useUi();
   const ai = useAi();
+  const [transferOpen, setTransferOpen] = React.useState<"export" | "import" | "both" | null>(null);
 
   return (
     <div className="pb-10">
@@ -224,6 +226,7 @@ export default function SettingsPage() {
           </Button>
         </Section>
       </div>
+      <DataTransferDialog open={transferOpen !== null} onOpenChange={(o) => { if (!o) setTransferOpen(null); }} mode={transferOpen ?? "both"} />
     </div>
   );
 }
