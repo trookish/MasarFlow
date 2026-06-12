@@ -72,11 +72,20 @@ export const useVault = create<VaultStoreState>((set, get) => ({
       const caps = getBackendCapabilities(session.backend);
       const s = await saveSettings({ mode: session.backend === "native-fsa" ? "obsidian" : session.backend as VaultSettings["mode"], vaultName: session.rootName, backend: session.backend, backendCapabilities: caps });
       set({ vaultName: session.rootName, settings: s, status: "idle", lastError: null });
-      const handle = await getNativeHandle();
-      if (!handle) { set({ status: "error", lastError: "No vault handle" }); return false; }
-      const r = await _runPull(handle, (await getDb().projects.toArray())[0]!, (p) => set({ progress: p }));
-      set({ lastResult: r, lastFullSync: Date.now(), progress: null });
-      await getDb().vaultMeta.put({ key: "lastFullSync", value: Date.now() });
+      const project = (await getDb().projects.toArray())[0];
+      if (!project) { set({ lastError: "No active project" }); return false; }
+      if (session.backend === "native-fsa") {
+        const handle = await getNativeHandle();
+        if (!handle) { set({ status: "error", lastError: "No vault handle" }); return false; }
+        const r = await _runPull(handle, project, (p) => set({ progress: p }));
+        set({ lastResult: r, lastFullSync: Date.now(), progress: null });
+        await getDb().vaultMeta.put({ key: "lastFullSync", value: Date.now() });
+      } else {
+        const { runPullWithBackend } = await import("../vault/sync-engine-backend");
+        const r = await runPullWithBackend(backend, project, (p) => set({ progress: p as unknown as SyncProgress }));
+        set({ lastResult: r as unknown as SyncResult, lastFullSync: Date.now(), progress: null });
+        await getDb().vaultMeta.put({ key: "lastFullSync", value: Date.now() });
+      }
       if (s.pollingMs > 0 && session.backend === "native-fsa") startPolling(get);
       return true;
     } catch (e) {

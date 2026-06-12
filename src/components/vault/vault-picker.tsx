@@ -55,12 +55,12 @@ export function VaultPicker() {
     );
   }
 
-  if (!caps.fsa && !caps.opfs && !caps.webkitdirectory) {
+  if (!caps.webkitdirectory) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm"><ShieldAlert className="h-4 w-4 text-[color:var(--warning)]" />Browser not supported</CardTitle>
-          <CardDescription>Vault sync needs a modern browser.</CardDescription>
+          <CardDescription>Vault sync needs a browser that supports file folder picking.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-[11px] text-muted-foreground">
           <div>You are using <Badge variant="ghost">{caps.browserName}</Badge>.</div>
