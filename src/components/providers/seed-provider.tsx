@@ -14,13 +14,31 @@ export function SeedProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     let cancelled = false;
-    ensureSeed()
-      .then(() => {
-        if (!cancelled) setState({ ready: true, error: null });
-      })
-      .then(() => { void import("@/lib/automation/engine").then((m) => m.startAutomation(30000)); }).catch((e: Error) => {
-        if (!cancelled) setState({ ready: false, error: e.message });
-      });
+    const timeout = setTimeout(() => {
+      if (!cancelled) {
+        console.warn("ensureSeed timeout - forcing ready");
+        setState({ ready: true, error: null });
+      }
+    }, 8000);
+    (async () => {
+      try {
+        await ensureSeed();
+        clearTimeout(timeout);
+        if (cancelled) return;
+        setState({ ready: true, error: null });
+        try {
+          const m = await import("@/lib/automation/engine");
+          m.startAutomation(30000);
+        } catch (e) {
+          console.warn("automation start failed", e);
+        }
+      } catch (e) {
+        clearTimeout(timeout);
+        if (cancelled) return;
+        console.error("ensureSeed failed", e);
+        setState({ ready: false, error: (e as Error).message });
+      }
+    })();
     return () => {
       cancelled = true;
     };
