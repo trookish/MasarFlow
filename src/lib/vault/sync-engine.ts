@@ -1,14 +1,17 @@
-import { getDb, type Note, type Task, type SyncFile, type Project } from "../db/schema";
+import { getDb, type SyncFile, type Project } from "../db/schema";
 import { readVaultFile, walkVault } from "./fs-access";
 import { vaultNoteToBrain, brainNoteToVault, md5Hex, deriveExcerpt } from "./markdown-adapter";
 import { vaultTaskToBrain, brainTaskToVault, isTaskNote } from "./tasks-adapter";
 import { cacheAttachment, findEmbedTargets } from "./attachments";
-import { detectMimeType, isInTrash, isTemplate } from "./ignore-patterns";
+import { isInTrash, isTemplate } from "./ignore-patterns";
 import { parseFrontmatter, stripFrontmatter } from "./frontmatter";
-import { DEFAULT_VAULT_SETTINGS, type VaultSettings, type VaultFileMeta } from "./types";
+import { DEFAULT_VAULT_SETTINGS, type VaultSettings } from "./types";
 import { emitAutomationEvent } from "../automation/engine";
+import { getActiveHandle, setActiveHandle } from "./handle-store";
 
-const HANDLE_KEY = "masarflow.vault.handle.active";
+export { getActiveHandle, setActiveHandle };
+export { getSettings, saveSettings } from "./sync-engine-backend";
+import { getSettings } from "./sync-engine-backend";
 
 export interface SyncResult {
   scanned: number;
@@ -25,85 +28,6 @@ export interface SyncProgress {
   current: number;
   total: number;
   file?: string;
-}
-
-export async function getSettings(): Promise<VaultSettings> {
-  const row = await getDb().vaultMeta.get("settings");
-  if (!row) return { ...DEFAULT_VAULT_SETTINGS };
-  return { ...DEFAULT_VAULT_SETTINGS, ...((row.value ?? {}) as Partial<VaultSettings>) };
-}
-
-export async function saveSettings(s: Partial<VaultSettings>): Promise<VaultSettings> {
-  const cur = await getSettings();
-  const next = { ...cur, ...s };
-  await getDb().vaultMeta.put({ key: "settings", value: next });
-  return next;
-}
-
-export async function setActiveHandle(handle: FileSystemDirectoryHandle | null): Promise<void> {
-  if (typeof window === "undefined") return;
-  if (handle) {
-    try { await putHandle("vault", handle); } catch {}
-  } else {
-    try { await deleteHandle("vault"); } catch {}
-  }
-  window.localStorage.setItem(HANDLE_KEY, handle ? "1" : "0");
-}
-
-function putHandle(key: string, value: FileSystemDirectoryHandle): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open("masarflow-handle-store", 1);
-    req.onupgradeneeded = () => req.result.createObjectStore("handles");
-    req.onerror = () => reject(req.error);
-    req.onsuccess = () => {
-      const db = req.result;
-      const tx = db.transaction("handles", "readwrite");
-      const store = tx.objectStore("handles");
-      const put = store.put(value, key);
-      put.onsuccess = () => { db.close(); resolve(); };
-      put.onerror = () => { db.close(); reject(put.error); };
-    };
-  });
-}
-
-function deleteHandle(key: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open("masarflow-handle-store", 1);
-    req.onupgradeneeded = () => req.result.createObjectStore("handles");
-    req.onerror = () => reject(req.error);
-    req.onsuccess = () => {
-      const db = req.result;
-      const tx = db.transaction("handles", "readwrite");
-      const del = tx.objectStore("handles").delete(key);
-      del.onsuccess = () => { db.close(); resolve(); };
-      del.onerror = () => { db.close(); reject(del.error); };
-    };
-  });
-}
-
-export async function getActiveHandle(): Promise<FileSystemDirectoryHandle | null> {
-  if (typeof window === "undefined") return null;
-  if (window.localStorage.getItem(HANDLE_KEY) !== "1") return null;
-  try {
-    return await getHandle("vault");
-  } catch {
-    return null;
-  }
-}
-
-function getHandle(key: string): Promise<FileSystemDirectoryHandle | null> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open("masarflow-handle-store", 1);
-    req.onupgradeneeded = () => req.result.createObjectStore("handles");
-    req.onerror = () => reject(req.error);
-    req.onsuccess = () => {
-      const db = req.result;
-      const tx = db.transaction("handles", "readonly");
-      const get = tx.objectStore("handles").get(key);
-      get.onsuccess = () => { db.close(); resolve((get.result as FileSystemDirectoryHandle) ?? null); };
-      get.onerror = () => { db.close(); reject(get.error); };
-    };
-  });
 }
 
 export async function runPull(handle: FileSystemDirectoryHandle, project: Project, onProgress?: (p: SyncProgress) => void): Promise<SyncResult> {
@@ -145,10 +69,9 @@ export async function runPull(handle: FileSystemDirectoryHandle, project: Projec
         await getDb().syncFiles.put({
           id, projectId: project.id, relativePath: meta.relativePath, side: "remote", status, mtime: meta.mtime, hash, noteId: null, taskId: task.id, lastSyncedAt: Date.now(), isTemplate: isTpl, inTrash: meta.inTrash, size: meta.size,
         });
-        if (!prev) result.created++; else { result.updated++; if (status === "remote-newer") result.conflicts++; }
+        if (!prev) result.created++; else { result.updated++; }
       } else {
         const { note } = vaultNoteToBrain({ projectId: project.id, body: text, relativePath: meta.relativePath, mtime: meta.mtime });
-        if (isTpl) (note as Note & { isTemplate?: boolean }).isTemplate = true;
         await getDb().notes.put(note);
         const id = "sync_" + project.id + "_" + meta.relativePath.replace(/[^a-zA-Z0-9]/g, "_");
         const status: SyncFile["status"] = meta.inTrash ? "trash" : (prev ? "remote-newer" : "synced");

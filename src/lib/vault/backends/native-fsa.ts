@@ -8,8 +8,12 @@ import {
   readVaultFile as fsReadVaultFile,
   writeVaultFile as fsWriteVaultFile,
   walkVault as fsWalkVault,
+  saveHandleToken,
 } from "../fs-access";
-import { getActiveHandle } from "../sync-engine";
+import { getActiveHandle, setActiveHandle } from "../handle-store";
+import { saveSettings } from "../sync-engine-backend";
+
+export { getActiveHandle, setActiveHandle };
 
 const CAPS: VaultBackendCapabilities = {
   liveWatching: true,
@@ -27,13 +31,10 @@ class NativeFsaBackend implements VaultBackend {
     if (!handle) return null;
     const ok = await fsVerifyPermission(handle, true);
     if (!ok) return null;
-    const { setActiveHandle, saveSettings } = await import("../sync-engine");
     await setActiveHandle(handle);
-    const { saveHandleToken } = await import("../fs-access");
     saveHandleToken(handle.name, handle.name);
-    const s = await saveSettings({ mode: "obsidian", vaultName: handle.name, backend: "native-fsa", backendCapabilities: CAPS });
+    await saveSettings({ mode: "obsidian", vaultName: handle.name, backend: "native-fsa", backendCapabilities: CAPS });
     this.rootName = handle.name;
-    void s;
     const metas = await fsWalkVault(handle, { includePatterns: [], excludePatterns: [".obsidian", ".makemd", ".qodo", ".space", ".git", ".trash"], archiveIncluded: false, trashIncluded: true });
     return { rootName: handle.name, backend: "native-fsa", fileCount: metas.length };
   }
