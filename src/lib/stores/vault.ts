@@ -63,11 +63,13 @@ export const useVault = create<VaultStoreState>((set, get) => ({
     });
     if (s.pollingMs > 0 && finalBackend === "native-fsa") startPolling(get);
   },
-
   connect: async () => {
     try {
+      console.log("[vault] connect() starting");
       const backend = await getBackend();
+      console.log("[vault] backend:", backend.kind);
       const session = await backend.pick();
+      console.log("[vault] session:", session);
       if (!session) { set({ status: "idle" }); return false; }
       const caps = getBackendCapabilities(session.backend);
       const s = await saveSettings({ mode: session.backend === "native-fsa" ? "obsidian" : session.backend as VaultSettings["mode"], vaultName: session.rootName, backend: session.backend, backendCapabilities: caps });
@@ -76,7 +78,7 @@ export const useVault = create<VaultStoreState>((set, get) => ({
       if (!project) { set({ lastError: "No active project" }); return false; }
       if (session.backend === "native-fsa") {
         const handle = await getNativeHandle();
-        if (!handle) { set({ status: "error", lastError: "No vault handle" }); return false; }
+        if (!handle) { set({ status: "error", lastError: "No vault handle persisted" }); return false; }
         const r = await _runPull(handle, project, (p) => set({ progress: p }));
         set({ lastResult: r, lastFullSync: Date.now(), progress: null });
         await getDb().vaultMeta.put({ key: "lastFullSync", value: Date.now() });
@@ -87,9 +89,15 @@ export const useVault = create<VaultStoreState>((set, get) => ({
         await getDb().vaultMeta.put({ key: "lastFullSync", value: Date.now() });
       }
       if (s.pollingMs > 0 && session.backend === "native-fsa") startPolling(get);
+      console.log("[vault] connect() success");
       return true;
     } catch (e) {
-      set({ lastError: (e as Error).message, status: "error" });
+      console.error("[vault] connect() failed:", e);
+      const msg = (e as Error).message || String(e);
+      set({ lastError: msg, status: "error" });
+      if (typeof window !== "undefined" && (window as unknown as { toast?: { error: (s: string, o?: unknown) => void } }).toast) {
+        (window as unknown as { toast: { error: (s: string, o?: unknown) => void } }).toast.error("Vault connect failed: " + msg);
+      }
       return false;
     }
   },
