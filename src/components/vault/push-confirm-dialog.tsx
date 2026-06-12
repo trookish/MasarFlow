@@ -27,7 +27,7 @@ export function PushConfirmDialog({ open, onOpenChange }: { open: boolean; onOpe
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-sm">Push to vault</DialogTitle>
           <DialogDescription>
-            {count} file{count === 1 ? "" : "s"} have local changes. Your browser doesn't support in-place writes; choose how to save.
+            {count} file{count === 1 ? "" : "s"} have local changes. Your browser doesn&apos;t support in-place writes; choose how to save.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">

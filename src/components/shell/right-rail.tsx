@@ -172,6 +172,7 @@ function VaultPanel() {
   const lastFullSync = useVault((s) => s.lastFullSync);
   const runSync = useVault((s) => s.runSync);
   const connect = useVault((s) => s.connect);
+  const repick = useVault((s) => s.repick);
   const projectId = useLiveQuery(async () => (await getDb().projects.toArray())[0]?.id, []);
   const trashCount = useLiveQuery(async () => {
     if (!projectId) return 0;
@@ -183,17 +184,22 @@ function VaultPanel() {
       <div className="rounded-md border border-border bg-surface-2 p-2">
         <div className="flex items-center gap-1.5 text-[11px]">
           <FolderOpen className="h-3 w-3" />
-          <span className="font-medium">{settings.mode === "obsidian" ? vaultName || "Vault" : "Local notes"}</span>
-          <span className="ml-auto text-[10px] text-muted-foreground capitalize">{settings.mode}</span>
+          <span className="font-medium">{vaultName || "Local notes"}</span>
+          <span className="ml-auto text-[10px] text-muted-foreground capitalize">{(settings.backend || settings.mode).replace("-", " ")}</span>
         </div>
         <div className="mt-1 text-[10px] text-muted-foreground">
           {lastFullSync ? "Synced " + formatRelativeTime(lastFullSync) : "Not yet synced"}
         </div>
         <div className="mt-1.5 flex items-center gap-1">
-          {settings.mode === "obsidian" ? (
-            <Button size="sm" variant="soft" className="h-6 text-[10px]" disabled={status === "syncing"} onClick={() => runSync()}>
-              <RefreshCw className={"h-3 w-3 " + (status === "syncing" ? "animate-spin" : "")} />Sync
-            </Button>
+          {settings.mode === "obsidian" || settings.mode === "opfs" || settings.mode === "legacy-fallback" ? (
+            <>
+              <Button size="sm" variant="soft" className="h-6 text-[10px]" disabled={status === "syncing"} onClick={() => runSync()}>
+                <RefreshCw className={"h-3 w-3 " + (status === "syncing" ? "animate-spin" : "")} />Sync
+              </Button>
+              {settings.mode === "legacy-fallback" && (
+                <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => repick()}>Re-pick</Button>
+              )}
+            </>
           ) : (
             <Button size="sm" variant="soft" className="h-6 text-[10px]" onClick={() => connect()}>
               <FolderOpen className="h-3 w-3" />Connect

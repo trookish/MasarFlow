@@ -13,7 +13,7 @@ import { VaultPicker } from "@/components/vault/vault-picker";
 import { VaultModeBadge } from "@/components/vault/vault-mode-badge";
 import { SyncRow } from "@/components/vault/sync-row";
 import { TrashView } from "@/components/vault/trash-view";
-import { useVault } from "@/lib/stores/vault";
+import { useVault, useVault as useVaultStore } from "@/lib/stores/vault";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb, type SyncFile } from "@/lib/db/schema";
 import { formatRelativeTime } from "@/lib/utils";
@@ -53,9 +53,12 @@ export default function SyncPage() {
     return c;
   }, [allFiles]);
 
+  const vaultConnected = settings.mode === "obsidian" || settings.mode === "opfs" || settings.mode === "legacy-fallback";
+  const caps = settings.backendCapabilities;
+
   return (
     <div className="pb-10">
-      <PageHeader icon={RefreshCw} eyebrow="Vault" title="Sync manager" description="Obsidian vault sync - pull, push, and resolve conflicts." actions={<VaultModeBadge />} />
+      <PageHeader icon={RefreshCw} eyebrow="Vault" title="Sync manager" description="Obsidian vault sync - pull, push, and resolve conflicts. Identical UX in every browser." actions={<VaultModeBadge />} />
       <div className="space-y-4 px-6 py-5">
         <div className="grid gap-3 lg:grid-cols-3">
           <VaultPicker />
@@ -69,9 +72,9 @@ export default function SyncPage() {
               {lastResult && <div className="grid grid-cols-2 gap-2 text-[11px]"><Stat label="Scanned" value={lastResult.scanned} /><Stat label="Created" value={lastResult.created} /><Stat label="Updated" value={lastResult.updated} /><Stat label="Attachments" value={lastResult.attachments} /></div>}
               {lastError && <div className="border border-destructive/30 bg-destructive/10 p-2 text-[11px] text-destructive rounded-md">{lastError}</div>}
               <div className="flex flex-wrap gap-1.5">
-                <Button size="sm" onClick={() => runSync()} disabled={status === "syncing" || settings.mode !== "obsidian"} className="gap-1.5"><RefreshCw className={"h-3 w-3 " + (status === "syncing" ? "animate-spin" : "")} />Sync</Button>
-                <Button size="sm" variant="soft" onClick={() => runPull()} disabled={status === "syncing" || settings.mode !== "obsidian"} className="gap-1.5"><ArrowDown className="h-3 w-3" />Pull</Button>
-                <Button size="sm" variant="soft" onClick={() => runPush()} disabled={status === "syncing" || settings.mode !== "obsidian"} className="gap-1.5"><ArrowUp className="h-3 w-3" />Push</Button>
+                <Button size="sm" onClick={() => runSync()} disabled={status === "syncing" || !vaultConnected} className="gap-1.5"><RefreshCw className={"h-3 w-3 " + (status === "syncing" ? "animate-spin" : "")} />Sync</Button>
+                <Button size="sm" variant="soft" onClick={() => runPull()} disabled={status === "syncing" || !vaultConnected} className="gap-1.5"><ArrowDown className="h-3 w-3" />Pull</Button>
+                <Button size="sm" variant="soft" onClick={() => runPush()} disabled={status === "syncing" || !vaultConnected} className="gap-1.5"><ArrowUp className="h-3 w-3" />Push</Button>
               </div>
             </CardContent>
           </Card>
@@ -83,6 +86,24 @@ export default function SyncPage() {
             <CardContent className="space-y-1.5 text-[11px]">
               {settings.includePatterns.map((p) => <div key={p} className="flex items-center gap-1.5"><FolderOpen className="h-3 w-3" />{p}</div>)}
               <div className="mt-1 text-[10px] text-muted-foreground">Excluded: {settings.excludePatterns.join(", ")}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Backend</CardTitle>
+              <CardDescription>{useVaultStore((s) => s.capabilities.browserName)} browser - {settings.backend === "native-fsa" ? "live two-way" : settings.backend === "opfs" ? "in-browser sandbox" : "cached mirror"}.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-1.5 text-[11px]">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge variant={caps?.liveWatching ? "default" : "ghost"} className="text-[10px]">{caps?.liveWatching ? "Live watching" : "No live watching"}</Badge>
+                <Badge variant={caps?.inPlaceWrites ? "default" : "ghost"} className="text-[10px]">{caps?.inPlaceWrites ? "In-place writes" : "Download on push"}</Badge>
+                <Badge variant={caps?.multiSessionPersistence ? "default" : "ghost"} className="text-[10px]">{caps?.multiSessionPersistence ? "Persists" : "Re-pick each session"}</Badge>
+              </div>
+              <div className="text-[10px] text-muted-foreground">
+                {settings.backend === "native-fsa" && "Two-way sync via the File System Access API."}
+                {settings.backend === "opfs" && "Files live in browser OPFS. Use 'Export as zip' to round-trip."}
+                {settings.backend === "legacy-fallback" && "Files cached in IndexedDB. Re-pick each session. Push triggers per-file download."}
+              </div>
             </CardContent>
           </Card>
         </div>
