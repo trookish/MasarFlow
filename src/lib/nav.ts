@@ -1,4 +1,4 @@
-import { LayoutDashboard, Brain, FileText, ShieldCheck, Network, Share2, ListTodo, Bot, Workflow, BookOpen, ScrollText, Search, Settings, Box, Puzzle, type LucideIcon } from "lucide-react"
+import { LayoutDashboard, Brain, FileText, ShieldCheck, Network, Share2, ListTodo, Bot, Workflow, BookOpen, ScrollText, Search, Settings, Box, Puzzle, RefreshCw, type LucideIcon } from "lucide-react"
 
 export interface NavItem {
   id: string;
@@ -90,6 +90,14 @@ export const NAV_ITEMS: NavItem[] = [
     icon: ScrollText,
     shortcut: "G L",
     description: "Chronological project memory",
+    group: "system",
+  },
+  {
+    id: "sync",
+    label: "Sync",
+    href: "/sync",
+    icon: RefreshCw,
+    description: "Obsidian vault sync manager",
     group: "system",
   },
   {

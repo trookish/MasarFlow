@@ -22,7 +22,7 @@ export function ConflictDialog({ open, onOpenChange, file, onResolved }: { open:
       <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-sm">Conflict · {file.relativePath}</DialogTitle>
-          <DialogDescription>Choose which version to keep. "Both" creates a sibling copy.</DialogDescription>
+          <DialogDescription>Choose which version to keep. &quot;Both&quot; creates a sibling copy.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">

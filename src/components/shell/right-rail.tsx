@@ -1,11 +1,14 @@
 "use client";
 import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Sparkles, Link2, GitBranch, Boxes, Lightbulb, ArrowRight, ScrollText } from "lucide-react";
+import { Sparkles, Link2, GitBranch, Boxes, Lightbulb, ArrowRight, ScrollText, RefreshCw, FolderOpen, Trash2 } from "lucide-react";
 import { useUi } from "@/lib/stores/ui";
 import { useActiveProject } from "@/lib/db/repos/projects";
 import { usePathname } from "next/navigation";
 import { useMemories, useTasks, useSystems, useArchGraph, useDevLogs } from "@/lib/db/repos/misc";
+import { useVault } from "@/lib/stores/vault";
+import { useLiveQuery } from "dexie-react-hooks";
+import { getDb } from "@/lib/db/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -154,7 +157,56 @@ const PANELS: RightRailPanel[] = [
     icon: <Lightbulb className="h-3.5 w-3.5" />,
     content: <MemoryReferencesPanel />,
   },
+  {
+    id: "vault",
+    title: "Vault",
+    icon: <FolderOpen className="h-3.5 w-3.5" />,
+    content: <VaultPanel />,
+  },
 ];
+
+function VaultPanel() {
+  const settings = useVault((s) => s.settings);
+  const vaultName = useVault((s) => s.vaultName);
+  const status = useVault((s) => s.status);
+  const lastFullSync = useVault((s) => s.lastFullSync);
+  const runSync = useVault((s) => s.runSync);
+  const connect = useVault((s) => s.connect);
+  const projectId = useLiveQuery(async () => (await getDb().projects.toArray())[0]?.id, []);
+  const trashCount = useLiveQuery(async () => {
+    if (!projectId) return 0;
+    const all = await getDb().syncFiles.where({ projectId }).toArray();
+    return all.filter((f) => f.inTrash || f.status === "deleted-local" || f.status === "deleted-remote").length;
+  }, [projectId], 0);
+  return (
+    <div className="space-y-2">
+      <div className="rounded-md border border-border bg-surface-2 p-2">
+        <div className="flex items-center gap-1.5 text-[11px]">
+          <FolderOpen className="h-3 w-3" />
+          <span className="font-medium">{settings.mode === "obsidian" ? vaultName || "Vault" : "Local notes"}</span>
+          <span className="ml-auto text-[10px] text-muted-foreground capitalize">{settings.mode}</span>
+        </div>
+        <div className="mt-1 text-[10px] text-muted-foreground">
+          {lastFullSync ? "Synced " + formatRelativeTime(lastFullSync) : "Not yet synced"}
+        </div>
+        <div className="mt-1.5 flex items-center gap-1">
+          {settings.mode === "obsidian" ? (
+            <Button size="sm" variant="soft" className="h-6 text-[10px]" disabled={status === "syncing"} onClick={() => runSync()}>
+              <RefreshCw className={"h-3 w-3 " + (status === "syncing" ? "animate-spin" : "")} />Sync
+            </Button>
+          ) : (
+            <Button size="sm" variant="soft" className="h-6 text-[10px]" onClick={() => connect()}>
+              <FolderOpen className="h-3 w-3" />Connect
+            </Button>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 rounded-md border border-border/60 bg-card/40 p-2 text-[10px]">
+        <Trash2 className="h-3 w-3" />Trash: {trashCount}
+      </div>
+    </div>
+  );
+}
 
 function RecentDevPanel() {
   const project = useActiveProject();

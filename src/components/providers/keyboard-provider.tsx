@@ -7,6 +7,7 @@ import { resetSeed } from "@/lib/db/seed";
 import { emitAutomationEvent } from "@/lib/automation/engine";
 import { useAi } from "@/lib/stores/ai";
 import { useActiveProject } from "@/lib/db/repos/projects";
+import { useVault } from "@/lib/stores/vault";
 import { setOpenNewNote, setOpenNewSpec, setOpenNewTask, setOpenNewLog, setOpenNewDoc, setOpenNewStandard, useCreateDialogs } from "@/lib/stores/create-dialogs";
 
 const isMac =
@@ -169,6 +170,9 @@ export function KeyboardProvider({ children }: { children: React.ReactNode }) {
         case "run-workflow":
           window.dispatchEvent(new CustomEvent("masarflow:run-workflow"));
           return;
+        case "sync-now":
+          void useVault.getState().runSync();
+          return;
         case "review-plans":
           router.push("/specs?filter=awaiting-approval");
           return;
@@ -183,6 +187,7 @@ export function KeyboardProvider({ children }: { children: React.ReactNode }) {
         "go-graph": "/knowledge-graph",
         "go-logs": "/dev-logs",
         "go-workflow": "/workflow",
+        "go-sync": "/sync",
       };
       if (routeById[id]) {
         if (pathname !== routeById[id]) router.push(routeById[id]);

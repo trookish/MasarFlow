@@ -4,6 +4,7 @@ import "@/styles/globals.css";
 import { SeedProvider } from "@/components/providers/seed-provider";
 import { KeyboardProvider } from "@/components/providers/keyboard-provider";
 import { ThemeApplier } from "@/components/providers/theme-provider";
+import { VaultProvider } from "@/components/providers/vault-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -42,8 +43,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <TooltipProvider delayDuration={250}>
             <SeedProvider>
               <KeyboardProvider>
-                {children}
-                <Toaster />
+                <VaultProvider>
+                  {children}
+                  <Toaster />
+                </VaultProvider>
               </KeyboardProvider>
             </SeedProvider>
           </TooltipProvider>

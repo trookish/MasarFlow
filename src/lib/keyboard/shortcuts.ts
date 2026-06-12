@@ -39,6 +39,8 @@ export const SHORTCUTS: ShortcutDef[] = [
   { id: "run-workflow", scope: "action", keys: "R W", label: "Run AI workflow simulation", group: "Actions", description: "Trigger the 16-step pipeline" },
   { id: "cycle-ai", scope: "action", keys: "R A", label: "Cycle AI provider", group: "Actions", description: "Switch between simulated and real LLM providers" },
   { id: "reset-seed", scope: "action", keys: "R S", label: "Reset seed data", group: "Actions", description: "Wipe IndexedDB and re-seed" },
+  { id: "sync-now", scope: "action", keys: "S S", label: "Sync vault now", group: "Actions", description: "Run vault pull+push immediately" },
+  { id: "go-sync", scope: "go-to", keys: "G V", label: "Go to Sync", group: "Go to", description: "Open the vault sync manager" },
 ];
 
 const OVERRIDES_KEY = "masarflow.shortcut.overrides.v1";

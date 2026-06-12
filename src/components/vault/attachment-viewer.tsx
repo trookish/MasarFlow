@@ -93,13 +93,7 @@ export function AttachmentViewer({ projectId, relativePath, name }: { projectId:
     );
   }
   if (isTextish(name)) {
-    const [text, setText] = React.useState<string | null>(null);
-    React.useEffect(() => { (async () => { const r = await fetch(src); setText(await r.text()); })(); }, [src]);
-    return (
-      <pre className="max-h-72 overflow-auto rounded-md border border-border bg-surface-2 p-2.5 text-[11px] whitespace-pre-wrap">
-        {text ?? "Loading..."}
-      </pre>
-    );
+    return <TextPreview src={src} />;
   }
   if (isDownloadable(name)) {
     return (
@@ -110,6 +104,16 @@ export function AttachmentViewer({ projectId, relativePath, name }: { projectId:
   }
   return (
     <div className="flex items-center gap-2 rounded-md border border-border bg-card/60 p-2.5 text-[11px]"><FileText className="h-3.5 w-3.5" />{name}</div>
+  );
+}
+
+function TextPreview({ src }: { src: string }) {
+  const [text, setText] = React.useState<string | null>(null);
+  React.useEffect(() => { (async () => { const r = await fetch(src); setText(await r.text()); })(); }, [src]);
+  return (
+    <pre className="max-h-72 overflow-auto rounded-md border border-border bg-surface-2 p-2.5 text-[11px] whitespace-pre-wrap">
+      {text ?? "Loading..."}
+    </pre>
   );
 }
 

@@ -9,10 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useUi, ACCENTS, type AccentColor, type Density, type FontChoice } from "@/lib/stores/ui";
 import { useAi, type AgentProvider } from "@/lib/stores/ai";
+import { useVault } from "@/lib/stores/vault";
 import { ACCENT_OPTIONS } from "@/components/providers/theme-provider";
 import { cn } from "@/lib/utils";
 import { resetSeed } from "@/lib/db/seed";
 import { DataTransferDialog } from "@/components/common/data-transfer-dialog";
+import { VaultSettingsBlock } from "@/components/common/vault-settings-block";
+import { Row } from "@/components/common/shared-row";
 import { toast } from "sonner";
 
 function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
@@ -128,6 +131,10 @@ export default function SettingsPage() {
               </button>
             ))}
           </div>
+        </Section>
+
+        <Section title="Vault" description="Obsidian vault sync (Mode A) or built-in local notes (Mode B).">
+          <VaultSettingsBlock />
         </Section>
 
         <Section title="Shell" description="Toggle parts of the workspace shell.">
@@ -266,24 +273,3 @@ function PreviewTile() {
   );
 }
 
-function Row({
-  label,
-  description,
-  checked,
-  onChange,
-}: {
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: () => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-border p-2.5">
-      <div>
-        <div className="text-xs font-medium">{label}</div>
-        <div className="text-[10px] text-muted-foreground">{description}</div>
-      </div>
-      <Switch checked={checked} onCheckedChange={onChange} />
-    </div>
-  );
-}
