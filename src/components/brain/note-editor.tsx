@@ -32,6 +32,8 @@ import { useNotes } from "@/lib/db/repos/notes";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { toast } from "sonner";
+import { AttachmentViewer } from "@/components/vault/attachment-viewer";
+import { findEmbedTargets } from "@/lib/vault/attachments";
 
 const RichEditor = dynamic(
   () => import("@/components/editor/rich-editor").then((m) => m.RichEditor),
@@ -210,6 +212,7 @@ export function NoteEditor({ noteId }: { noteId: string }) {
                   className="prose prose-sm max-w-none dark:prose-invert"
                   dangerouslySetInnerHTML={{ __html: markdownToHtml(draft.body) }}
                 />
+                <AttachmentGallery body={draft.body} projectId={draft.projectId} />
               </CardContent>
             </Card>
           )}
@@ -440,6 +443,24 @@ function OutgoingLinks({ body, selfId, selfTitle }: { body: string; selfId: stri
         </li>
       ))}
     </ul>
+  );
+}
+
+function AttachmentGallery({ body, projectId }: { body: string; projectId: string }) {
+  const targets = React.useMemo(() => findEmbedTargets(body), [body]);
+  if (targets.length === 0) return null;
+  return (
+    <div className="mt-5 space-y-2">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+        <Link2 className="h-3 w-3" />Attachments
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {targets.map((t) => {
+          const name = t.split("/").pop() ?? t;
+          return <AttachmentViewer key={t} projectId={projectId} relativePath={t} name={name} />;
+        })}
+      </div>
+    </div>
   );
 }
 

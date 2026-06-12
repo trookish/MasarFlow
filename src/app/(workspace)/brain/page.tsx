@@ -13,6 +13,8 @@ import { useNotes } from "@/lib/db/repos/notes";
 import { useFolders, useTags } from "@/lib/db/repos/misc";
 import { formatRelativeTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { VaultModeBadge } from "@/components/vault/vault-mode-badge";
+import { useVault } from "@/lib/stores/vault";
 
 const TYPE_ACCENT: Record<string, string> = {
   idea: "var(--graph-idea)",
@@ -26,6 +28,7 @@ const TYPE_ACCENT: Record<string, string> = {
 };
 
 export default function BrainPage() {
+  const settings = useVault((s) => s.settings);
   const project = useActiveProject();
   const notes = useNotes(project?.id);
   const folders = useFolders(project?.id);
@@ -53,11 +56,12 @@ export default function BrainPage() {
         title="Permanent project memory"
         description="Ideas, systems, mechanics, research, decisions, and lore. Every note links bidirectionally to specs, tasks, architecture, and code."
         actions={
+          <div className="flex items-center gap-2"><VaultModeBadge />
           <Button asChild className="gap-2">
             <Link href="/brain/new">
               <Plus className="h-4 w-4" /> New note
             </Link>
-          </Button>
+          </Button></div>
         }
       />
 
