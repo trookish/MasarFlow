@@ -272,6 +272,41 @@ export const planSchema = z.object({
 });
 export type Plan = z.infer<typeof planSchema>;
 
+export const syncFileSchema = z.object({
+  id: idSchema,
+  projectId: idSchema,
+  relativePath: z.string(),
+  side: z.enum(["remote", "local", "both"]),
+  status: z.enum(["synced", "local-newer", "remote-newer", "conflict", "deleted-local", "deleted-remote", "ignored", "trash"]),
+  mtime: z.number(),
+  hash: z.string(),
+  noteId: z.string().nullable().default(null),
+  taskId: z.string().nullable().default(null),
+  lastSyncedAt: z.number(),
+  isTemplate: z.boolean().default(false),
+  inTrash: z.boolean().default(false),
+  size: z.number().default(0),
+});
+export type SyncFile = z.infer<typeof syncFileSchema>;
+
+export const vaultMetaSchema = z.object({
+  key: idSchema,
+  value: z.unknown(),
+});
+export type VaultMeta = z.infer<typeof vaultMetaSchema>;
+
+export const attachmentSchema = z.object({
+  id: idSchema,
+  projectId: idSchema,
+  relativePath: z.string(),
+  mimeType: z.string(),
+  size: z.number(),
+  blob: z.instanceof(Blob).optional(),
+  cachedAt: z.number(),
+  sourceVaultPath: z.string().nullable().default(null),
+});
+export type Attachment = z.infer<typeof attachmentSchema>;
+
 export interface MasarFlowDB extends Dexie {
   projects: Table<Project, string>;
   notes: Table<Note, string>;
@@ -291,6 +326,9 @@ export interface MasarFlowDB extends Dexie {
   folders: Table<Folder, string>;
   plans: Table<Plan, string>;
   meta: Table<{ key: string; value: string | number }, string>;
+  syncFiles: Table<SyncFile, string>;
+  vaultMeta: Table<VaultMeta, string>;
+  attachments: Table<Attachment, string>;
 }
 
 let dbInstance: MasarFlowDB | null = null;
@@ -324,6 +362,29 @@ export function getDb(): MasarFlowDB {
     folders: "id, projectId, parentId, name",
     plans: "id, specId, status, createdAt",
     meta: "key",
+  });
+  db.version(2).stores({
+    projects: "id, slug, updatedAt",
+    notes: "id, projectId, type, updatedAt, *tags, folderId",
+    specs: "id, projectId, status, number, updatedAt",
+    standards: "id, projectId, category, updatedAt",
+    tasks: "id, projectId, status, priority, specId, updatedAt, *dependencies, *tags",
+    systems: "id, projectId, name",
+    archNodes: "id, projectId, systemId, type",
+    archEdges: "id, source, target, kind",
+    docs: "id, projectId, kind, updatedAt",
+    devLogs: "id, projectId, kind, createdAt",
+    agents: "id, role, status",
+    commits: "id, projectId, date, hash",
+    memories: "id, projectId, kind, *tags, weight, lastRecallAt",
+    links: "id, sourceType, sourceId, targetType, targetId, kind",
+    tags: "id, name",
+    folders: "id, projectId, parentId, name",
+    plans: "id, specId, status, createdAt",
+    meta: "key",
+    syncFiles: "id, projectId, status, lastSyncedAt, relativePath",
+    vaultMeta: "key",
+    attachments: "id, projectId, relativePath, cachedAt",
   });
   dbInstance = db;
   return db;
