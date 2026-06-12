@@ -1,13 +1,33 @@
 export type { NoteType, TaskPriority, TaskStatus } from "../db/schema";
 import type { NoteType as _NT, TaskPriority as _TP, TaskStatus as _TS } from "../db/schema";
 
-export type VaultMode = "local" | "obsidian" | "disconnected";
+export type VaultMode = "local" | "obsidian" | "disconnected" | "opfs" | "legacy-fallback";
+export type VaultBackendKind = "native-fsa" | "opfs" | "legacy-fallback" | "local";
 
 export interface VaultCapabilities {
   fsa: boolean;
   webkit: boolean;
   showDirectoryPicker: boolean;
+  webkitdirectory: boolean;
+  opfs: boolean;
   browserName: string;
+}
+
+export interface VaultBackendCapabilities {
+  liveWatching: boolean;
+  inPlaceWrites: boolean;
+  multiSessionPersistence: boolean;
+}
+
+export interface VaultSession {
+  rootName: string;
+  backend: VaultBackendKind;
+  fileCount: number;
+}
+
+export interface VaultWriteResult {
+  ok: boolean;
+  method: "in-place" | "download" | "blob-cached";
 }
 
 export interface VaultFileMeta {
@@ -71,6 +91,8 @@ export interface Wikilink {
 export interface VaultSettings {
   mode: VaultMode;
   vaultName: string | null;
+  backend: VaultBackendKind | "auto";
+  backendCapabilities: VaultBackendCapabilities | null;
   pollingMs: number;
   archiveIncluded: boolean;
   trashIncluded: boolean;
@@ -85,6 +107,8 @@ export interface VaultSettings {
 export const DEFAULT_VAULT_SETTINGS: VaultSettings = {
   mode: "local",
   vaultName: null,
+  backend: "auto",
+  backendCapabilities: null,
   pollingMs: 300000,
   archiveIncluded: false,
   trashIncluded: true,
