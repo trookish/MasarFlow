@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Trash2 } from "lucide-react";
+import { ChevronDown, Trash2, FileUp } from "lucide-react";
 import { notesRepo } from "@/lib/db/repos";
 import { NOTE_TYPES, type Note, type NoteType } from "@/lib/db/schema";
 import { NOTE_TYPE_DOT } from "@/lib/colors";
@@ -28,6 +28,7 @@ interface NoteEditorProps {
   allNotes: Note[];
   onNavigateToTitle: (title: string) => void;
   onDelete: () => void;
+  onPromote: () => void;
 }
 
 interface AutocompleteState {
@@ -72,6 +73,7 @@ export function NoteEditor({
   allNotes,
   onNavigateToTitle,
   onDelete,
+  onPromote,
 }: NoteEditorProps) {
   const noteId = note.id;
   const [title, setTitle] = useState(note.title);
@@ -274,6 +276,11 @@ export function NoteEditor({
             projectId={projectId}
             onPick={(tpl) => applyTemplate(tpl.body, tpl.type)}
           />
+
+          <Button variant="outline" size="sm" onClick={onPromote}>
+            <FileUp className="h-3.5 w-3.5" />
+            Promote to spec
+          </Button>
 
           <div className="ml-auto">
             <Tabs value={view} onValueChange={(v) => setView(v as typeof view)}>

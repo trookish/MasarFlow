@@ -1,12 +1,12 @@
-import { KanbanSquare } from "lucide-react";
-import { RouteShell } from "@/components/shell/route-shell";
+"use client";
+
+import { Suspense } from "react";
+import { TasksView } from "@/components/tasks/tasks-view";
 
 export default function TasksPage() {
   return (
-    <RouteShell
-      icon={KanbanSquare}
-      title="Task Boards"
-      description="Kanban boards, sprint planning, and AI task generation are planned next. Tasks you create are stored and show in search and the graph."
-    />
+    <Suspense fallback={null}>
+      <TasksView />
+    </Suspense>
   );
 }

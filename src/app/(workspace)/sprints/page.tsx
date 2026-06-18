@@ -1,12 +1,7 @@
-import { Flag } from "lucide-react";
-import { RouteShell } from "@/components/shell/route-shell";
+"use client";
+
+import { SprintsView } from "@/components/sprints/sprints-view";
 
 export default function SprintsPage() {
-  return (
-    <RouteShell
-      icon={Flag}
-      title="Sprints"
-      description="Sprint planning and milestone tracking are coming soon."
-    />
-  );
+  return <SprintsView />;
 }

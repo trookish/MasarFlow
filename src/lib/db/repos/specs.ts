@@ -29,4 +29,22 @@ export const specsRepo = {
   async remove(id: string): Promise<void> {
     await db.specs.delete(id);
   },
+  /**
+   * Recompute a spec's implementation progress from its linked tasks
+   * (% of tasks in the `done` status) and persist it. No-op if the spec is
+   * gone. Call after any task with this specId is created/updated/removed.
+   */
+  async recomputeProgress(specId: string): Promise<void> {
+    const tasks = await db.tasks.where("specId").equals(specId).toArray();
+    const progress = tasks.length
+      ? Math.round(
+          (tasks.filter((t) => t.status === "done").length / tasks.length) *
+            100,
+        )
+      : 0;
+    await db.specs.update(specId, {
+      implementationProgress: progress,
+      updatedAt: now(),
+    });
+  },
 };

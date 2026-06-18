@@ -27,3 +27,17 @@ test("creates a note in the Brain module", async ({ page }) => {
   // The editor title input appears for the new note.
   await expect(page.getByPlaceholder("Untitled note")).toBeVisible();
 });
+
+test("creates a spec in the Specifications module", async ({ page }) => {
+  await page.goto("/specs", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "New spec" }).first().click();
+  // The RFC editor opens with its title field.
+  await expect(page.getByPlaceholder("Spec title")).toBeVisible();
+});
+
+test("creates a task on the kanban board", async ({ page }) => {
+  await page.goto("/tasks", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "New task" }).first().click();
+  // The task detail dialog opens with its title field.
+  await expect(page.getByPlaceholder("Task title")).toBeVisible();
+});

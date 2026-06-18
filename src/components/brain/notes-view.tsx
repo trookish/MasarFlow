@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Search, PenTool } from "lucide-react";
-import { notesRepo, foldersRepo } from "@/lib/db/repos";
+import { notesRepo, foldersRepo, specsRepo } from "@/lib/db/repos";
+import type { Note } from "@/lib/db/schema";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,21 @@ export function NotesView() {
     await foldersRepo.create({ projectId, name });
   }
 
+  // Idea → Specification: spin a note up into an RFC linked back to the note.
+  async function promoteToSpec(note: Note) {
+    if (!projectId) return;
+    const count = (await specsRepo.listByProject(projectId)).length;
+    const number = `RFC-${String(count + 1).padStart(3, "0")}`;
+    const spec = await specsRepo.create({
+      projectId,
+      number,
+      title: note.title,
+      purpose: note.excerpt,
+      linkedNoteIds: [note.id],
+    });
+    router.push(`/specs?spec=${spec.id}`);
+  }
+
   async function deleteFolder(id: string) {
     await foldersRepo.remove(id);
     if (folder === id) setFolder("all");
@@ -136,6 +152,7 @@ export function NotesView() {
             allNotes={allNotes}
             onNavigateToTitle={navigateToTitle}
             onDelete={deleteNote}
+            onPromote={() => promoteToSpec(selectedNote)}
           />
         ) : (
           <EmptyState

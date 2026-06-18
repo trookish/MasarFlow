@@ -6,6 +6,7 @@ export { linksRepo } from "./links";
 export { canvasRepo } from "./canvas";
 export { specsRepo } from "./specs";
 export { tasksRepo } from "./tasks";
+export { sprintsRepo } from "./sprints";
 export { standardsRepo } from "./standards";
 export { systemsRepo } from "./systems";
 export { memoriesRepo } from "./memories";
