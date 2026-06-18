@@ -1,26 +1,193 @@
 @import "tailwindcss";
 
+/* Class-based dark mode (next-themes attribute="class"); dark is the default. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Semantic design tokens. Components must ONLY use the token utilities these
+ * generate (bg-background, text-foreground, border-border, text-primary, …).
+ * Never hardcode hex values or raw color utilities in components.
+ */
+
 :root {
+  /* Light theme (dark is default via the `dark` class on <html>) */
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --popover: #ffffff;
+  --popover-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #6b7280;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --accent: #f1f1f4;
+  --accent-foreground: #18181b;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --destructive: #dc2626;
+  --destructive-foreground: #fafafa;
+  --success: #16a34a;
+  --warning: #d97706;
+  --sidebar: #fafafa;
+  --sidebar-foreground: #18181b;
+  --sidebar-border: #e4e4e7;
+  --radius: 0.625rem;
+
+  /* Default accent palette (violet). Overridden by [data-accent]. */
+  --primary: #7c5cfc;
+  --primary-foreground: #ffffff;
+  --ring: #7c5cfc;
+
+  /* Knowledge-graph / entity type colors */
+  --node-idea: #f59e0b;
+  --node-system: #3b82f6;
+  --node-mechanic: #06b6d4;
+  --node-research: #8b5cf6;
+  --node-experiment: #ec4899;
+  --node-note: #a1a1aa;
+  --node-lore: #10b981;
+  --node-decision: #f43f5e;
+  --node-spec: #6366f1;
+  --node-task: #14b8a6;
+  --node-commit: #fb923c;
+  --node-system-module: #0ea5e9;
+}
+
+.dark {
+  --background: #0a0a0c;
+  --foreground: #e8e8ec;
+  --card: #121216;
+  --card-foreground: #e8e8ec;
+  --popover: #151519;
+  --popover-foreground: #e8e8ec;
+  --muted: #1b1b20;
+  --muted-foreground: #9a9aa4;
+  --secondary: #1b1b20;
+  --secondary-foreground: #e8e8ec;
+  --accent: #232329;
+  --accent-foreground: #f4f4f6;
+  --border: #27272d;
+  --input: #2c2c33;
+  --destructive: #ef4444;
+  --destructive-foreground: #fafafa;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --sidebar: #0c0c10;
+  --sidebar-foreground: #cfcfd6;
+  --sidebar-border: #1e1e23;
+}
+
+/* ── Accent palettes ─────────────────────────────────────────────────── */
+[data-accent="violet"] {
+  --primary: #7c5cfc;
+  --primary-foreground: #ffffff;
+  --ring: #7c5cfc;
+}
+[data-accent="cyan"] {
+  --primary: #22b8cf;
+  --primary-foreground: #042027;
+  --ring: #22b8cf;
+}
+[data-accent="emerald"] {
+  --primary: #10b981;
+  --primary-foreground: #042f23;
+  --ring: #10b981;
+}
+[data-accent="rose"] {
+  --primary: #f43f5e;
+  --primary-foreground: #ffffff;
+  --ring: #f43f5e;
+}
+[data-accent="amber"] {
+  --primary: #f59e0b;
+  --primary-foreground: #2b1c00;
+  --ring: #f59e0b;
+}
+[data-accent="blue"] {
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --ring: #3b82f6;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --color-node-idea: var(--node-idea);
+  --color-node-system: var(--node-system);
+  --color-node-mechanic: var(--node-mechanic);
+  --color-node-research: var(--node-research);
+  --color-node-experiment: var(--node-experiment);
+  --color-node-note: var(--node-note);
+  --color-node-lore: var(--node-lore);
+  --color-node-decision: var(--node-decision);
+  --color-node-spec: var(--node-spec);
+  --color-node-task: var(--node-task);
+  --color-node-commit: var(--node-commit);
+  --color-node-system-module: var(--node-system-module);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Offset sticky headers when anchor-navigating */
+  html {
+    scroll-padding-top: 4rem;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Thin, theme-aware scrollbars */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
