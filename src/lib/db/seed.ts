@@ -309,6 +309,7 @@ export async function loadDemoData(): Promise<string> {
     title: "No per-frame allocations",
     rule: "Avoid heap allocation inside Update/tick loops; pool instead.",
     examples: ["// pool projectiles instead of `new Projectile()`"],
+    pattern: "new\\s+[A-Z]\\w*\\(",
   });
   await standardsRepo.create({
     projectId,
@@ -321,6 +322,14 @@ export async function loadDemoData(): Promise<string> {
     category: "comments",
     title: "Document public systems",
     rule: "Every public system exposes a one-line summary of responsibility.",
+  });
+  await standardsRepo.create({
+    projectId,
+    category: "naming",
+    title: "Spell out 'prototype'",
+    rule: "Write 'prototype' in docs — avoid the abbreviation 'proto'.",
+    examples: ["// prototype the nav-mesh, not 'proto the nav-mesh'"],
+    pattern: "\\bproto\\b",
   });
 
   // ── Systems ───────────────────────────────────────────────────────────

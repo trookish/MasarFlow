@@ -175,6 +175,13 @@ export const standardSchema = z.object({
   rule: z.string().default(""),
   examples: z.array(z.string()).default([]),
   enforced: z.boolean().default(true),
+  /**
+   * Optional regular expression treated as a *forbidden* pattern. When set and
+   * the standard is enforced, the enforcer flags any note/spec/task content
+   * that matches it. Empty means "documentation-only" (not machine-checked).
+   * Not indexed — added without a Dexie version bump.
+   */
+  pattern: z.string().default(""),
   createdAt: z.number(),
   updatedAt: z.number(),
 });

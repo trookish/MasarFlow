@@ -41,3 +41,12 @@ test("creates a task on the kanban board", async ({ page }) => {
   // The task detail dialog opens with its title field.
   await expect(page.getByPlaceholder("Task title")).toBeVisible();
 });
+
+test("creates a standard and opens the enforcer", async ({ page }) => {
+  await page.goto("/standards", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "New standard" }).first().click();
+  await expect(page.getByPlaceholder("Standard title")).toBeVisible();
+  // The enforcer tab renders its scan summary.
+  await page.getByRole("tab", { name: "Enforcer" }).click();
+  await expect(page.getByText(/machine-checkable standard/i)).toBeVisible();
+});
