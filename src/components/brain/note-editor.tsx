@@ -84,11 +84,18 @@ export function NoteEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // The parent remounts this component per note (key={note.id}), so the
   // useState initializers above already give fresh state; `loaded` captures the
-  // initial snapshot for change detection.
+  // last-persisted snapshot and `latest` the most recent edits.
   const loaded = useRef(note);
+  const latest = useRef({
+    title: note.title,
+    body: note.body,
+    type: note.type,
+    tags: note.tags,
+  });
 
   // Debounced autosave — only when content actually changed.
   useEffect(() => {
+    latest.current = { title, body, type, tags };
     const l = loaded.current;
     if (l.id !== noteId) return;
     if (
@@ -105,6 +112,23 @@ export function NoteEditor({
     }, 450);
     return () => clearTimeout(handle);
   }, [title, body, type, tags, noteId]);
+
+  // Flush a still-pending edit on unmount (e.g. switching notes faster than the
+  // debounce) so the last keystrokes are never lost.
+  useEffect(() => {
+    return () => {
+      const l = loaded.current;
+      const cur = latest.current;
+      if (
+        cur.title !== l.title ||
+        cur.body !== l.body ||
+        cur.type !== l.type ||
+        !arraysEqual(cur.tags, l.tags)
+      ) {
+        void notesRepo.update(noteId, cur);
+      }
+    };
+  }, [noteId]);
 
   const suggestions: WikilinkSuggestion[] = useMemo(() => {
     if (!ac.open) return [];

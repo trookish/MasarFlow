@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Folder as FolderIcon,
   FolderPlus,
@@ -79,14 +79,35 @@ export function FolderTree({
 }: FolderTreeProps) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
+  // Guards against the blur handler firing a second time after Enter/Escape
+  // has already unmounted the input (the blur closure still holds the name).
+  const done = useRef(false);
 
   const unfiledCount = notes.filter((n) => !n.folderId).length;
 
-  function submit() {
+  function commit() {
+    if (done.current) return;
+    done.current = true;
     const trimmed = name.trim();
     if (trimmed) onCreateFolder(trimmed);
     setName("");
     setAdding(false);
+  }
+
+  function cancel() {
+    done.current = true;
+    setName("");
+    setAdding(false);
+  }
+
+  function toggleAdder() {
+    if (adding) {
+      cancel();
+    } else {
+      done.current = false;
+      setName("");
+      setAdding(true);
+    }
   }
 
   return (
@@ -98,7 +119,7 @@ export function FolderTree({
         <button
           type="button"
           aria-label="New folder"
-          onClick={() => setAdding((v) => !v)}
+          onClick={toggleAdder}
           className="text-muted-foreground hover:text-foreground"
         >
           <FolderPlus className="h-3.5 w-3.5" />
@@ -137,13 +158,10 @@ export function FolderTree({
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") submit();
-            if (e.key === "Escape") {
-              setAdding(false);
-              setName("");
-            }
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") cancel();
           }}
-          onBlur={submit}
+          onBlur={commit}
           placeholder="Folder name…"
           className="mt-1 h-8 w-full rounded-md border border-input bg-background px-2 text-sm outline-none"
         />
