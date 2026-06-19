@@ -11,6 +11,7 @@ import {
   memoriesRepo,
   commitsRepo,
   devLogsRepo,
+  docsRepo,
 } from "@/lib/db/repos";
 import type { Note } from "@/lib/db/schema";
 
@@ -437,6 +438,71 @@ export async function loadDemoData(): Promise<string> {
     type: "commit",
     title: "Dash i-frames landed",
     body: "Implemented the dash invincibility window (commit a1b2c3d).",
+  });
+
+  // ── Documentation ─────────────────────────────────────────────────────
+  await docsRepo.create({
+    projectId,
+    title: "Getting Started",
+    category: "guides",
+    body: [
+      "# Getting Started",
+      "",
+      "Welcome to **Aetheris**. This guide gets you from clone to first build.",
+      "",
+      "## Prerequisites",
+      "",
+      "- Unity 2022 LTS",
+      "- .NET 8 SDK",
+      "- Git LFS (assets are large)",
+      "",
+      "## Steps",
+      "",
+      "1. Clone the repo and run `git lfs pull`.",
+      "2. Open the project in Unity.",
+      "3. Press Play to enter the combat sandbox.",
+      "",
+      "> [!TIP]",
+      "> Use the `~` console to spawn enemies for quick iteration.",
+    ].join("\n"),
+  });
+  await docsRepo.create({
+    projectId,
+    title: "Combat System Overview",
+    category: "architecture",
+    body: [
+      "# Combat System",
+      "",
+      "The combat core drives all damage resolution. It feeds the ==AI Subsystem== and the boss director.",
+      "",
+      "## Damage pipeline",
+      "",
+      "| Stage | Owner | Notes |",
+      "|-------|-------|-------|",
+      "| Input | Input System | buffered 6 frames |",
+      "| Resolve | Combat Core | crit + armor |",
+      "| React | AI Subsystem | telegraph next move |",
+      "",
+      "See the [design notes](https://example.com/combat) for the full spec.",
+    ].join("\n"),
+  });
+  await docsRepo.create({
+    projectId,
+    title: "Save File Format",
+    category: "api",
+    body: [
+      "# Save File Format",
+      "",
+      "Saves are JSON, versioned by `schemaVersion`.",
+      "",
+      "```json",
+      '{ "schemaVersion": 3, "player": { "hp": 100 } }',
+      "```",
+      "",
+      "- [x] v1 — flat keys",
+      "- [x] v2 — nested player block",
+      "- [ ] v3 — inventory deltas",
+    ].join("\n"),
   });
 
   return projectId;

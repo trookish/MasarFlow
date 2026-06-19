@@ -64,6 +64,13 @@ test("creates a system and views the architecture diagram", async ({
   ).toBeVisible();
 });
 
+test("creates a doc in the Documentation hub", async ({ page }) => {
+  await page.goto("/docs", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "New doc" }).first().click();
+  // The doc editor opens with its title field.
+  await expect(page.getByPlaceholder("Untitled doc")).toBeVisible();
+});
+
 test("filters the cross-entity knowledge graph", async ({ page }) => {
   // Seed one note so the graph has data and the filter toolbar renders.
   await page.goto("/brain", { waitUntil: "domcontentloaded" });

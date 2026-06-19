@@ -1,12 +1,13 @@
-import { BookOpen } from "lucide-react";
-import { RouteShell } from "@/components/shell/route-shell";
+"use client";
+
+import { Suspense } from "react";
+import { DocsView } from "@/components/docs/docs-view";
 
 export default function DocsPage() {
+  // DocsView reads ?doc= via useSearchParams, which needs a Suspense boundary.
   return (
-    <RouteShell
-      icon={BookOpen}
-      title="Documentation"
-      description="Auto-generated system, API, and architecture docs are coming in a later milestone."
-    />
+    <Suspense fallback={null}>
+      <DocsView />
+    </Suspense>
   );
 }
