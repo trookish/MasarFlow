@@ -332,15 +332,23 @@ export async function loadDemoData(): Promise<string> {
     pattern: "\\bproto\\b",
   });
 
-  // ── Systems ───────────────────────────────────────────────────────────
+  // ── Systems (a small dependency graph for the Architecture diagram) ───
+  const inputSystem = await systemsRepo.create({
+    projectId,
+    name: "Input System",
+    description: "Buffered input with action mapping.",
+    category: "input",
+    health: 90,
+  });
   const combatCore = await systemsRepo.create({
     projectId,
     name: "Combat Core",
     description: "Owns the combat loop and hit resolution.",
     category: "core",
     health: 82,
+    dependencies: [inputSystem.id],
   });
-  await systemsRepo.create({
+  const aiSubsystem = await systemsRepo.create({
     projectId,
     name: "AI Subsystem",
     description: "Behavior-tree driven enemy logic.",
@@ -350,10 +358,20 @@ export async function loadDemoData(): Promise<string> {
   });
   await systemsRepo.create({
     projectId,
-    name: "Input System",
-    description: "Buffered input with action mapping.",
-    category: "input",
-    health: 90,
+    name: "Boss Director",
+    description: "Orchestrates multi-phase boss encounters.",
+    category: "ai",
+    health: 45,
+    status: "planned",
+    dependencies: [aiSubsystem.id, combatCore.id],
+  });
+  await systemsRepo.create({
+    projectId,
+    name: "Telemetry",
+    description: "Legacy event logging — slated for replacement.",
+    category: "tooling",
+    health: 28,
+    status: "deprecated",
   });
 
   // ── Commits ───────────────────────────────────────────────────────────

@@ -55,7 +55,7 @@ export const NAV_GROUPS: NavGroup[] = [
             href: "/brain/templates",
             icon: LayoutTemplate,
           },
-          { label: "Graph", href: "/brain/graph", icon: Network },
+          { label: "Graph", href: "/knowledge?categories=note", icon: Network },
         ],
       },
       {

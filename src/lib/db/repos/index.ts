@@ -9,6 +9,7 @@ export { tasksRepo } from "./tasks";
 export { sprintsRepo } from "./sprints";
 export { standardsRepo } from "./standards";
 export { systemsRepo } from "./systems";
+export { archRepo } from "./arch";
 export { memoriesRepo } from "./memories";
 export { commitsRepo } from "./commits";
 export { devLogsRepo } from "./devLogs";

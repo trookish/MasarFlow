@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   forceSimulation,
   forceManyBody,
@@ -13,7 +13,7 @@ import {
   type SimulationLinkDatum,
 } from "d3-force";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Maximize2, Network } from "lucide-react";
+import { Maximize2, Network, Search } from "lucide-react";
 import {
   notesRepo,
   specsRepo,
@@ -24,6 +24,7 @@ import {
 } from "@/lib/db/repos";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { GRAPH_VAR, GRAPH_KIND_LABEL, type GraphKind } from "@/lib/colors";
+import { cn } from "@/lib/utils/cn";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,9 +67,29 @@ const LEGEND: GraphKind[] = [
   "commit",
 ];
 
-export function KnowledgeGraph() {
+/** Filterable entity categories, with a label and a representative color. */
+const CATEGORIES: { id: EntityCategory; label: string; var: string }[] = [
+  { id: "note", label: "Notes", var: "--node-note" },
+  { id: "spec", label: "Specs", var: "--node-spec" },
+  { id: "task", label: "Tasks", var: "--node-task" },
+  { id: "system", label: "Systems", var: "--node-system" },
+  { id: "commit", label: "Commits", var: "--node-commit" },
+];
+const ALL_CATEGORIES = CATEGORIES.map((c) => c.id);
+
+function linkEnd(end: GLink["source"]): string {
+  return typeof end === "string" ? end : (end as GNode).key;
+}
+
+export function KnowledgeGraph({
+  initialCategories,
+}: {
+  /** Entity categories shown on first render. Defaults to all. */
+  initialCategories?: EntityCategory[];
+} = {}) {
   const projectId = useActiveProjectId();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const svgRef = useRef<SVGSVGElement>(null);
   const simRef = useRef<Simulation<GNode, GLink> | null>(null);
   const drag = useRef<{
@@ -84,6 +105,20 @@ export function KnowledgeGraph() {
   const [glinks, setGlinks] = useState<GLink[]>([]);
   const [transform, setTransform] = useState({ x: 0, y: 0, k: 1 });
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  const defaultCategories = useMemo(() => {
+    const catParam = searchParams.get("categories");
+    if (catParam) {
+      const cats = catParam.split(",") as EntityCategory[];
+      return cats.filter((c) => ALL_CATEGORIES.includes(c));
+    }
+    return initialCategories ?? ALL_CATEGORIES;
+  }, [searchParams, initialCategories]);
+
+  const [activeCats, setActiveCats] = useState<Set<EntityCategory>>(
+    () => new Set(defaultCategories),
+  );
+  const [query, setQuery] = useState("");
 
   const data = useLiveQuery(async () => {
     if (!projectId) return { nodes: [] as GNode[], links: [] as GLink[] };
@@ -145,10 +180,20 @@ export function KnowledgeGraph() {
     return { nodes, links: edges };
   }, [projectId]);
 
+  // Restrict the graph to the active entity categories. Links survive only when
+  // both endpoints are still visible.
+  const filtered = useMemo(() => {
+    const nodes = (data?.nodes ?? []).filter((n) => activeCats.has(n.category));
+    const visible = new Set(nodes.map((n) => n.key));
+    const links = (data?.links ?? []).filter(
+      (l) => visible.has(linkEnd(l.source)) && visible.has(linkEnd(l.target)),
+    );
+    return { nodes, links };
+  }, [data, activeCats]);
+
   useEffect(() => {
-    if (!data) return;
-    const nodes = data.nodes.map((n) => ({ ...n }));
-    const links = data.links.map((l) => ({ ...l }));
+    const nodes = filtered.nodes.map((n) => ({ ...n }));
+    const links = filtered.links.map((l) => ({ ...l }));
     // Seed React state from the d3-force simulation (an external system that
     // owns layout and mutates these objects on every tick).
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -171,7 +216,7 @@ export function KnowledgeGraph() {
     return () => {
       sim.stop();
     };
-  }, [data]);
+  }, [filtered]);
 
   const selectedNode: SelectedGraphNode | null = (() => {
     const n = gnodes.find((x) => x.key === selectedKey);
@@ -259,14 +304,24 @@ export function KnowledgeGraph() {
   function openEntity(category: EntityCategory, refId: string) {
     const routes: Record<EntityCategory, string> = {
       note: `/brain?note=${refId}`,
-      spec: "/specs",
-      task: "/tasks",
-      system: "/architecture",
+      spec: `/specs?spec=${refId}`,
+      task: `/tasks?task=${refId}`,
+      system: `/architecture?system=${refId}`,
       commit: "/dashboard",
     };
     router.push(routes[category]);
   }
 
+  function toggleCat(cat: EntityCategory) {
+    setActiveCats((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  }
+
+  const q = query.trim().toLowerCase();
   const hasData = (data?.nodes.length ?? 0) > 0;
 
   return (
@@ -280,6 +335,46 @@ export function KnowledgeGraph() {
           />
         ) : (
           <>
+            <div className="absolute top-3 left-3 z-10 flex max-w-[60%] flex-col gap-2">
+              <div className="relative">
+                <Search className="absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Focus nodes…"
+                  className="h-8 w-56 rounded-md border border-border bg-card/80 pr-2 pl-7 text-sm outline-none backdrop-blur placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+                />
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {CATEGORIES.map((c) => {
+                  const on = activeCats.has(c.id);
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => toggleCat(c.id)}
+                      aria-pressed={on}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] backdrop-blur transition-colors",
+                        on
+                          ? "border-border bg-card/80 text-foreground"
+                          : "border-transparent bg-card/40 text-muted-foreground/60",
+                      )}
+                    >
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{
+                          background: on ? `var(${c.var})` : "currentColor",
+                          opacity: on ? 1 : 0.4,
+                        }}
+                      />
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="absolute top-3 right-3 z-10">
               <Button
                 variant="outline"
@@ -333,11 +428,13 @@ export function KnowledgeGraph() {
                 {gnodes.map((n) => {
                   if (n.x == null || n.y == null) return null;
                   const selected = n.key === selectedKey;
+                  const dimmed = q !== "" && !n.label.toLowerCase().includes(q);
                   return (
                     <g
                       key={n.key}
                       transform={`translate(${n.x},${n.y})`}
                       className="cursor-pointer"
+                      opacity={dimmed ? 0.2 : 1}
                       onPointerDown={(e) => onPointerDownNode(e, n)}
                       onClick={(e) => {
                         e.stopPropagation();

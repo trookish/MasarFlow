@@ -1,7 +1,12 @@
 "use client";
 
-import { KnowledgeGraph } from "@/components/brain/knowledge-graph";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function BrainGraphPage() {
-  return <KnowledgeGraph />;
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/knowledge?categories=note");
+  }, [router]);
+  return null;
 }

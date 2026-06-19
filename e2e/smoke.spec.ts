@@ -50,3 +50,27 @@ test("creates a standard and opens the enforcer", async ({ page }) => {
   await page.getByRole("tab", { name: "Enforcer" }).click();
   await expect(page.getByText(/machine-checkable standard/i)).toBeVisible();
 });
+
+test("creates a system and views the architecture diagram", async ({
+  page,
+}) => {
+  await page.goto("/architecture", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "New system" }).first().click();
+  await expect(page.getByPlaceholder("System name")).toBeVisible();
+  // The Diagram tab renders the live dependency graph once a system exists.
+  await page.getByRole("tab", { name: "Diagram" }).click();
+  await expect(
+    page.getByRole("button", { name: "Auto-arrange" }),
+  ).toBeVisible();
+});
+
+test("filters the cross-entity knowledge graph", async ({ page }) => {
+  // Seed one note so the graph has data and the filter toolbar renders.
+  await page.goto("/brain", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "New note" }).first().click();
+  await expect(page.getByPlaceholder("Untitled note")).toBeVisible();
+
+  await page.goto("/knowledge", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("button", { name: "Notes" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Systems" })).toBeVisible();
+});
