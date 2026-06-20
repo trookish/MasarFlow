@@ -427,18 +427,57 @@ export async function loadDemoData(): Promise<string> {
   });
 
   // ── Dev logs ──────────────────────────────────────────────────────────
-  await devLogsRepo.create({
-    projectId,
-    type: "spec",
-    title: "RFC-001 approved",
-    body: "Combat loop spec approved and moved to implementation.",
-  });
-  await devLogsRepo.create({
-    projectId,
-    type: "commit",
-    title: "Dash i-frames landed",
-    body: "Implemented the dash invincibility window (commit a1b2c3d).",
-  });
+  // A multi-day timeline across types, some linked to real entities.
+  const nowTs = Date.now();
+  const devLogRows: Array<Parameters<typeof devLogsRepo.create>[0]> = [
+    {
+      projectId,
+      type: "commit",
+      title: "Dash i-frames landed",
+      body: "Implemented the dash invincibility window (commit `a1b2c3d`).",
+      createdAt: nowTs - 2 * 3_600_000,
+    },
+    {
+      projectId,
+      type: "change",
+      title: "Refactored damage pipeline",
+      body: "Split resolve/react stages so the **AI Subsystem** can react one frame earlier.",
+      createdAt: nowTs - 5 * 3_600_000,
+    },
+    {
+      projectId,
+      type: "spec",
+      title: "RFC-001 approved",
+      body: "Combat loop spec approved and moved to implementation.",
+      refType: "spec",
+      refId: rfc1.id,
+      createdAt: nowTs - DAY - 3 * 3_600_000,
+    },
+    {
+      projectId,
+      type: "system",
+      title: "Combat Core health raised to 82",
+      body: "Crit rounding bug fixed; coverage back above target.",
+      refType: "system",
+      refId: combatCore.id,
+      createdAt: nowTs - DAY - 6 * 3_600_000,
+    },
+    {
+      projectId,
+      type: "task",
+      title: "Added telemetry opt-out",
+      body: "Players can now disable analytics in settings.",
+      createdAt: nowTs - 3 * DAY,
+    },
+    {
+      projectId,
+      type: "change",
+      title: "Migrated save format to v3",
+      body: "Inventory now stored as deltas — see the Save File Format doc.",
+      createdAt: nowTs - 3 * DAY - 2 * 3_600_000,
+    },
+  ];
+  for (const row of devLogRows) await devLogsRepo.create(row);
 
   // ── Documentation ─────────────────────────────────────────────────────
   await docsRepo.create({

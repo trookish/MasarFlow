@@ -13,6 +13,9 @@ export const devLogsRepo = {
       .reverse()
       .sortBy("createdAt");
   },
+  get(id: string): Promise<DevLog | undefined> {
+    return db.devLogs.get(id);
+  },
   async create(input: DevLogInput): Promise<DevLog> {
     const devLog = devLogSchema.parse({
       ...input,
@@ -21,6 +24,9 @@ export const devLogsRepo = {
     });
     await db.devLogs.add(devLog);
     return devLog;
+  },
+  async update(id: string, patch: Partial<DevLog>): Promise<void> {
+    await db.devLogs.update(id, patch);
   },
   async remove(id: string): Promise<void> {
     await db.devLogs.delete(id);

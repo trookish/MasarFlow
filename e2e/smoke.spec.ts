@@ -71,6 +71,13 @@ test("creates a doc in the Documentation hub", async ({ page }) => {
   await expect(page.getByPlaceholder("Untitled doc")).toBeVisible();
 });
 
+test("adds an entry in the Dev Logs timeline", async ({ page }) => {
+  await page.goto("/devlogs", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "New entry" }).first().click();
+  // The composer opens with its title field.
+  await expect(page.getByPlaceholder("What happened?")).toBeVisible();
+});
+
 test("filters the cross-entity knowledge graph", async ({ page }) => {
   // Seed one note so the graph has data and the filter toolbar renders.
   await page.goto("/brain", { waitUntil: "domcontentloaded" });
