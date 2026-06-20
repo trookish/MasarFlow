@@ -12,6 +12,7 @@ import {
   Flag,
   Bot,
   Workflow,
+  MessageSquare,
   BookOpen,
   ScrollText,
   RefreshCw,
@@ -84,6 +85,12 @@ export const NAV_GROUPS: NavGroup[] = [
         keywords: ["kanban", "tasks"],
       },
       { label: "Sprints", href: "/sprints", icon: Flag },
+      {
+        label: "Chat",
+        href: "/chat",
+        icon: MessageSquare,
+        keywords: ["ai", "claude", "openai", "openrouter", "llm", "providers"],
+      },
       { label: "AI Agents", href: "/agents", icon: Bot },
       {
         label: "AI Workflow",

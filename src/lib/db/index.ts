@@ -26,6 +26,9 @@ import type {
   Attachment,
   WatchEvent,
   PluginState,
+  AiConnection,
+  ChatThread,
+  ChatMessage,
 } from "./schema";
 
 /**
@@ -59,6 +62,9 @@ export class MasarFlowDB extends Dexie {
   attachments!: EntityTable<Attachment, "id">;
   watchEvents!: EntityTable<WatchEvent, "id">;
   plugins!: EntityTable<PluginState, "id">;
+  aiConnections!: EntityTable<AiConnection, "id">;
+  chatThreads!: EntityTable<ChatThread, "id">;
+  chatMessages!: EntityTable<ChatMessage, "id">;
 
   constructor() {
     super("masarflow");
@@ -97,6 +103,12 @@ export class MasarFlowDB extends Dexie {
     // v3: per-project plugin install/enable state (additive).
     this.version(3).stores({
       plugins: "id, projectId, pluginId, [projectId+pluginId]",
+    });
+    // v4: Chat — provider connections, threads, and messages (additive).
+    this.version(4).stores({
+      aiConnections: "id, providerId, updatedAt",
+      chatThreads: "id, projectId, connectionId, updatedAt",
+      chatMessages: "id, threadId, createdAt",
     });
   }
 }

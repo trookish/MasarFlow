@@ -460,3 +460,36 @@ export const pluginStateSchema = z.object({
   updatedAt: z.number(),
 });
 export type PluginState = z.infer<typeof pluginStateSchema>;
+
+/** A user-configured connection to an AI provider (key stored locally). */
+export const aiConnectionSchema = z.object({
+  id: z.string(),
+  providerId: z.string(),
+  label: z.string(),
+  apiKey: z.string().default(""),
+  baseUrl: z.string().default(""),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+export type AiConnection = z.infer<typeof aiConnectionSchema>;
+
+export const chatThreadSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  title: z.string().default("New chat"),
+  connectionId: z.string(),
+  modelId: z.string(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+export type ChatThread = z.infer<typeof chatThreadSchema>;
+
+export const chatMessageSchema = z.object({
+  id: z.string(),
+  threadId: z.string(),
+  role: z.enum(["system", "user", "assistant"]),
+  content: z.string().default(""),
+  error: z.string().nullable().default(null),
+  createdAt: z.number(),
+});
+export type ChatMessage = z.infer<typeof chatMessageSchema>;

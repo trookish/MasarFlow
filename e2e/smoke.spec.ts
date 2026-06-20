@@ -127,6 +127,12 @@ test("installs a plugin from the marketplace", async ({ page }) => {
   await expect(page.getByText(/1 installed/)).toBeVisible();
 });
 
+test("opens the Chat module", async ({ page }) => {
+  await page.goto("/chat", { waitUntil: "domcontentloaded" });
+  // The sidebar's New chat button always renders.
+  await expect(page.getByRole("button", { name: "New chat" })).toBeVisible();
+});
+
 test("filters the cross-entity knowledge graph", async ({ page }) => {
   // Seed one note so the graph has data and the filter toolbar renders.
   await page.goto("/brain", { waitUntil: "domcontentloaded" });

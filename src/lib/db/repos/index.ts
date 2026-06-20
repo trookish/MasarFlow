@@ -17,3 +17,8 @@ export { docsRepo } from "./docs";
 export { syncRepo } from "./sync";
 export { watchEventsRepo } from "./watchEvents";
 export { pluginsRepo } from "./plugins";
+export {
+  aiConnectionsRepo,
+  chatThreadsRepo,
+  chatMessagesRepo,
+} from "./chat";
