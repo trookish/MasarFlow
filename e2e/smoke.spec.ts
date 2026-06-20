@@ -78,6 +78,18 @@ test("adds an entry in the Dev Logs timeline", async ({ page }) => {
   await expect(page.getByPlaceholder("What happened?")).toBeVisible();
 });
 
+test("scans the workspace into the Sync Panel", async ({ page }) => {
+  // Seed a note so the scan produces at least one vault file.
+  await page.goto("/brain", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "New note" }).first().click();
+  await expect(page.getByPlaceholder("Untitled note")).toBeVisible();
+
+  await page.goto("/sync", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "Scan workspace" }).first().click();
+  // A markdown vault file row appears for the note.
+  await expect(page.getByText(/notes\/.*\.md/)).toBeVisible();
+});
+
 test("filters the cross-entity knowledge graph", async ({ page }) => {
   // Seed one note so the graph has data and the filter toolbar renders.
   await page.goto("/brain", { waitUntil: "domcontentloaded" });

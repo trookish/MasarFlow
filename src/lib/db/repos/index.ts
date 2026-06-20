@@ -14,3 +14,4 @@ export { memoriesRepo } from "./memories";
 export { commitsRepo } from "./commits";
 export { devLogsRepo } from "./devLogs";
 export { docsRepo } from "./docs";
+export { syncRepo } from "./sync";
