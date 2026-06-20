@@ -24,6 +24,7 @@ import type {
   CanvasEdge,
   SyncFile,
   Attachment,
+  WatchEvent,
 } from "./schema";
 
 /**
@@ -55,6 +56,7 @@ export class MasarFlowDB extends Dexie {
   canvasEdges!: EntityTable<CanvasEdge, "id">;
   syncFiles!: EntityTable<SyncFile, "id">;
   attachments!: EntityTable<Attachment, "id">;
+  watchEvents!: EntityTable<WatchEvent, "id">;
 
   constructor() {
     super("masarflow");
@@ -85,6 +87,10 @@ export class MasarFlowDB extends Dexie {
       canvasEdges: "id, canvasId, source, target",
       syncFiles: "id, projectId, path, status",
       attachments: "id, projectId",
+    });
+    // v2: Project Watcher change feed (additive — preserves existing data).
+    this.version(2).stores({
+      watchEvents: "id, projectId, kind, fileType, createdAt",
     });
   }
 }

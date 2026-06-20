@@ -90,6 +90,15 @@ test("scans the workspace into the Sync Panel", async ({ page }) => {
   await expect(page.getByText(/notes\/.*\.md/)).toBeVisible();
 });
 
+test("simulates a change in the Project Watcher", async ({ page }) => {
+  await page.goto("/watcher", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "Simulate change" }).first().click();
+  // A file-change event row appears in the feed.
+  await expect(
+    page.getByText(/src\/|assets\/|scenes\/|shaders\/|config\/|docs\//).first(),
+  ).toBeVisible();
+});
+
 test("filters the cross-entity knowledge graph", async ({ page }) => {
   // Seed one note so the graph has data and the filter toolbar renders.
   await page.goto("/brain", { waitUntil: "domcontentloaded" });

@@ -104,7 +104,12 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: RefreshCw,
         keywords: ["obsidian", "github"],
       },
-      { label: "Unity Watcher", href: "/watcher", icon: Eye },
+      {
+        label: "Project Watcher",
+        href: "/watcher",
+        icon: Eye,
+        keywords: ["unity", "files", "watch", "changes"],
+      },
       {
         label: "Semantic Search",
         href: "/search",

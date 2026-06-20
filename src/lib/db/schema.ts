@@ -433,3 +433,19 @@ export const attachmentSchema = z.object({
   createdAt: z.number(),
 });
 export type Attachment = z.infer<typeof attachmentSchema>;
+
+export const watchEventSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  path: z.string(),
+  kind: z.enum(["created", "modified", "deleted"]).default("modified"),
+  fileType: z
+    .enum(["code", "asset", "scene", "shader", "config", "doc", "other"])
+    .default("other"),
+  /** Optional mapping to a system in the Architecture catalog. */
+  systemId: z.string().nullable().default(null),
+  createdAt: z.number(),
+});
+export type WatchEvent = z.infer<typeof watchEventSchema>;
+export type WatchKind = WatchEvent["kind"];
+export type WatchFileType = WatchEvent["fileType"];

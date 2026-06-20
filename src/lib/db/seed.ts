@@ -12,8 +12,10 @@ import {
   commitsRepo,
   devLogsRepo,
   docsRepo,
+  watchEventsRepo,
 } from "@/lib/db/repos";
 import type { Note } from "@/lib/db/schema";
+import { inferFileType } from "@/lib/watcher";
 
 const DEMO_SLUG = "aetheris-demo";
 const DAY = 86_400_000;
@@ -543,6 +545,33 @@ export async function loadDemoData(): Promise<string> {
       "- [ ] v3 — inventory deltas",
     ].join("\n"),
   });
+
+  // ── Project Watcher events ────────────────────────────────────────────
+  const watchRows: Array<{
+    path: string;
+    kind: "created" | "modified" | "deleted";
+    systemId: string | null;
+    agoMs: number;
+  }> = [
+    { path: "src/combat/CombatCore.cs", kind: "modified", systemId: combatCore.id, agoMs: 4 * 60_000 },
+    { path: "config/balance.json", kind: "modified", systemId: combatCore.id, agoMs: 12 * 60_000 },
+    { path: "src/ai/EnemyBehaviour.cs", kind: "modified", systemId: aiSubsystem.id, agoMs: 26 * 60_000 },
+    { path: "assets/textures/hero_albedo.png", kind: "created", systemId: null, agoMs: 55 * 60_000 },
+    { path: "src/input/InputSystem.cs", kind: "modified", systemId: inputSystem.id, agoMs: 90 * 60_000 },
+    { path: "scenes/Old_Arena.scene", kind: "deleted", systemId: null, agoMs: 3 * 3_600_000 },
+    { path: "shaders/Dissolve.shader", kind: "created", systemId: null, agoMs: 5 * 3_600_000 },
+  ];
+  const watchNow = Date.now();
+  for (const w of watchRows) {
+    await watchEventsRepo.create({
+      projectId,
+      path: w.path,
+      kind: w.kind,
+      fileType: inferFileType(w.path),
+      systemId: w.systemId,
+      createdAt: watchNow - w.agoMs,
+    });
+  }
 
   return projectId;
 }
