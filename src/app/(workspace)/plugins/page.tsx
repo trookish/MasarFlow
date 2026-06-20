@@ -1,12 +1,7 @@
-import { Plug } from "lucide-react";
-import { RouteShell } from "@/components/shell/route-shell";
+"use client";
+
+import { PluginsView } from "@/components/plugins/plugins-view";
 
 export default function PluginsPage() {
-  return (
-    <RouteShell
-      icon={Plug}
-      title="Plugins"
-      description="Extend MasarFlow with plugins. Coming in a later milestone."
-    />
-  );
+  return <PluginsView />;
 }

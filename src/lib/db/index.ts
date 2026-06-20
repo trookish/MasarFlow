@@ -25,6 +25,7 @@ import type {
   SyncFile,
   Attachment,
   WatchEvent,
+  PluginState,
 } from "./schema";
 
 /**
@@ -57,6 +58,7 @@ export class MasarFlowDB extends Dexie {
   syncFiles!: EntityTable<SyncFile, "id">;
   attachments!: EntityTable<Attachment, "id">;
   watchEvents!: EntityTable<WatchEvent, "id">;
+  plugins!: EntityTable<PluginState, "id">;
 
   constructor() {
     super("masarflow");
@@ -91,6 +93,10 @@ export class MasarFlowDB extends Dexie {
     // v2: Project Watcher change feed (additive — preserves existing data).
     this.version(2).stores({
       watchEvents: "id, projectId, kind, fileType, createdAt",
+    });
+    // v3: per-project plugin install/enable state (additive).
+    this.version(3).stores({
+      plugins: "id, projectId, pluginId, [projectId+pluginId]",
     });
   }
 }

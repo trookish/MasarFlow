@@ -16,3 +16,4 @@ export { devLogsRepo } from "./devLogs";
 export { docsRepo } from "./docs";
 export { syncRepo } from "./sync";
 export { watchEventsRepo } from "./watchEvents";
+export { pluginsRepo } from "./plugins";

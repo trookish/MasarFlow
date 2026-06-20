@@ -449,3 +449,14 @@ export const watchEventSchema = z.object({
 export type WatchEvent = z.infer<typeof watchEventSchema>;
 export type WatchKind = WatchEvent["kind"];
 export type WatchFileType = WatchEvent["fileType"];
+
+export const pluginStateSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  pluginId: z.string(),
+  enabled: z.boolean().default(true),
+  settings: z.record(z.string(), z.union([z.string(), z.boolean()])).default({}),
+  installedAt: z.number(),
+  updatedAt: z.number(),
+});
+export type PluginState = z.infer<typeof pluginStateSchema>;

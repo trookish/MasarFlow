@@ -116,6 +116,17 @@ test("searches across the workspace in Semantic Search", async ({ page }) => {
   await expect(page.getByText(/\d+ result/)).toBeVisible();
 });
 
+test("installs a plugin from the marketplace", async ({ page }) => {
+  await page.goto("/plugins", { waitUntil: "domcontentloaded" });
+  // Exact match so we don't hit the "Installed" filter chip.
+  await page
+    .getByRole("button", { name: "Install", exact: true })
+    .first()
+    .click();
+  // The toolbar count reflects the newly installed plugin.
+  await expect(page.getByText(/1 installed/)).toBeVisible();
+});
+
 test("filters the cross-entity knowledge graph", async ({ page }) => {
   // Seed one note so the graph has data and the filter toolbar renders.
   await page.goto("/brain", { waitUntil: "domcontentloaded" });
