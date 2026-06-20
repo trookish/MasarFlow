@@ -99,6 +99,23 @@ test("simulates a change in the Project Watcher", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("searches across the workspace in Semantic Search", async ({ page }) => {
+  // A new note persists with the title "Untitled note" on creation (no autosave
+  // needed), so the search corpus has a deterministic match.
+  await page.goto("/brain", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "New note" }).first().click();
+  await expect(page.getByPlaceholder("Untitled note")).toBeVisible();
+
+  await page.goto("/search", { waitUntil: "domcontentloaded" });
+  // Wait until the corpus has loaded (empty-query state shows "N items") so the
+  // controlled input is hydrated before we type.
+  await expect(page.getByText(/\d+ item/)).toBeVisible();
+  const box = page.getByPlaceholder(/Search across/);
+  await box.click();
+  await box.pressSequentially("untitled");
+  await expect(page.getByText(/\d+ result/)).toBeVisible();
+});
+
 test("filters the cross-entity knowledge graph", async ({ page }) => {
   // Seed one note so the graph has data and the filter toolbar renders.
   await page.goto("/brain", { waitUntil: "domcontentloaded" });

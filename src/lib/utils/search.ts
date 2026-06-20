@@ -6,6 +6,8 @@ import {
   standardsRepo,
   memoriesRepo,
   devLogsRepo,
+  docsRepo,
+  systemsRepo,
 } from "@/lib/db/repos";
 import { stripMarkdown } from "./markdown";
 
@@ -15,7 +17,9 @@ export type SearchKind =
   | "task"
   | "standard"
   | "memory"
-  | "devlog";
+  | "devlog"
+  | "doc"
+  | "system";
 
 export interface SearchItem {
   id: string;
@@ -33,6 +37,8 @@ const KIND_LABEL: Record<SearchKind, string> = {
   standard: "Standard",
   memory: "Memory",
   devlog: "Dev Log",
+  doc: "Doc",
+  system: "System",
 };
 
 export function kindLabel(kind: SearchKind): string {
@@ -44,16 +50,17 @@ export async function buildSearchItems(
   projectId?: string | null,
 ): Promise<SearchItem[]> {
   if (!projectId) return [];
-  const [notes, specs, tasks, standards, memories, devLogs] = await Promise.all(
-    [
+  const [notes, specs, tasks, standards, memories, devLogs, docs, systems] =
+    await Promise.all([
       notesRepo.listByProject(projectId),
       specsRepo.listByProject(projectId),
       tasksRepo.listByProject(projectId),
       standardsRepo.listByProject(projectId),
       memoriesRepo.listByProject(projectId),
       devLogsRepo.listByProject(projectId),
-    ],
-  );
+      docsRepo.listByProject(projectId),
+      systemsRepo.listByProject(projectId),
+    ]);
 
   const items: SearchItem[] = [];
 
@@ -117,6 +124,26 @@ export async function buildSearchItems(
       href: `/devlogs`,
     });
   }
+  for (const d of docs) {
+    items.push({
+      id: d.id,
+      kind: "doc",
+      title: d.title,
+      subtitle: d.category,
+      body: stripMarkdown(d.body),
+      href: `/docs?doc=${d.id}`,
+    });
+  }
+  for (const s of systems) {
+    items.push({
+      id: s.id,
+      kind: "system",
+      title: s.name,
+      subtitle: `${s.category} · ${s.status}`,
+      body: s.description,
+      href: `/architecture?system=${s.id}`,
+    });
+  }
 
   return items;
 }
@@ -132,5 +159,7 @@ export function createSearchIndex(items: SearchItem[]): Fuse<SearchItem> {
     threshold: 0.4,
     ignoreLocation: true,
     minMatchCharLength: 2,
+    includeScore: true,
+    includeMatches: true,
   });
 }
