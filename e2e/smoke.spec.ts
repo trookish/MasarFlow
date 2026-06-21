@@ -140,6 +140,13 @@ test("shows the AI Agents roster", async ({ page }) => {
   await expect(page.getByText("Reviewer")).toBeVisible();
 });
 
+test("opens the AI Workflow pipeline", async ({ page }) => {
+  await page.goto("/workflow", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "New workflow" }).first().click();
+  // The new-run form shows the idea field.
+  await expect(page.getByPlaceholder(/spaced-repetition/i)).toBeVisible();
+});
+
 test("filters the cross-entity knowledge graph", async ({ page }) => {
   // Seed one note so the graph has data and the filter toolbar renders.
   await page.goto("/brain", { waitUntil: "domcontentloaded" });

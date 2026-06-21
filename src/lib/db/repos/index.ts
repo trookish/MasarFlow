@@ -23,3 +23,4 @@ export {
   chatMessagesRepo,
 } from "./chat";
 export { agentsRepo, agentRunsRepo } from "./agents";
+export { workflowRepo } from "./workflow";

@@ -1,12 +1,7 @@
-import { Workflow } from "lucide-react";
-import { RouteShell } from "@/components/shell/route-shell";
+"use client";
+
+import { WorkflowView } from "@/components/workflow/workflow-view";
 
 export default function WorkflowPage() {
-  return (
-    <RouteShell
-      icon={Workflow}
-      title="AI Workflow"
-      description="The 16-step idea-to-implementation workflow is planned for a later milestone."
-    />
-  );
+  return <WorkflowView />;
 }

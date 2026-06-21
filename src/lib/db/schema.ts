@@ -493,3 +493,28 @@ export const chatMessageSchema = z.object({
   createdAt: z.number(),
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
+
+/** A run of the 16-step idea → implementation workflow. */
+export const workflowRunSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  title: z.string().default("Untitled workflow"),
+  idea: z.string().default(""),
+  connectionId: z.string(),
+  modelId: z.string(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+export type WorkflowRun = z.infer<typeof workflowRunSchema>;
+
+export const workflowStepSchema = z.object({
+  id: z.string(),
+  runId: z.string(),
+  stepKey: z.string(),
+  order: z.number(),
+  status: z.enum(["pending", "running", "done", "error"]).default("pending"),
+  output: z.string().default(""),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+export type WorkflowStep = z.infer<typeof workflowStepSchema>;

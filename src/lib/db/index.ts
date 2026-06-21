@@ -29,6 +29,8 @@ import type {
   AiConnection,
   ChatThread,
   ChatMessage,
+  WorkflowRun,
+  WorkflowStep,
 } from "./schema";
 
 /**
@@ -65,6 +67,8 @@ export class MasarFlowDB extends Dexie {
   aiConnections!: EntityTable<AiConnection, "id">;
   chatThreads!: EntityTable<ChatThread, "id">;
   chatMessages!: EntityTable<ChatMessage, "id">;
+  workflowRuns!: EntityTable<WorkflowRun, "id">;
+  workflowSteps!: EntityTable<WorkflowStep, "id">;
 
   constructor() {
     super("masarflow");
@@ -109,6 +113,11 @@ export class MasarFlowDB extends Dexie {
       aiConnections: "id, providerId, updatedAt",
       chatThreads: "id, projectId, connectionId, updatedAt",
       chatMessages: "id, threadId, createdAt",
+    });
+    // v5: AI Workflow — pipeline runs and their steps (additive).
+    this.version(5).stores({
+      workflowRuns: "id, projectId, updatedAt",
+      workflowSteps: "id, runId, order",
     });
   }
 }
