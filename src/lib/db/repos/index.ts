@@ -22,3 +22,4 @@ export {
   chatThreadsRepo,
   chatMessagesRepo,
 } from "./chat";
+export { agentsRepo, agentRunsRepo } from "./agents";

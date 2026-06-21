@@ -133,6 +133,13 @@ test("opens the Chat module", async ({ page }) => {
   await expect(page.getByRole("button", { name: "New chat" })).toBeVisible();
 });
 
+test("shows the AI Agents roster", async ({ page }) => {
+  await page.goto("/agents", { waitUntil: "domcontentloaded" });
+  // The roster seeds specialized agents on first load.
+  await expect(page.getByText("Architect")).toBeVisible();
+  await expect(page.getByText("Reviewer")).toBeVisible();
+});
+
 test("filters the cross-entity knowledge graph", async ({ page }) => {
   // Seed one note so the graph has data and the filter toolbar renders.
   await page.goto("/brain", { waitUntil: "domcontentloaded" });
