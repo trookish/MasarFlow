@@ -7,6 +7,7 @@ import { Plus, BookOpen, Search } from "lucide-react";
 import { docsRepo } from "@/lib/db/repos";
 import type { Doc } from "@/lib/db/schema";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { usePageSettings } from "@/lib/stores/page-settings";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ export function DocsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedId = searchParams.get("doc");
+  const { defaultMode, showLineNumbers } = usePageSettings((s) => s.docs);
   const [query, setQuery] = useState("");
 
   const docsRaw = useLiveQuery(
@@ -137,7 +139,13 @@ export function DocsView() {
       {/* Editor */}
       <div className="min-w-0 flex-1">
         {selected ? (
-          <DocEditor key={selected.id} doc={selected} onDelete={deleteDoc} />
+          <DocEditor
+            key={selected.id}
+            doc={selected}
+            onDelete={deleteDoc}
+            defaultMode={defaultMode}
+            showLineNumbers={showLineNumbers}
+          />
         ) : (
           <EmptyState
             icon={BookOpen}

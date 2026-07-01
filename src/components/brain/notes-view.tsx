@@ -104,8 +104,22 @@ export function NotesView() {
 
   return (
     <div className="flex h-full">
-      {/* Left pane */}
-      <div className="flex w-72 shrink-0 flex-col border-r border-border">
+      {/* Folders column */}
+      <div className="flex w-52 shrink-0 flex-col border-r border-border">
+        <ScrollArea className="flex-1">
+          <FolderTree
+            folders={folders}
+            notes={allNotes}
+            selected={folder}
+            onSelect={setFolder}
+            onCreateFolder={createFolder}
+            onDeleteFolder={deleteFolder}
+          />
+        </ScrollArea>
+      </div>
+
+      {/* Notes column */}
+      <div className="flex w-64 shrink-0 flex-col border-r border-border">
         <div className="flex items-center gap-2 border-b border-border p-2">
           <div className="relative flex-1">
             <Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -126,19 +140,7 @@ export function NotesView() {
           </Button>
         </div>
         <ScrollArea className="flex-1">
-          <FolderTree
-            folders={folders}
-            notes={allNotes}
-            selected={folder}
-            onSelect={setFolder}
-            onCreateFolder={createFolder}
-            onDeleteFolder={deleteFolder}
-          />
-          <NoteList
-            notes={filtered}
-            selectedId={selectedId}
-            onSelect={select}
-          />
+          <NoteList notes={filtered} selectedId={selectedId} onSelect={select} />
         </ScrollArea>
       </div>
 

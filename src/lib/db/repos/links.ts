@@ -18,7 +18,8 @@ export const linksRepo = {
   },
 
   async create(
-    input: Omit<Link, "id" | "createdAt"> & Partial<Pick<Link, "id">>,
+    input: Omit<Link, "id" | "createdAt" | "label"> &
+      Partial<Pick<Link, "id" | "label">>,
   ): Promise<Link> {
     const link: Link = {
       id: input.id ?? uuid(),

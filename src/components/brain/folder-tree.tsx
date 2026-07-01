@@ -27,6 +27,7 @@ function Row({
   icon,
   label,
   count,
+  depth = 0,
   onClick,
   onDelete,
 }: {
@@ -34,6 +35,7 @@ function Row({
   icon: React.ReactNode;
   label: string;
   count: number;
+  depth?: number;
   onClick: () => void;
   onDelete?: () => void;
 }) {
@@ -45,6 +47,7 @@ function Row({
           ? "bg-accent font-medium text-foreground"
           : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
       )}
+      style={depth ? { paddingLeft: depth * 14 + 8 } : undefined}
       onClick={onClick}
     >
       {icon}
@@ -85,6 +88,29 @@ export function FolderTree({
 
   const unfiledCount = notes.filter((n) => !n.folderId).length;
 
+  // Render the folder forest depth-first so nested vault folders stay nested.
+  function renderFolders(
+    parentId: string | null,
+    depth: number,
+  ): React.ReactNode[] {
+    return folders
+      .filter((f) => (f.parentId ?? null) === parentId)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .flatMap((f) => [
+        <Row
+          key={f.id}
+          active={selected === f.id}
+          icon={<FolderIcon className="h-4 w-4" />}
+          label={f.name}
+          count={notes.filter((n) => n.folderId === f.id).length}
+          depth={depth}
+          onClick={() => onSelect(f.id)}
+          onDelete={() => onDeleteFolder(f.id)}
+        />,
+        ...renderFolders(f.id, depth + 1),
+      ]);
+  }
+
   function commit() {
     if (done.current) return;
     done.current = true;
@@ -111,7 +137,7 @@ export function FolderTree({
   }
 
   return (
-    <div className="space-y-0.5 border-b border-border p-2">
+    <div className="space-y-0.5 p-2">
       <div className="flex items-center justify-between px-2 py-1">
         <span className="text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase">
           Folders
@@ -133,17 +159,7 @@ export function FolderTree({
         count={notes.length}
         onClick={() => onSelect("all")}
       />
-      {folders.map((f) => (
-        <Row
-          key={f.id}
-          active={selected === f.id}
-          icon={<FolderIcon className="h-4 w-4" />}
-          label={f.name}
-          count={notes.filter((n) => n.folderId === f.id).length}
-          onClick={() => onSelect(f.id)}
-          onDelete={() => onDeleteFolder(f.id)}
-        />
-      ))}
+      {renderFolders(null, 0)}
       <Row
         active={selected === "unfiled"}
         icon={<Inbox className="h-4 w-4" />}

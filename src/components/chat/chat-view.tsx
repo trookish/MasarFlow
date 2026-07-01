@@ -15,13 +15,17 @@ import {
   Bot,
   User,
   AlertCircle,
+  Wrench,
+  Check,
+  X,
+  Sparkles,
 } from "lucide-react";
 import {
   aiConnectionsRepo,
   chatThreadsRepo,
   chatMessagesRepo,
 } from "@/lib/db/repos";
-import type { AiConnection } from "@/lib/db/schema";
+import type { AiConnection, ToolActivity } from "@/lib/db/schema";
 import {
   fetchCatalog,
   modelsForProvider,
@@ -29,8 +33,14 @@ import {
   type Catalog,
   type AiProvider,
 } from "@/lib/ai/catalog";
-import { streamChat } from "@/lib/ai/chat-client";
+import { runWorkspaceChat, type WireMessage } from "@/lib/ai/chat-client";
+import { WORKSPACE_TOOLS, executeWorkspaceTool } from "@/lib/ai/tools";
+import {
+  assembleWorkspaceContext,
+  buildAssistantSystemPrompt,
+} from "@/lib/ai/context";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { usePageSettings } from "@/lib/stores/page-settings";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,11 +55,16 @@ export function ChatView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const threadId = searchParams.get("thread");
+  const { density, showTimestamps } = usePageSettings((s) => s.chat);
 
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [connDialog, setConnDialog] = useState(false);
   const [input, setInput] = useState("");
-  const [stream, setStream] = useState<{ id: string; text: string } | null>(null);
+  const [stream, setStream] = useState<{
+    id: string;
+    text: string;
+    tools: ToolActivity[];
+  } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -115,7 +130,7 @@ export function ChatView() {
       await chatThreadsRepo.update(thread.id, {});
     }
 
-    const history = [
+    const history: WireMessage[] = [
       ...messages
         .filter((m) => m.role !== "system" && !m.error)
         .map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
@@ -127,25 +142,58 @@ export function ChatView() {
       role: "assistant",
       content: "",
     });
-    setStream({ id: assistant.id, text: "" });
+    setStream({ id: assistant.id, text: "", tools: [] });
     const controller = new AbortController();
     abortRef.current = controller;
 
     try {
+      // Ground the model in the live workspace: notes, specs, tasks, docs,
+      // standards, systems, memories, dev logs — assembled fresh per turn.
+      const contextText = await assembleWorkspaceContext(projectId!, {
+        query: text,
+      });
+      const system = buildAssistantSystemPrompt(contextText, { withTools: true });
+
       let acc = "";
-      await streamChat({
+      const tools: ToolActivity[] = [];
+      const toolIndexById = new Map<string, number>();
+      const summarize = (args: Record<string, unknown>): string => {
+        for (const k of ["title", "name", "number", "query", "content", "id"]) {
+          const v = args[k];
+          if (typeof v === "string" && v.trim()) return v.slice(0, 80);
+        }
+        return "";
+      };
+
+      const result = await runWorkspaceChat({
         provider,
         apiKey: connection.apiKey,
         baseUrl: connection.baseUrl,
         model: thread.modelId,
+        system,
         messages: history,
+        tools: WORKSPACE_TOOLS,
+        executeTool: (call) => executeWorkspaceTool(projectId!, call),
         signal: controller.signal,
-        onDelta: (chunk) => {
-          acc += chunk;
-          setStream({ id: assistant.id, text: acc });
+        onEvent: (e) => {
+          if (e.type === "text") {
+            acc += e.text;
+          } else if (e.type === "round" && e.round > 0 && acc) {
+            acc += "\n\n";
+          } else if (e.type === "tool_call") {
+            toolIndexById.set(e.id, tools.length);
+            tools.push({ name: e.name, summary: summarize(e.arguments), ok: true });
+          } else if (e.type === "tool_result") {
+            const i = toolIndexById.get(e.id);
+            if (i !== undefined) tools[i] = { ...tools[i], ok: e.ok };
+          }
+          setStream({ id: assistant.id, text: acc, tools: [...tools] });
         },
       });
-      await chatMessagesRepo.update(assistant.id, { content: acc });
+      await chatMessagesRepo.update(assistant.id, {
+        content: result.text || acc,
+        toolActivity: tools,
+      });
     } catch (e) {
       const message =
         controller.signal.aborted ? "Stopped." : (e as Error).message;
@@ -251,11 +299,23 @@ export function ChatView() {
                   onChange={(m) => chatThreadsRepo.update(thread.id, { modelId: m })}
                 />
               )}
+              <span
+                className="ml-auto inline-flex items-center gap-1.5 text-[11px] text-muted-foreground"
+                title="Every turn is grounded in your live workspace (notes, specs, tasks, docs, standards, systems, memories) and the assistant can create or update entities via tools."
+              >
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                Workspace-aware
+              </span>
             </div>
 
             {/* Messages */}
             <ScrollArea className="flex-1">
-              <div className="mx-auto max-w-3xl space-y-5 px-5 py-5">
+              <div
+                className={cn(
+                  "mx-auto max-w-3xl px-5 py-5",
+                  density === "compact" ? "space-y-2.5" : "space-y-5",
+                )}
+              >
                 {messages.length === 0 && (
                   <p className="py-10 text-center text-sm text-muted-foreground">
                     Send a message to start the conversation.
@@ -264,6 +324,9 @@ export function ChatView() {
                 {messages.map((m) => {
                   const live = stream && stream.id === m.id;
                   const content = live ? stream.text : m.content;
+                  const toolActivity = live
+                    ? stream.tools
+                    : (m.toolActivity ?? []);
                   return (
                     <div key={m.id} className="flex gap-3">
                       <span
@@ -281,6 +344,43 @@ export function ChatView() {
                         )}
                       </span>
                       <div className="min-w-0 flex-1 pt-0.5">
+                        {showTimestamps && (
+                          <div className="mb-0.5 text-[10px] text-muted-foreground">
+                            {new Date(m.createdAt).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                        )}
+                        {toolActivity.length > 0 && (
+                          <div className="mb-1.5 flex flex-wrap gap-1">
+                            {toolActivity.map((t, i) => (
+                              <span
+                                key={`${t.name}-${i}`}
+                                className={cn(
+                                  "inline-flex items-center gap-1 rounded-full border border-border bg-accent/40 px-2 py-0.5 text-[11px]",
+                                  t.ok
+                                    ? "text-muted-foreground"
+                                    : "text-destructive",
+                                )}
+                                title={t.summary}
+                              >
+                                <Wrench className="h-3 w-3" />
+                                {t.name}
+                                {t.summary && (
+                                  <span className="max-w-36 truncate opacity-70">
+                                    {t.summary}
+                                  </span>
+                                )}
+                                {t.ok ? (
+                                  <Check className="h-3 w-3 text-node-lore" />
+                                ) : (
+                                  <X className="h-3 w-3" />
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         {m.error ? (
                           <div className="flex items-center gap-2 text-sm text-destructive">
                             <AlertCircle className="h-4 w-4 shrink-0" />

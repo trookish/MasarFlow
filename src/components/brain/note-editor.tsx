@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Trash2, FileUp } from "lucide-react";
+import { ChevronDown, Trash2, FileUp, FileDown } from "lucide-react";
 import { notesRepo } from "@/lib/db/repos";
 import { NOTE_TYPES, type Note, type NoteType } from "@/lib/db/schema";
 import { NOTE_TYPE_DOT } from "@/lib/colors";
+import { usePageSettings } from "@/lib/stores/page-settings";
+import { usePlugin, settingStr } from "@/lib/plugins-runtime";
+import { exportMarkdownToPdf } from "@/lib/export-pdf";
 import { cn } from "@/lib/utils/cn";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -18,6 +21,7 @@ import { MarkdownPreview } from "./markdown-preview";
 import { TagInput } from "./tag-input";
 import { TemplatePicker } from "./template-picker";
 import { RichMarkdownEditor } from "./rich-markdown-editor";
+import { BacklinksPanel } from "./backlinks-panel";
 
 interface NoteEditorProps {
   note: Note;
@@ -40,6 +44,11 @@ export function NoteEditor({
   onDelete,
   onPromote,
 }: NoteEditorProps) {
+  const { showWordCount, lineWrap } = usePageSettings((s) => s.brain);
+  const wordCountPlugin = usePlugin("word-count");
+  const spellPlugin = usePlugin("spell-check");
+  const pdfPlugin = usePlugin("export-pdf");
+  const spellLang = settingStr(spellPlugin.settings, "language", "en");
   const noteId = note.id;
   const [title, setTitle] = useState(note.title);
   const [body, setBody] = useState(note.body);
@@ -139,7 +148,30 @@ export function NoteEditor({
             Promote to spec
           </Button>
 
-          <div className="ml-auto">
+          {pdfPlugin.active && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                void exportMarkdownToPdf(
+                  title || "Untitled note",
+                  body,
+                  `${type} · ${new Date(note.updatedAt).toLocaleDateString()}`,
+                )
+              }
+            >
+              <FileDown className="h-3.5 w-3.5" />
+              Export PDF
+            </Button>
+          )}
+
+          <div className="ml-auto flex items-center gap-3">
+            {(showWordCount || wordCountPlugin.active) && (
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {body.trim() ? body.trim().split(/\s+/).length : 0} words ·{" "}
+                {body.length} chars
+              </span>
+            )}
             <Tabs value={mode} onValueChange={(v) => setMode(v as typeof mode)}>
               <TabsList>
                 <TabsTrigger value="write">Write</TabsTrigger>
@@ -156,10 +188,13 @@ export function NoteEditor({
       <div className="flex min-h-0 flex-1">
         {mode === "write" ? (
           <RichMarkdownEditor
-            key={noteId}
+            key={`${noteId}-${lineWrap}-${spellPlugin.active}-${spellLang}`}
             value={body}
             onChange={setBody}
             suggestions={noteSuggestions}
+            lineWrap={lineWrap}
+            spellCheck={spellPlugin.active}
+            spellCheckLang={spellLang}
             className="scrollbar-thin min-h-0 flex-1 overflow-y-auto"
           />
         ) : (
@@ -168,6 +203,13 @@ export function NoteEditor({
           </div>
         )}
       </div>
+
+      {/* Obsidian-style connections pane */}
+      <BacklinksPanel
+        note={note}
+        allNotes={allNotes}
+        onNavigate={onNavigateToTitle}
+      />
     </div>
   );
 }

@@ -5,7 +5,8 @@ import { uuid, now } from "@/lib/utils/ids";
 type SystemInput = Partial<System> & Pick<System, "projectId" | "name">;
 
 export const systemsRepo = {
-  listByProject(projectId: string): Promise<System[]> {
+  async listByProject(projectId?: string | null): Promise<System[]> {
+    if (!projectId) return [];
     return db.systems.where("projectId").equals(projectId).toArray();
   },
   get(id: string): Promise<System | undefined> {

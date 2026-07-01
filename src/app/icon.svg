@@ -1,0 +1,11 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MasarFlow">
+  <mask id="masar-road">
+    <rect width="512" height="512" fill="white"/>
+    <path d="M256 250 C 232 300 296 320 262 366 C 240 398 300 396 304 432"
+          stroke="black" stroke-width="30" stroke-linecap="round" fill="none"/>
+  </mask>
+  <rect width="512" height="512" rx="104" fill="#ffffff"/>
+  <path mask="url(#masar-road)"
+        d="M122 412 L122 182 L256 306 L390 182 L390 412"
+        stroke="#0a0a0c" stroke-width="74" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+</svg>

@@ -2,8 +2,10 @@ import { db } from "@/lib/db";
 import {
   agentSchema,
   agentRunSchema,
+  agentStepSchema,
   type Agent,
   type AgentRun,
+  type AgentStep,
 } from "@/lib/db/schema";
 import { uuid, now } from "@/lib/utils/ids";
 import { AGENT_ROSTER, DEFAULT_AGENT_MODEL } from "@/lib/ai/agents";
@@ -68,6 +70,32 @@ export const agentRunsRepo = {
     await db.agentRuns.update(id, patch);
   },
   async remove(id: string): Promise<void> {
-    await db.agentRuns.delete(id);
+    await db.transaction("rw", [db.agentRuns, db.agentSteps], async () => {
+      await db.agentSteps.where("runId").equals(id).delete();
+      await db.agentRuns.delete(id);
+    });
+  },
+};
+
+export const agentStepsRepo = {
+  listByRun(runId: string): Promise<AgentStep[]> {
+    return db.agentSteps.where("runId").equals(runId).sortBy("order");
+  },
+  async append(
+    runId: string,
+    type: AgentStep["type"],
+    content: string,
+  ): Promise<AgentStep> {
+    const count = await db.agentSteps.where("runId").equals(runId).count();
+    const step = agentStepSchema.parse({
+      id: uuid(),
+      runId,
+      order: count,
+      type,
+      content,
+      createdAt: now(),
+    });
+    await db.agentSteps.add(step);
+    return step;
   },
 };

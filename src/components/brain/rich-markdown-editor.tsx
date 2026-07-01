@@ -11,6 +11,7 @@ import {
   keymap,
   drawSelection,
   placeholder,
+  lineNumbers,
 } from "@codemirror/view";
 import {
   history,
@@ -236,6 +237,12 @@ interface RichMarkdownEditorProps {
   suggestions: WikilinkSuggestion[];
   placeholderText?: string;
   className?: string;
+  showLineNumbers?: boolean;
+  lineWrap?: boolean;
+  /** Browser inline spell-checking (Spell Check plugin). */
+  spellCheck?: boolean;
+  /** BCP-47 language for the spell checker, e.g. "en". */
+  spellCheckLang?: string;
 }
 
 export function RichMarkdownEditor({
@@ -244,6 +251,10 @@ export function RichMarkdownEditor({
   suggestions,
   placeholderText = "Write in Markdown… type / for commands, [[ to link notes",
   className,
+  showLineNumbers = false,
+  lineWrap = true,
+  spellCheck = false,
+  spellCheckLang = "en",
 }: RichMarkdownEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -287,7 +298,16 @@ export function RichMarkdownEditor({
         history(),
         markdown({ base: markdownLanguage, extensions: [HighlightExtension] }),
         syntaxHighlighting(markdownHighlight),
-        EditorView.lineWrapping,
+        ...(showLineNumbers ? [lineNumbers()] : []),
+        ...(lineWrap ? [EditorView.lineWrapping] : []),
+        ...(spellCheck
+          ? [
+              EditorView.contentAttributes.of({
+                spellcheck: "true",
+                lang: spellCheckLang,
+              }),
+            ]
+          : []),
         buildTheme(),
         livePreview,
         wikilinkPlugin,

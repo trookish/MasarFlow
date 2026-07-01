@@ -26,10 +26,11 @@ import {
   DEVLOG_TYPES,
   DEVLOG_TYPE_LABEL,
   DEVLOG_TYPE_COLOR,
-  groupLogsByDay,
+  groupLogs,
   type DevLogType,
 } from "@/lib/devlogs";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { usePageSettings } from "@/lib/stores/page-settings";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,6 +82,7 @@ function relativeTime(ts: number): string {
 
 export function DevLogsView() {
   const projectId = useActiveProjectId();
+  const { showTime, groupBy } = usePageSettings((s) => s.devlogs);
   const [active, setActive] = useState<Set<DevLogType>>(
     () => new Set(DEVLOG_TYPES),
   );
@@ -97,7 +99,7 @@ export function DevLogsView() {
     () => logs.filter((l) => active.has(l.type as DevLogType)),
     [logs, active],
   );
-  const groups = useMemo(() => groupLogsByDay(filtered), [filtered]);
+  const groups = useMemo(() => groupLogs(filtered, groupBy), [filtered, groupBy]);
 
   function toggle(type: DevLogType) {
     setActive((prev) => {
@@ -197,6 +199,7 @@ export function DevLogsView() {
                       <DevLogItem
                         key={log.id}
                         log={log}
+                        showTime={showTime}
                         onEdit={() => {
                           setEditingId(log.id);
                           setComposing(false);
@@ -217,10 +220,12 @@ export function DevLogsView() {
 
 function DevLogItem({
   log,
+  showTime,
   onEdit,
   onDelete,
 }: {
   log: DevLog;
+  showTime: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -242,9 +247,11 @@ function DevLogItem({
             <Badge variant="outline" className="capitalize">
               {DEVLOG_TYPE_LABEL[type]}
             </Badge>
-            <span className="text-xs text-muted-foreground">
-              {relativeTime(log.createdAt)}
-            </span>
+            {showTime && (
+              <span className="text-xs text-muted-foreground">
+                {relativeTime(log.createdAt)}
+              </span>
+            )}
             {href && (
               <Link
                 href={href}

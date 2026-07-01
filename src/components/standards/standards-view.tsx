@@ -3,9 +3,16 @@
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, ShieldCheck, ShieldOff } from "lucide-react";
-import { standardsRepo } from "@/lib/db/repos";
+import { Plus, ShieldCheck, ShieldOff, AlertTriangle } from "lucide-react";
+import {
+  standardsRepo,
+  notesRepo,
+  specsRepo,
+  tasksRepo,
+} from "@/lib/db/repos";
+import { runEnforcer } from "@/lib/enforce";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { usePageSettings } from "@/lib/stores/page-settings";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +27,7 @@ export function StandardsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedId = searchParams.get("standard");
+  const { autoValidate, showLineNumbers } = usePageSettings((s) => s.standards);
   const [tab, setTab] = useState<"catalog" | "enforcer">("catalog");
 
   const standardsRaw = useLiveQuery(
@@ -27,6 +35,29 @@ export function StandardsView() {
     [projectId],
   );
   const standards = useMemo(() => standardsRaw ?? [], [standardsRaw]);
+
+  // Live violation count, computed only when auto-validate is enabled.
+  const notesRaw = useLiveQuery(
+    () => (autoValidate ? notesRepo.listByProject(projectId) : []),
+    [projectId, autoValidate],
+  );
+  const specsRaw = useLiveQuery(
+    () => (autoValidate ? specsRepo.listByProject(projectId) : []),
+    [projectId, autoValidate],
+  );
+  const tasksRaw = useLiveQuery(
+    () => (autoValidate ? tasksRepo.listByProject(projectId) : []),
+    [projectId, autoValidate],
+  );
+  const violationCount = useMemo(() => {
+    if (!autoValidate) return 0;
+    return runEnforcer(
+      standards,
+      notesRaw ?? [],
+      specsRaw ?? [],
+      tasksRaw ?? [],
+    ).length;
+  }, [autoValidate, standards, notesRaw, specsRaw, tasksRaw]);
   const sorted = useMemo(
     () =>
       [...standards].sort(
@@ -69,6 +100,27 @@ export function StandardsView() {
             <TabsTrigger value="enforcer">Enforcer</TabsTrigger>
           </TabsList>
         </Tabs>
+        {autoValidate && (
+          <button
+            type="button"
+            onClick={() => setTab("enforcer")}
+            className={cn(
+              "ml-auto flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
+              violationCount === 0
+                ? "bg-success/15 text-success"
+                : "bg-warning/15 text-warning",
+            )}
+          >
+            {violationCount === 0 ? (
+              <ShieldCheck className="h-3.5 w-3.5" />
+            ) : (
+              <AlertTriangle className="h-3.5 w-3.5" />
+            )}
+            {violationCount === 0
+              ? "No violations"
+              : `${violationCount} violation${violationCount === 1 ? "" : "s"}`}
+          </button>
+        )}
       </div>
 
       {tab === "enforcer" ? (
@@ -131,6 +183,7 @@ export function StandardsView() {
               <StandardEditor
                 key={selected.id}
                 standard={selected}
+                showLineNumbers={showLineNumbers}
                 onDelete={deleteStandard}
               />
             ) : (

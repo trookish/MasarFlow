@@ -64,50 +64,36 @@ export function inferFileType(path: string): WatchFileType {
   return EXT_TYPE[ext] ?? "other";
 }
 
-/** A candidate change the simulated watcher can emit. */
-export interface ChangeTemplate {
-  path: string;
-  systemHint: string | null;
-}
-
-/** Plausible project file changes, mapped to seeded system names where it fits. */
-export const SIMULATED_CHANGES: ChangeTemplate[] = [
-  { path: "src/input/InputSystem.cs", systemHint: "Input System" },
-  { path: "src/combat/CombatCore.cs", systemHint: "Combat Core" },
-  { path: "src/combat/DamageResolver.cs", systemHint: "Combat Core" },
-  { path: "src/ai/EnemyBehaviour.cs", systemHint: "AI Subsystem" },
-  { path: "src/ai/BossDirector.cs", systemHint: "Boss Director" },
-  { path: "src/telemetry/Telemetry.cs", systemHint: "Telemetry" },
-  { path: "config/balance.json", systemHint: "Combat Core" },
-  { path: "assets/textures/hero_albedo.png", systemHint: null },
-  { path: "assets/audio/sword_hit.wav", systemHint: null },
-  { path: "scenes/Arena.scene", systemHint: null },
-  { path: "shaders/Dissolve.shader", systemHint: null },
-  { path: "docs/changelog.md", systemHint: null },
-];
-
-const KIND_WEIGHTS: WatchKind[] = [
-  "modified", "modified", "modified", "created", "deleted",
-];
-
-export interface PickedChange {
+/** A live event streamed from the /api/watch SSE endpoint. */
+export interface LiveWatchEvent {
   path: string;
   kind: WatchKind;
-  fileType: WatchFileType;
-  systemHint: string | null;
 }
 
 /**
- * Pick a simulated change. `rng` returns [0,1); injectable so the choice is
- * deterministic in tests.
+ * Map a changed file path to an Architecture system by name. A system matches
+ * when every word of its name appears in the path (case-insensitive, in any
+ * separator form: "Combat Core" matches src/combat/core, CombatCore.cs, or
+ * combat-core/). Longest (most specific) name wins. Pure.
  */
-export function pickChange(rng: () => number = Math.random): PickedChange {
-  const tpl = SIMULATED_CHANGES[Math.floor(rng() * SIMULATED_CHANGES.length)];
-  const kind = KIND_WEIGHTS[Math.floor(rng() * KIND_WEIGHTS.length)];
-  return {
-    path: tpl.path,
-    kind,
-    fileType: inferFileType(tpl.path),
-    systemHint: tpl.systemHint,
-  };
+export function matchSystemByPath<T extends { id: string; name: string }>(
+  filePath: string,
+  systems: readonly T[],
+): T | null {
+  const haystack = filePath.toLowerCase().replace(/[\\/_\-.]/g, " ");
+  const compact = filePath.toLowerCase().replace(/[\\/_\-.\s]/g, "");
+  let best: T | null = null;
+  let bestLen = 0;
+  for (const system of systems) {
+    const words = system.name.toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length === 0) continue;
+    const matches =
+      words.every((w) => haystack.includes(w)) ||
+      compact.includes(words.join(""));
+    if (matches && system.name.length > bestLen) {
+      best = system;
+      bestLen = system.name.length;
+    }
+  }
+  return best;
 }

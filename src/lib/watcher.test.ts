@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { inferFileType, pickChange, SIMULATED_CHANGES } from "./watcher";
+import { inferFileType, matchSystemByPath } from "./watcher";
 
 describe("inferFileType", () => {
   it("classifies by extension", () => {
@@ -22,20 +22,36 @@ describe("inferFileType", () => {
   });
 });
 
-describe("pickChange", () => {
-  it("is deterministic given a fixed rng", () => {
-    const a = pickChange(() => 0);
-    expect(a.path).toBe(SIMULATED_CHANGES[0].path);
-    expect(a.kind).toBe("modified");
-    expect(a.fileType).toBe("code");
-    expect(a.systemHint).toBe("Input System");
+describe("matchSystemByPath", () => {
+  const systems = [
+    { id: "1", name: "Combat Core" },
+    { id: "2", name: "Input System" },
+    { id: "3", name: "Telemetry" },
+  ];
+
+  it("matches when every word of the name appears in the path", () => {
+    expect(matchSystemByPath("src/combat/core/Damage.cs", systems)?.id).toBe("1");
+    expect(matchSystemByPath("src/input/system/Keys.ts", systems)?.id).toBe("2");
   });
 
-  it("derives fileType from the chosen path", () => {
-    // rng just below 1 selects the last entries.
-    const c = pickChange(() => 0.99);
-    const tpl = SIMULATED_CHANGES[SIMULATED_CHANGES.length - 1];
-    expect(c.path).toBe(tpl.path);
-    expect(c.fileType).toBe("doc");
+  it("matches compact CamelCase / kebab-case forms", () => {
+    expect(matchSystemByPath("src/CombatCore.cs", systems)?.id).toBe("1");
+    expect(matchSystemByPath("lib/combat-core/resolver.ts", systems)?.id).toBe("1");
+  });
+
+  it("is case-insensitive", () => {
+    expect(matchSystemByPath("SRC/TELEMETRY/log.ts", systems)?.id).toBe("3");
+  });
+
+  it("returns null when nothing matches", () => {
+    expect(matchSystemByPath("assets/textures/hero.png", systems)).toBeNull();
+  });
+
+  it("prefers the most specific (longest) matching name", () => {
+    const overlapping = [
+      { id: "a", name: "Core" },
+      { id: "b", name: "Combat Core" },
+    ];
+    expect(matchSystemByPath("src/combat/core/x.cs", overlapping)?.id).toBe("b");
   });
 });

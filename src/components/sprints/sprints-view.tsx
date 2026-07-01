@@ -6,6 +6,7 @@ import { ChevronDown, Flag, Plus, Trash2 } from "lucide-react";
 import { sprintsRepo, tasksRepo } from "@/lib/db/repos";
 import type { Sprint, Task } from "@/lib/db/schema";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { usePageSettings } from "@/lib/stores/page-settings";
 import { taskStatusLabel } from "@/lib/workflow";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,17 @@ const SPRINT_STATUS: Record<SprintStatus, { label: string; badge: string }> = {
   completed: { label: "Completed", badge: "bg-success/15 text-success" },
 };
 
+/** Priority-weighted "story points" (no dedicated field on tasks). */
+const POINT_WEIGHT: Record<Task["priority"], number> = {
+  low: 1,
+  medium: 2,
+  high: 3,
+  urgent: 5,
+};
+function points(list: Task[]): number {
+  return list.reduce((sum, t) => sum + (POINT_WEIGHT[t.priority] ?? 1), 0);
+}
+
 function toInputDate(ms: number | null): string {
   if (!ms) return "";
   return new Date(ms).toISOString().slice(0, 10);
@@ -39,8 +51,16 @@ function fromInputDate(value: string): number | null {
 
 export function SprintsView() {
   const projectId = useActiveProjectId();
-  const sprints =
+  const { showCompleted, velocityDisplay } = usePageSettings((s) => s.sprints);
+  const sprintsRaw =
     useLiveQuery(() => sprintsRepo.listByProject(projectId), [projectId]) ?? [];
+  const sprints = useMemo(
+    () =>
+      showCompleted
+        ? sprintsRaw
+        : sprintsRaw.filter((s) => s.status !== "completed"),
+    [sprintsRaw, showCompleted],
+  );
   const tasksRaw = useLiveQuery(
     () => tasksRepo.listByProject(projectId),
     [projectId],
@@ -97,7 +117,15 @@ export function SprintsView() {
             sprints.map((s) => {
               const meta = SPRINT_STATUS[s.status];
               const list = tasksBySprint.get(s.id) ?? [];
-              const done = list.filter((t) => t.status === "done").length;
+              const doneList = list.filter((t) => t.status === "done");
+              const tasksLabel = `${doneList.length}/${list.length} tasks`;
+              const pointsLabel = `${points(doneList)}/${points(list)} pts`;
+              const velocity =
+                velocityDisplay === "tasks"
+                  ? tasksLabel
+                  : velocityDisplay === "points"
+                    ? pointsLabel
+                    : `${tasksLabel} · ${pointsLabel}`;
               return (
                 <button
                   key={s.id}
@@ -117,7 +145,7 @@ export function SprintsView() {
                     <Badge className={meta.badge}>{meta.label}</Badge>
                   </div>
                   <div className="mt-0.5 text-[10px] text-muted-foreground tabular-nums">
-                    {done}/{list.length} tasks done
+                    {velocity} done
                   </div>
                 </button>
               );

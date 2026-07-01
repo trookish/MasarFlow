@@ -1,15 +1,50 @@
 "use client";
 
-import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
 import { useEffect } from "react";
-import { useThemeStore } from "@/lib/stores/theme";
+import { useThemeStore, readableForeground } from "@/lib/stores/theme";
 
-/** Syncs the persisted accent into a `data-accent` attribute on <html>. */
-function AccentApplier() {
-  const accent = useThemeStore((s) => s.accent);
+/**
+ * Reads the appearance store and projects it onto the document:
+ *  - drives next-themes (light / dark / system; amoled maps to dark + a surface flag)
+ *  - sets data-surface / data-accent-mode attributes consumed by globals.css
+ *  - writes the live accent, gradient, radius and font-scale CSS variables inline
+ */
+function AppearanceApplier() {
+  const { setTheme } = useTheme();
+  const {
+    mode,
+    accentMode,
+    accentColor,
+    accentColor2,
+    gradientAngle,
+    radius,
+    fontScale,
+  } = useThemeStore();
+
+  // Color scheme → next-themes (amoled is a dark variant).
   useEffect(() => {
-    document.documentElement.dataset.accent = accent;
-  }, [accent]);
+    setTheme(mode === "amoled" ? "dark" : mode);
+    document.documentElement.dataset.surface =
+      mode === "amoled" ? "amoled" : "default";
+  }, [mode, setTheme]);
+
+  // Accent, gradient, radius and scale → inline CSS variables on <html>.
+  useEffect(() => {
+    const root = document.documentElement;
+    const fg = readableForeground(accentColor);
+    root.style.setProperty("--primary", accentColor);
+    root.style.setProperty("--primary-foreground", fg);
+    root.style.setProperty("--ring", accentColor);
+    root.style.setProperty(
+      "--accent-gradient",
+      `linear-gradient(${gradientAngle}deg, ${accentColor}, ${accentColor2})`,
+    );
+    root.dataset.accentMode = accentMode;
+    root.style.setProperty("--radius", `${radius}rem`);
+    root.style.fontSize = `${fontScale * 100}%`;
+  }, [accentMode, accentColor, accentColor2, gradientAngle, radius, fontScale]);
+
   return null;
 }
 
@@ -18,10 +53,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     <NextThemesProvider
       attribute="class"
       defaultTheme="dark"
-      enableSystem={false}
+      enableSystem
       disableTransitionOnChange
     >
-      <AccentApplier />
+      <AppearanceApplier />
       {children}
     </NextThemesProvider>
   );

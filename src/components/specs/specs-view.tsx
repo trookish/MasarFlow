@@ -6,6 +6,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, FileText } from "lucide-react";
 import { specsRepo, tasksRepo, notesRepo } from "@/lib/db/repos";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { usePageSettings } from "@/lib/stores/page-settings";
 import { specStatusMeta } from "@/lib/workflow";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ export function SpecsView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedId = searchParams.get("spec");
+  const { defaultSort, showCompleted } = usePageSettings((s) => s.specs);
 
   const specs = useLiveQuery(
     () => specsRepo.listByProject(projectId),
@@ -33,11 +35,26 @@ export function SpecsView() {
     [projectId],
   );
 
-  const allSpecs = useMemo(
-    () =>
-      [...(specs ?? [])].sort((a, b) => a.number.localeCompare(b.number)),
-    [specs],
-  );
+  const STATUS_ORDER = ["draft", "review", "approved", "implementing", "shipped"];
+  const allSpecs = useMemo(() => {
+    let list = [...(specs ?? [])];
+    if (!showCompleted) list = list.filter((s) => s.status !== "shipped");
+    list.sort((a, b) => {
+      switch (defaultSort) {
+        case "title":
+          return a.title.localeCompare(b.title);
+        case "status":
+          return STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
+        case "progress":
+          return b.implementationProgress - a.implementationProgress;
+        case "updatedAt":
+        default:
+          return b.updatedAt - a.updatedAt;
+      }
+    });
+    return list;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [specs, defaultSort, showCompleted]);
   const selectedSpec = allSpecs.find((s) => s.id === selectedId) ?? null;
   const linkedTasks = useMemo(
     () =>

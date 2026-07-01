@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   Plug,
@@ -30,6 +31,7 @@ import {
   type PluginSettings,
 } from "@/lib/plugins";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { usePageSettings } from "@/lib/stores/page-settings";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +54,7 @@ const ICONS: Record<string, LucideIcon> = {
 
 export function PluginsView() {
   const projectId = useActiveProjectId();
+  const { showDisabled } = usePageSettings((s) => s.plugins);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
   const [installedOnly, setInstalledOnly] = useState(false);
@@ -73,16 +76,20 @@ export function PluginsView() {
     [stateByPlugin],
   );
 
-  const visible = useMemo(
-    () =>
-      filterPlugins(PLUGIN_CATALOG, {
-        query,
-        category,
-        installedIds,
-        installedOnly,
-      }),
-    [query, category, installedIds, installedOnly],
-  );
+  const visible = useMemo(() => {
+    const list = filterPlugins(PLUGIN_CATALOG, {
+      query,
+      category,
+      installedIds,
+      installedOnly,
+    });
+    if (showDisabled) return list;
+    // Hide plugins that are installed but disabled.
+    return list.filter((p) => {
+      const st = stateByPlugin.get(p.id);
+      return !st || st.enabled;
+    });
+  }, [query, category, installedIds, installedOnly, showDisabled, stateByPlugin]);
 
   async function install(plugin: PluginDef) {
     if (!projectId) return;
@@ -199,6 +206,15 @@ export function PluginsView() {
                       </Badge>
                     ))}
                   </div>
+
+                  {state?.enabled && plugin.href && (
+                    <Link
+                      href={plugin.href}
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      {plugin.hrefLabel ?? "Open"} →
+                    </Link>
+                  )}
 
                   <div className="mt-auto flex items-center gap-2 pt-1">
                     {state ? (

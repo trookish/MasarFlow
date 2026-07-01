@@ -34,8 +34,14 @@ import {
   type Catalog,
   type AiProvider,
 } from "@/lib/ai/catalog";
-import { streamChat } from "@/lib/ai/chat-client";
+import { runWorkspaceChat } from "@/lib/ai/chat-client";
+import { WORKSPACE_TOOLS, executeWorkspaceTool } from "@/lib/ai/tools";
+import {
+  assembleWorkspaceContext,
+  buildAssistantSystemPrompt,
+} from "@/lib/ai/context";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { usePageSettings } from "@/lib/stores/page-settings";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -264,6 +270,7 @@ function RunDetail({
   connections: ConnLike[];
   onManageConnections: () => void;
 }) {
+  const autoAdvance = usePageSettings((s) => s.workflow.autoAdvance);
   const steps = useLiveQuery(() => workflowRepo.listSteps(run.id), [run.id]) ?? [];
   const [active, setActive] = useState<{ id: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -286,22 +293,42 @@ function RunDetail({
     const controller = new AbortController();
     abortRef.current = controller;
     try {
+      // Ground the step's agent in the live workspace; materializing steps
+      // also get the tool belt so their artifacts (specs, tasks, docs,
+      // memories) are created for real.
+      const contextText = await assembleWorkspaceContext(run.projectId, {
+        query: `${run.idea} ${def.title}`,
+      });
+      const system = buildAssistantSystemPrompt(contextText, {
+        withTools: Boolean(def.materialize),
+        role: `${stepSystemPrompt(def)}\n\nYou are executing step "${def.title}" of MasarFlow's 16-step idea→implementation workflow.`,
+      });
+
       let acc = "";
-      await streamChat({
+      const result = await runWorkspaceChat({
         provider,
         apiKey: connection.apiKey,
         baseUrl: connection.baseUrl,
         model: run.modelId,
-        system: stepSystemPrompt(def),
+        system,
         messages: [{ role: "user", content: buildStepPrompt(run.idea, prior, def) }],
+        tools: def.materialize ? WORKSPACE_TOOLS : undefined,
+        executeTool: def.materialize
+          ? (call) => executeWorkspaceTool(run.projectId, call)
+          : undefined,
         signal: controller.signal,
-        onDelta: (chunk) => {
-          acc += chunk;
-          setActive({ id: step.id, text: acc });
+        onEvent: (e) => {
+          if (e.type === "text") {
+            acc += e.text;
+            setActive({ id: step.id, text: acc });
+          } else if (e.type === "round" && e.round > 0 && acc) {
+            acc += "\n\n";
+          }
         },
       });
-      await workflowRepo.updateStep(step.id, { status: "done", output: acc });
-      return acc;
+      const output = result.text || acc;
+      await workflowRepo.updateStep(step.id, { status: "done", output });
+      return output;
     } catch (e) {
       const msg = controller.signal.aborted ? "Stopped." : (e as Error).message;
       await workflowRepo.updateStep(step.id, { status: "error", output: msg });
@@ -322,7 +349,31 @@ function RunDetail({
     if (busy) return;
     setBusy(true);
     try {
-      await runStep(step, priorOutputs(step.order, steps));
+      if (autoAdvance) {
+        // Run this step and continue through the remaining steps in order.
+        const all = await workflowRepo.listSteps(run.id);
+        const prior = priorOutputs(step.order, all);
+        for (const s of all.filter((x) => x.order >= step.order)) {
+          if (s.status === "done" && s.id !== step.id) {
+            prior.push({
+              title: stepDef(s.stepKey)?.title ?? s.stepKey,
+              output: s.output,
+            });
+            continue;
+          }
+          try {
+            const out = await runStep(s, [...prior]);
+            prior.push({
+              title: stepDef(s.stepKey)?.title ?? s.stepKey,
+              output: out,
+            });
+          } catch {
+            break; // stop the chain on first failure / stop
+          }
+        }
+      } else {
+        await runStep(step, priorOutputs(step.order, steps));
+      }
     } catch {
       /* surfaced on the step */
     } finally {

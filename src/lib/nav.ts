@@ -20,6 +20,9 @@ import {
   Search,
   Plug,
   Settings,
+  Layers,
+  Cpu,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 
@@ -35,12 +38,15 @@ export interface NavItem {
 
 export interface NavGroup {
   label: string;
+  /** Icon shown in the narrow group-rail. */
+  icon: LucideIcon;
   items: NavItem[];
 }
 
 export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Workspace",
+    icon: Layers,
     items: [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       {
@@ -66,10 +72,19 @@ export const NAV_GROUPS: NavGroup[] = [
         keywords: ["rfc", "specs"],
       },
       { label: "Standards", href: "/standards", icon: ShieldCheck },
+      { label: "Documentation", href: "/docs", icon: BookOpen },
+      {
+        label: "Files",
+        href: "/files",
+        icon: Layers,
+        keywords: ["attachments", "gallery", "images", "media"],
+      },
+      { label: "Dev Logs", href: "/devlogs", icon: ScrollText },
     ],
   },
   {
     label: "Intelligence",
+    icon: Cpu,
     items: [
       { label: "Architecture", href: "/architecture", icon: Boxes },
       {
@@ -102,9 +117,8 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "System",
+    icon: Wrench,
     items: [
-      { label: "Documentation", href: "/docs", icon: BookOpen },
-      { label: "Dev Logs", href: "/devlogs", icon: ScrollText },
       {
         label: "Sync Panel",
         href: "/sync",

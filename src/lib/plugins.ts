@@ -19,6 +19,10 @@ export interface PluginDef {
   icon: string;
   capabilities: string[];
   settings: PluginSettingField[];
+  /** Where the plugin's live functionality can be seen once enabled. */
+  href?: string;
+  /** Short label for the href, e.g. "Open Sync Panel". */
+  hrefLabel?: string;
 }
 
 export type PluginSettings = Record<string, string | boolean>;
@@ -51,6 +55,8 @@ export const PLUGIN_CATALOG: PluginDef[] = [
       { key: "vaultPath", label: "Vault path", type: "text", default: "", placeholder: "~/Vaults/MyVault" },
       { key: "autoSync", label: "Auto-sync on change", type: "boolean", default: true },
     ],
+    href: "/sync",
+    hrefLabel: "Open Sync Panel",
   },
   {
     id: "github-commits",
@@ -66,6 +72,8 @@ export const PLUGIN_CATALOG: PluginDef[] = [
       { key: "repo", label: "Repository", type: "text", default: "", placeholder: "owner/name" },
       { key: "branch", label: "Branch", type: "text", default: "main" },
     ],
+    href: "/dashboard",
+    hrefLabel: "Open Commits (Dashboard)",
   },
   {
     id: "mermaid-diagrams",

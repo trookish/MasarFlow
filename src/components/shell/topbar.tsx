@@ -4,6 +4,7 @@ import { Search, Command as CommandIcon, Keyboard } from "lucide-react";
 import { useUIStore } from "@/lib/stores/ui";
 import { ProjectSwitcher } from "./project-switcher";
 import { ThemeToggle } from "./theme-toggle";
+import { PomodoroWidget, DailyNoteButton } from "./plugin-widgets";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -14,7 +15,7 @@ export function Topbar() {
   const setShortcutsOpen = useUIStore((s) => s.setShortcutsOpen);
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur">
+    <header className="relative z-40 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur">
       <ProjectSwitcher />
 
       <button
@@ -28,6 +29,8 @@ export function Topbar() {
       </button>
 
       <div className="ml-auto flex items-center gap-1">
+        <PomodoroWidget />
+        <DailyNoteButton />
         <Tooltip label="Command palette (⌘K)" side="bottom">
           <Button
             variant="ghost"

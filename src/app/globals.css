@@ -78,36 +78,37 @@
   --sidebar-border: #1e1e23;
 }
 
-/* ── Accent palettes ─────────────────────────────────────────────────── */
-[data-accent="violet"] {
-  --primary: #7c5cfc;
-  --primary-foreground: #ffffff;
-  --ring: #7c5cfc;
+/* ── AMOLED surface ──────────────────────────────────────────────────────
+ * Pure-black variant of the dark theme. Applied via data-surface on <html>
+ * (set by the appearance store) and only takes effect alongside `.dark`. */
+.dark[data-surface="amoled"] {
+  --background: #000000;
+  --card: #050507;
+  --popover: #060608;
+  --muted: #0d0d10;
+  --secondary: #0d0d10;
+  --accent: #141418;
+  --border: #1a1a1f;
+  --input: #1d1d22;
+  --sidebar: #000000;
+  --sidebar-border: #141418;
 }
-[data-accent="cyan"] {
-  --primary: #22b8cf;
-  --primary-foreground: #042027;
-  --ring: #22b8cf;
+
+/* ── Accent ───────────────────────────────────────────────────────────────
+ * --primary / --primary-foreground / --ring are written inline on <html> by
+ * the appearance applier. In gradient mode, repaint solid primary surfaces
+ * with the gradient (the solid --primary stays as the fallback color). */
+[data-accent-mode="gradient"] .bg-primary {
+  background-image: var(--accent-gradient);
 }
-[data-accent="emerald"] {
-  --primary: #10b981;
-  --primary-foreground: #042f23;
-  --ring: #10b981;
+[data-accent-mode="gradient"] .accent-gradient-text {
+  background-image: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
-[data-accent="rose"] {
-  --primary: #f43f5e;
-  --primary-foreground: #ffffff;
-  --ring: #f43f5e;
-}
-[data-accent="amber"] {
-  --primary: #f59e0b;
-  --primary-foreground: #2b1c00;
-  --ring: #f59e0b;
-}
-[data-accent="blue"] {
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
-  --ring: #3b82f6;
+.accent-gradient-bg {
+  background-image: var(--accent-gradient);
 }
 
 @theme inline {

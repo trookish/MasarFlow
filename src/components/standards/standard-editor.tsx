@@ -41,9 +41,11 @@ function toForm(s: Standard): StandardForm {
 export function StandardEditor({
   standard,
   onDelete,
+  showLineNumbers = false,
 }: {
   standard: Standard;
   onDelete: () => void;
+  showLineNumbers?: boolean;
 }) {
   const standardId = standard.id;
   const [form, setForm] = useState<StandardForm>(() => toForm(standard));
@@ -131,12 +133,30 @@ export function StandardEditor({
             <label className="text-xs font-medium text-muted-foreground">
               Rule
             </label>
-            <Textarea
-              value={form.rule}
-              onChange={(e) => set({ rule: e.target.value })}
-              placeholder="Describe the rule developers must follow."
-              rows={3}
-            />
+            {showLineNumbers ? (
+              <div className="flex overflow-hidden rounded-md border border-input">
+                <pre
+                  aria-hidden
+                  className="select-none border-r border-border bg-muted/40 px-2 py-2 text-right font-mono text-sm leading-[1.5] text-muted-foreground"
+                >
+                  {form.rule.split("\n").map((_, i) => `${i + 1}\n`).join("")}
+                </pre>
+                <Textarea
+                  value={form.rule}
+                  onChange={(e) => set({ rule: e.target.value })}
+                  placeholder="Describe the rule developers must follow."
+                  rows={3}
+                  className="rounded-none border-0 font-mono leading-[1.5] focus-visible:ring-0"
+                />
+              </div>
+            ) : (
+              <Textarea
+                value={form.rule}
+                onChange={(e) => set({ rule: e.target.value })}
+                placeholder="Describe the rule developers must follow."
+                rows={3}
+              />
+            )}
           </div>
 
           <div className="space-y-1.5">

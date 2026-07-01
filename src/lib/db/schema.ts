@@ -484,12 +484,25 @@ export const chatThreadSchema = z.object({
 });
 export type ChatThread = z.infer<typeof chatThreadSchema>;
 
+/** One tool invocation recorded on an assistant chat message. */
+export const toolActivitySchema = z.object({
+  name: z.string(),
+  summary: z.string().default(""),
+  ok: z.boolean().default(true),
+});
+export type ToolActivity = z.infer<typeof toolActivitySchema>;
+
 export const chatMessageSchema = z.object({
   id: z.string(),
   threadId: z.string(),
   role: z.enum(["system", "user", "assistant"]),
   content: z.string().default(""),
   error: z.string().nullable().default(null),
+  /**
+   * Workspace tool calls the assistant executed while producing this message.
+   * Not indexed — added without a Dexie version bump.
+   */
+  toolActivity: z.array(toolActivitySchema).default([]),
   createdAt: z.number(),
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;

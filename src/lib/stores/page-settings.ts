@@ -69,13 +69,18 @@ export interface DevlogsSettings {
 }
 
 export interface SyncSettings {
+  mode: "local" | "obsidian";
   autoSyncInterval: "off" | "15m" | "1h" | "6h";
   conflictResolution: "ask" | "prefer-local" | "prefer-remote";
+  /** Vault folder whose files import as MasarFlow note templates ("" = none). */
+  templatesFolder: string;
 }
 
 export interface WatcherSettings {
   showHiddenFiles: boolean;
   watchDepth: "1" | "3" | "unlimited";
+  /** Absolute path of the local directory to watch ("" = not configured). */
+  watchDir: string;
 }
 
 export interface SearchSettings {
@@ -123,8 +128,13 @@ export const PAGE_SETTINGS_DEFAULTS: AllPageSettings = {
   workflow: { autoAdvance: false },
   docs: { defaultMode: "preview", showLineNumbers: true },
   devlogs: { showTime: true, groupBy: "day" },
-  sync: { autoSyncInterval: "off", conflictResolution: "ask" },
-  watcher: { showHiddenFiles: false, watchDepth: "3" },
+  sync: {
+    mode: "obsidian",
+    autoSyncInterval: "off",
+    conflictResolution: "ask",
+    templatesFolder: "",
+  },
+  watcher: { showHiddenFiles: false, watchDepth: "3", watchDir: "" },
   search: { defaultMode: "semantic", resultsPerPage: "20" },
   plugins: { showDisabled: true },
 };

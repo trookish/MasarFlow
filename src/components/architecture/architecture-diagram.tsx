@@ -23,6 +23,7 @@ import { Boxes, LayoutGrid } from "lucide-react";
 import { systemsRepo, archRepo } from "@/lib/db/repos";
 import type { System } from "@/lib/db/schema";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { usePageSettings } from "@/lib/stores/page-settings";
 import { layoutSystems, type LayoutSystem } from "@/lib/arch-layout";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ type SystemNodeData = {
   category: string;
   status: System["status"];
   health: number;
+  showLabel: boolean;
   onOpen?: (id: string) => void;
 };
 
@@ -59,11 +61,15 @@ function SystemNode({ id, data }: NodeProps<Node<SystemNodeData>>) {
         <span
           className={cn("h-2 w-2 shrink-0 rounded-full", STATUS_DOT[data.status])}
         />
-        <span className="flex-1 truncate text-sm font-medium">{data.name}</span>
+        {data.showLabel && (
+          <span className="flex-1 truncate text-sm font-medium">{data.name}</span>
+        )}
       </div>
-      <div className="mt-1 text-[10px] tracking-wide text-muted-foreground uppercase">
-        {data.category}
-      </div>
+      {data.showLabel && (
+        <div className="mt-1 text-[10px] tracking-wide text-muted-foreground uppercase">
+          {data.category}
+        </div>
+      )}
       <div className="mt-2 flex items-center gap-1.5">
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
           <div
@@ -87,6 +93,9 @@ function ArchitectureDiagramInner({
 }) {
   const projectId = useActiveProjectId();
   const { resolvedTheme } = useTheme();
+  const { showNodeLabels, showEdgeLabels } = usePageSettings(
+    (s) => s.architecture,
+  );
 
   const systems = useLiveQuery(
     () => systemsRepo.listByProject(projectId ?? ""),
@@ -130,6 +139,7 @@ function ArchitectureDiagramInner({
           category: s.category,
           status: s.status,
           health: s.health,
+          showLabel: showNodeLabels,
           onOpen,
         },
       }));
@@ -144,11 +154,21 @@ function ArchitectureDiagramInner({
             id: `${s.id}->${dep}`,
             source: s.id,
             target: dep,
+            label: showEdgeLabels ? "depends on" : undefined,
             markerEnd: { type: MarkerType.ArrowClosed },
           })),
       ),
     );
-  }, [systems, positions, autoPositions, onOpen, setNodes, setEdges]);
+  }, [
+    systems,
+    positions,
+    autoPositions,
+    onOpen,
+    setNodes,
+    setEdges,
+    showNodeLabels,
+    showEdgeLabels,
+  ]);
 
   const persistPosition = useCallback(
     (node: Node<SystemNodeData>) => {

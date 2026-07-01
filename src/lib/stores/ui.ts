@@ -7,6 +7,10 @@ interface UIState {
   toggleSidebar: () => void;
   setSidebarCollapsed: (value: boolean) => void;
 
+  /** Which nav group is active in the two-rail sidebar. Persisted. */
+  activeNavGroup: string;
+  setActiveNavGroup: (group: string) => void;
+
   /** Transient overlay state (not persisted). */
   paletteOpen: boolean;
   setPaletteOpen: (value: boolean) => void;
@@ -24,6 +28,9 @@ export const useUIStore = create<UIState>()(
         set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
 
+      activeNavGroup: "Workspace",
+      setActiveNavGroup: (activeNavGroup) => set({ activeNavGroup }),
+
       paletteOpen: false,
       setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
       searchOpen: false,
@@ -33,8 +40,8 @@ export const useUIStore = create<UIState>()(
     }),
     {
       name: "masarflow-ui",
-      // Only the sidebar layout preference should persist.
-      partialize: (s) => ({ sidebarCollapsed: s.sidebarCollapsed }),
+      // Only sidebar layout prefs should persist.
+      partialize: (s) => ({ sidebarCollapsed: s.sidebarCollapsed, activeNavGroup: s.activeNavGroup }),
     },
   ),
 );

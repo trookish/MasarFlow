@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, FileDown } from "lucide-react";
 import { docsRepo } from "@/lib/db/repos";
 import type { Doc } from "@/lib/db/schema";
+import { usePlugin, settingStr } from "@/lib/plugins-runtime";
+import { exportMarkdownToPdf } from "@/lib/export-pdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,13 +32,22 @@ function toForm(d: Doc): DocForm {
 export function DocEditor({
   doc,
   onDelete,
+  defaultMode = "edit",
+  showLineNumbers = false,
 }: {
   doc: Doc;
   onDelete: () => void;
+  defaultMode?: "preview" | "edit";
+  showLineNumbers?: boolean;
 }) {
   const docId = doc.id;
+  const pdfPlugin = usePlugin("export-pdf");
+  const spellPlugin = usePlugin("spell-check");
+  const spellLang = settingStr(spellPlugin.settings, "language", "en");
   const [form, setForm] = useState<DocForm>(() => toForm(doc));
-  const [mode, setMode] = useState<"write" | "read">("write");
+  const [mode, setMode] = useState<"write" | "read">(
+    defaultMode === "preview" ? "read" : "write",
+  );
   const savedJson = useRef(JSON.stringify(form));
   const latest = useRef(form);
 
@@ -99,7 +110,23 @@ export function DocEditor({
             ))}
           </datalist>
 
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            {pdfPlugin.active && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  void exportMarkdownToPdf(
+                    form.title || "Untitled doc",
+                    form.body,
+                    form.category,
+                  )
+                }
+              >
+                <FileDown className="h-3.5 w-3.5" />
+                Export PDF
+              </Button>
+            )}
             <Tabs value={mode} onValueChange={(v) => setMode(v as typeof mode)}>
               <TabsList>
                 <TabsTrigger value="write">Write</TabsTrigger>
@@ -114,10 +141,13 @@ export function DocEditor({
       <div className="flex min-h-0 flex-1">
         {mode === "write" ? (
           <RichMarkdownEditor
-            key={docId}
+            key={`${docId}-${showLineNumbers}-${spellPlugin.active}-${spellLang}`}
             value={form.body}
             onChange={(body) => set({ body })}
             suggestions={[]}
+            showLineNumbers={showLineNumbers}
+            spellCheck={spellPlugin.active}
+            spellCheckLang={spellLang}
             placeholderText="Write documentation in Markdown… type / for commands"
             className="scrollbar-thin min-h-0 flex-1 overflow-y-auto"
           />

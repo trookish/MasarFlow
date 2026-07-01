@@ -1,18 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import Link from "next/link";
 import {
   Eye,
   Play,
   Pause,
-  Plus,
   Trash2,
   FilePlus2,
   FilePen,
   FileX2,
   Boxes,
+  FolderOpen,
+  AlertCircle,
   type LucideIcon,
 } from "lucide-react";
 import { watchEventsRepo, systemsRepo } from "@/lib/db/repos";
@@ -22,11 +23,15 @@ import {
   WATCH_KIND_LABEL,
   WATCH_KIND_STYLE,
   WATCH_FILE_TYPE_LABEL,
-  pickChange,
+  inferFileType,
+  matchSystemByPath,
+  type LiveWatchEvent,
 } from "@/lib/watcher";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { usePageSettings } from "@/lib/stores/page-settings";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -35,8 +40,6 @@ const KIND_ICON: Record<WatchKind, LucideIcon> = {
   modified: FilePen,
   deleted: FileX2,
 };
-
-const WATCH_INTERVAL_MS = 3500;
 
 function relTime(ts: number): string {
   const diff = Date.now() - ts;
@@ -52,7 +55,13 @@ function relTime(ts: number): string {
 
 export function WatcherView() {
   const projectId = useActiveProjectId();
+  const { showHiddenFiles, watchDepth, watchDir } = usePageSettings(
+    (s) => s.watcher,
+  );
+  const update = usePageSettings((s) => s.update);
   const [watching, setWatching] = useState(false);
+  const [watchError, setWatchError] = useState<string | null>(null);
+  const [dirInput, setDirInput] = useState(watchDir);
   const [kinds, setKinds] = useState<Set<WatchKind>>(() => new Set(WATCH_KINDS));
   const [types, setTypes] = useState<Set<WatchFileType> | null>(null);
 
@@ -71,35 +80,62 @@ export function WatcherView() {
     [systems],
   );
 
-  // Resolve a system name → id so emitted events can deep-link to Architecture.
-  const systemIdByName = useMemo(
-    () => new Map((systems ?? []).map((s) => [s.name, s.id])),
-    [systems],
-  );
-  const emit = useCallback(async () => {
-    if (!projectId) return;
-    const c = pickChange();
-    await watchEventsRepo.create({
-      projectId,
-      path: c.path,
-      kind: c.kind,
-      fileType: c.fileType,
-      systemId: c.systemHint ? (systemIdByName.get(c.systemHint) ?? null) : null,
-    });
-  }, [projectId, systemIdByName]);
-
-  // Keep the latest emit in a ref so the interval needn't restart on each change.
-  const emitRef = useRef(emit);
+  // Keep the latest systems in a ref so the live stream needn't reconnect
+  // when the architecture catalog changes.
+  const systemsRef = useRef(systems ?? []);
   useEffect(() => {
-    emitRef.current = emit;
-  }, [emit]);
+    systemsRef.current = systems ?? [];
+  }, [systems]);
 
-  // While watching, emit a simulated change on an interval.
+  // While watching, consume the real filesystem event stream from /api/watch
+  // (Node fs.watch on the configured directory) and persist each event.
   useEffect(() => {
-    if (!watching || !projectId) return;
-    const handle = setInterval(() => emitRef.current(), WATCH_INTERVAL_MS);
-    return () => clearInterval(handle);
-  }, [watching, projectId]);
+    if (!watching || !projectId || !watchDir.trim()) return;
+    const source = new EventSource(
+      `/api/watch?dir=${encodeURIComponent(watchDir.trim())}`,
+    );
+    source.onmessage = (msg) => {
+      let data: (LiveWatchEvent & { error?: string; ready?: boolean }) | null =
+        null;
+      try {
+        data = JSON.parse(msg.data);
+      } catch {
+        return;
+      }
+      if (!data) return;
+      if (data.error) {
+        setWatchError(data.error);
+        setWatching(false);
+        return;
+      }
+      if (data.ready || !data.path) return;
+      const match = matchSystemByPath(data.path, systemsRef.current);
+      void watchEventsRepo.create({
+        projectId,
+        path: data.path,
+        kind: data.kind,
+        fileType: inferFileType(data.path),
+        systemId: match?.id ?? null,
+      });
+    };
+    source.onerror = () => {
+      // The server rejects bad directories with an HTTP error, which
+      // surfaces here as a failed connection.
+      setWatchError(
+        "Could not watch that folder. Check the path exists and is a directory.",
+      );
+      setWatching(false);
+      source.close();
+    };
+    return () => source.close();
+  }, [watching, projectId, watchDir]);
+
+  function saveDirAndWatch() {
+    const dir = dirInput.trim();
+    update("watcher", { watchDir: dir });
+    setWatchError(null);
+    if (dir) setWatching(true);
+  }
 
   const presentTypes = useMemo(() => {
     const set = new Set<WatchFileType>();
@@ -107,12 +143,22 @@ export function WatcherView() {
     return [...set];
   }, [rows]);
 
+  const maxDepth = watchDepth === "unlimited" ? Infinity : Number(watchDepth);
   const visible = useMemo(
     () =>
-      rows.filter(
-        (r) => kinds.has(r.kind) && (!types || types.has(r.fileType)),
-      ),
-    [rows, kinds, types],
+      rows.filter((r) => {
+        if (!kinds.has(r.kind)) return false;
+        if (types && !types.has(r.fileType)) return false;
+        const segments = r.path.split("/").filter(Boolean);
+        // Hidden = any dot-prefixed path segment.
+        if (!showHiddenFiles && segments.some((s) => s.startsWith("."))) {
+          return false;
+        }
+        // Depth = number of directory levels (path separators).
+        if (segments.length - 1 > maxDepth) return false;
+        return true;
+      }),
+    [rows, kinds, types, showHiddenFiles, maxDepth],
   );
 
   function toggleKind(k: WatchKind) {
@@ -150,11 +196,27 @@ export function WatcherView() {
         </span>
 
         <div className="ml-auto flex items-center gap-2">
+          <div className="relative hidden md:block">
+            <FolderOpen className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={dirInput}
+              onChange={(e) => setDirInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveDirAndWatch();
+              }}
+              placeholder="C:\path\to\your\project"
+              className="h-8 w-72 pl-8 font-mono text-xs"
+              disabled={watching}
+            />
+          </div>
           <Button
             variant={watching ? "default" : "outline"}
             size="sm"
-            onClick={() => setWatching((w) => !w)}
-            disabled={!projectId}
+            onClick={() => {
+              if (watching) setWatching(false);
+              else saveDirAndWatch();
+            }}
+            disabled={!projectId || (!watching && !dirInput.trim())}
           >
             {watching ? (
               <Pause className="h-3.5 w-3.5" />
@@ -162,14 +224,6 @@ export function WatcherView() {
               <Play className="h-3.5 w-3.5" />
             )}
             {watching ? "Pause" : "Watch"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => emit()}
-            disabled={!projectId}
-          >
-            <Plus className="h-3.5 w-3.5" /> Simulate change
           </Button>
           <Button
             variant="ghost"
@@ -183,15 +237,35 @@ export function WatcherView() {
         </div>
       </div>
 
+      {watchError && (
+        <div className="flex items-center gap-2 border-b border-border bg-destructive/10 px-4 py-2 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 shrink-0" /> {watchError}
+        </div>
+      )}
+
       {rows.length === 0 ? (
         <EmptyState
           icon={Eye}
-          title="No file activity yet"
-          description="The Project Watcher streams created, modified, and deleted files across your project and maps them to systems. Start watching or simulate a change to see the feed."
+          title="Watch a real folder"
+          description="Point the watcher at any local project directory and it streams created, modified, and deleted files live — mapped to your Architecture systems. Events come straight from the filesystem."
           action={
-            <Button onClick={() => setWatching(true)} disabled={!projectId}>
-              <Play className="h-4 w-4" /> Start watching
-            </Button>
+            <div className="flex w-full max-w-md flex-col gap-2">
+              <Input
+                value={dirInput}
+                onChange={(e) => setDirInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveDirAndWatch();
+                }}
+                placeholder="C:\path\to\your\project"
+                className="font-mono text-xs"
+              />
+              <Button
+                onClick={saveDirAndWatch}
+                disabled={!projectId || !dirInput.trim()}
+              >
+                <Play className="h-4 w-4" /> Start watching
+              </Button>
+            </div>
           }
         />
       ) : (

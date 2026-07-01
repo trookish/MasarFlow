@@ -5,8 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, ChevronDown, Filter } from "lucide-react";
 import { tasksRepo, specsRepo, sprintsRepo } from "@/lib/db/repos";
-import type { Assignee, Task, TaskStatus } from "@/lib/db/schema";
+import type { Assignee, Task } from "@/lib/db/schema";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { usePageSettings } from "@/lib/stores/page-settings";
 import { ASSIGNEES } from "@/lib/workflow";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,7 @@ export function TasksView() {
     useLiveQuery(() => sprintsRepo.listByProject(projectId), [projectId]) ?? [];
   const specs = useMemo(() => specsRaw ?? [], [specsRaw]);
 
+  const { showCompleted, defaultGroup } = usePageSettings((s) => s.tasks);
   const [sprintFilter, setSprintFilter] = useState<string | "all">("all");
   const [assigneeFilter, setAssigneeFilter] = useState<Assignee | "all">("all");
 
@@ -49,9 +51,10 @@ export function TasksView() {
       allTasks.filter(
         (t) =>
           (sprintFilter === "all" || t.sprintId === sprintFilter) &&
-          (assigneeFilter === "all" || t.assignee === assigneeFilter),
+          (assigneeFilter === "all" || t.assignee === assigneeFilter) &&
+          (showCompleted || t.status !== "done"),
       ),
-    [allTasks, sprintFilter, assigneeFilter],
+    [allTasks, sprintFilter, assigneeFilter, showCompleted],
   );
   const selectedTask = allTasks.find((t) => t.id === selectedId) ?? null;
 
@@ -63,12 +66,6 @@ export function TasksView() {
     for (const id of new Set(specIds.filter((x): x is string => Boolean(x)))) {
       await specsRepo.recomputeProgress(id);
     }
-  }
-
-  async function moveTask(id: string, status: TaskStatus) {
-    const t = allTasks.find((x) => x.id === id);
-    await tasksRepo.update(id, { status });
-    await recompute(t?.specId);
   }
 
   async function patchTask(id: string, patch: Partial<Task>) {
@@ -84,12 +81,13 @@ export function TasksView() {
     await recompute(t?.specId);
   }
 
-  async function createTask(status: TaskStatus) {
+  async function createTask(patch: Partial<Task>) {
     if (!projectId) return;
     const task = await tasksRepo.create({
       projectId,
       title: "New task",
-      status,
+      status: "todo",
+      ...patch,
     });
     select(task.id);
   }
@@ -159,7 +157,7 @@ export function TasksView() {
           </DropdownMenu>
           <Button
             size="sm"
-            onClick={() => createTask("todo")}
+            onClick={() => createTask({ status: "todo" })}
             disabled={!projectId}
           >
             <Plus className="h-4 w-4" /> New task
@@ -171,8 +169,9 @@ export function TasksView() {
         <TaskBoard
           tasks={filtered}
           specsById={specsById}
+          groupBy={defaultGroup}
           onOpen={select}
-          onMove={moveTask}
+          onSet={patchTask}
           onCreate={createTask}
         />
       </div>

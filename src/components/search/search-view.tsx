@@ -13,6 +13,7 @@ import {
 } from "@/lib/utils/search";
 import { highlightSegments, snippetAround, type Segment } from "@/lib/highlight";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { usePageSettings } from "@/lib/stores/page-settings";
 import { cn } from "@/lib/utils/cn";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -64,6 +65,8 @@ function Highlighted({ segments }: { segments: Segment[] }) {
 export function SearchView() {
   const projectId = useActiveProjectId();
   const router = useRouter();
+  const { defaultMode, resultsPerPage } = usePageSettings((s) => s.search);
+  const perPage = Number(resultsPerPage);
   const [items, setItems] = useState<SearchItem[]>([]);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState<Set<SearchKind> | null>(null);
@@ -92,21 +95,38 @@ export function SearchView() {
   const ranked = useMemo<Ranked[]>(() => {
     const q = query.trim();
     if (!q) {
+      return items.map((item) => ({
+        item,
+        score: 0,
+        matches: [] as FuseResultMatch[],
+      }));
+    }
+    // Keyword mode: exact case-insensitive substring match (no fuzzy).
+    if (defaultMode === "keyword") {
+      const needle = q.toLowerCase();
       return items
-        .slice(0, 40)
+        .filter(
+          (it) =>
+            it.title.toLowerCase().includes(needle) ||
+            it.body.toLowerCase().includes(needle) ||
+            (it.subtitle?.toLowerCase().includes(needle) ?? false),
+        )
         .map((item) => ({ item, score: 0, matches: [] as FuseResultMatch[] }));
     }
+    // Semantic / hybrid: fuzzy index search.
     return fuse.search(q).map((r) => ({
       item: r.item,
       score: r.score ?? 0,
       matches: r.matches ?? [],
     }));
-  }, [query, items, fuse]);
+  }, [query, items, fuse, defaultMode]);
 
-  const results = useMemo(
-    () => (active ? ranked.filter((r) => active.has(r.item.kind)) : ranked),
-    [ranked, active],
-  );
+  const results = useMemo(() => {
+    const filtered = active
+      ? ranked.filter((r) => active.has(r.item.kind))
+      : ranked;
+    return filtered.slice(0, perPage);
+  }, [ranked, active, perPage]);
 
   function toggleKind(kind: SearchKind) {
     setSelected(0);

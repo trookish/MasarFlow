@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PanelLeft, Workflow } from "lucide-react";
-import { NAV_GROUPS, type NavItem } from "@/lib/nav";
-import { useUIStore } from "@/lib/stores/ui";
-import { useMounted } from "@/lib/hooks/use-mounted";
 import { cn } from "@/lib/utils/cn";
+import { NAV_GROUPS, type NavItem, type NavGroup } from "@/lib/nav";
+import { MasarFlowLogo } from "./logo";
+import { useUIStore } from "@/lib/stores/ui";
+import { usePageSettings } from "@/lib/stores/page-settings";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import { Tooltip } from "@/components/ui/tooltip";
 
 function isActive(pathname: string, href: string, exact = false): boolean {
@@ -14,26 +15,25 @@ function isActive(pathname: string, href: string, exact = false): boolean {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
+/** A single nav link in the expanded panel. */
 function NavLink({
   item,
-  collapsed,
   pathname,
   nested = false,
 }: {
   item: NavItem;
-  collapsed: boolean;
   pathname: string;
   nested?: boolean;
 }) {
   const Icon = item.icon;
   const active = isActive(pathname, item.href, nested);
-  const link = (
+  return (
     <Link
       href={item.href}
       className={cn(
-        "group flex items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors",
-        collapsed ? "h-9 w-9 justify-center" : "h-9",
-        nested && !collapsed && "ml-3 pl-3",
+        "group flex items-center gap-2.5 rounded-md px-2.5 text-sm transition-all duration-150",
+        "h-9",
+        nested && "ml-3 pl-3",
         active
           ? "bg-accent font-medium text-foreground"
           : "text-sidebar-foreground hover:bg-accent/60 hover:text-foreground",
@@ -41,98 +41,138 @@ function NavLink({
     >
       <Icon
         className={cn(
-          "h-4 w-4 shrink-0",
-          active ? "text-primary" : "text-muted-foreground",
+          "h-4 w-4 shrink-0 transition-colors",
+          active ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
         )}
       />
-      {!collapsed && <span className="truncate">{item.label}</span>}
+      <span className="truncate">{item.label}</span>
     </Link>
   );
-  return collapsed ? (
-    <Tooltip label={item.label} side="right">
-      {link}
+}
+
+/** A clickable group icon in the narrow left rail. */
+function GroupRailButton({
+  group,
+  active,
+  onClick,
+  anyChildActive,
+}: {
+  group: NavGroup;
+  active: boolean;
+  onClick: () => void;
+  anyChildActive: boolean;
+}) {
+  const Icon = group.icon;
+  return (
+    <Tooltip label={group.label} side="right">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={group.label}
+        className={cn(
+          "relative flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-150",
+          active
+            ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+            : anyChildActive
+              ? "bg-accent/70 text-foreground"
+              : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+        )}
+      >
+        <Icon className="h-[18px] w-[18px]" />
+        {/* Active-group indicator dot */}
+        {anyChildActive && !active && (
+          <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
+        )}
+      </button>
     </Tooltip>
-  ) : (
-    link
   );
 }
+
+const BRAIN_DEFAULT_HREF: Record<string, string> = {
+  notes: "/brain",
+  canvas: "/brain/canvas",
+  templates: "/brain/templates",
+};
 
 export function Sidebar() {
   const pathname = usePathname();
   const mounted = useMounted();
-  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
-  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
-  // Avoid hydration mismatch: server + first client render are expanded.
-  const collapsed = mounted && sidebarCollapsed;
+  const activeNavGroup = useUIStore((s) => s.activeNavGroup);
+  const setActiveNavGroup = useUIStore((s) => s.setActiveNavGroup);
+  const brainDefaultView = usePageSettings((s) => s.brain.defaultView);
+
+  const brainHref = BRAIN_DEFAULT_HREF[brainDefaultView] ?? "/brain";
+
+  // Avoid hydration mismatch: server + first client render use "Workspace".
+  const openGroup = mounted ? activeNavGroup : "Workspace";
+
+  // Detect which group owns the current pathname (for dot indicators).
+  const activeGroup = NAV_GROUPS.find((g) =>
+    g.items.some((item) => isActive(pathname, item.href)),
+  );
+
+  const currentGroup = NAV_GROUPS.find((g) => g.label === openGroup) ?? NAV_GROUPS[0];
 
   return (
-    <aside
-      className={cn(
-        "flex h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-200",
-        collapsed ? "w-16" : "w-60",
-      )}
-    >
-      <div
-        className={cn(
-          "flex h-14 items-center border-b border-sidebar-border px-3",
-          collapsed ? "justify-center" : "justify-between",
-        )}
-      >
-        {!collapsed && (
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Workflow className="h-4 w-4" />
-            </span>
-            <span className="text-sm font-semibold tracking-tight">
-              MasarFlow
-            </span>
-          </Link>
-        )}
-        <button
-          type="button"
-          aria-label="Toggle sidebar"
-          onClick={toggleSidebar}
-          className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+    <aside className="flex h-screen shrink-0 border-r border-sidebar-border bg-sidebar">
+      {/* ── Left icon rail ────────────────────────────────────────────── */}
+      <div className="flex w-[60px] shrink-0 flex-col items-center gap-1 border-r border-sidebar-border/60 py-3">
+        {/* Logo */}
+        <Link
+          href="/dashboard"
+          className="mb-2 flex h-11 w-11 items-center justify-center rounded-xl transition-colors hover:bg-accent/60"
+          aria-label="MasarFlow home"
         >
-          <PanelLeft className="h-4 w-4" />
-        </button>
+          <MasarFlowLogo className="h-7 w-7" />
+        </Link>
+
+        {/* Group buttons */}
+        <nav className="flex flex-col items-center gap-1.5" aria-label="Navigation groups">
+          {NAV_GROUPS.map((group) => (
+            <GroupRailButton
+              key={group.label}
+              group={group}
+              active={openGroup === group.label}
+              anyChildActive={activeGroup?.label === group.label}
+              onClick={() => setActiveNavGroup(group.label)}
+            />
+          ))}
+        </nav>
       </div>
 
-      <nav className="scrollbar-thin flex-1 space-y-4 overflow-y-auto px-2 py-3">
-        {NAV_GROUPS.map((group) => (
-          <div key={group.label} className="space-y-1">
-            {!collapsed && (
-              <p className="px-2.5 pb-1 text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase">
-                {group.label}
-              </p>
-            )}
-            {group.items.map((item) => {
-              const showChildren =
-                !collapsed && item.children && isActive(pathname, item.href);
-              return (
-                <div key={item.href} className="space-y-1">
-                  <NavLink
-                    item={item}
-                    collapsed={collapsed}
-                    pathname={pathname}
-                  />
-                  {showChildren
-                    ? item.children!.map((child) => (
-                        <NavLink
-                          key={child.href}
-                          item={child}
-                          collapsed={collapsed}
-                          pathname={pathname}
-                          nested
-                        />
-                      ))
-                    : null}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      </nav>
+      {/* ── Expanded items panel ──────────────────────────────────────── */}
+      <div className="flex w-48 shrink-0 flex-col overflow-hidden">
+        {/* Panel header */}
+        <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4">
+          <span className="text-xs font-semibold tracking-wider text-muted-foreground/70 uppercase">
+            {currentGroup.label}
+          </span>
+        </div>
+
+        {/* Items */}
+        <nav className="scrollbar-thin flex-1 space-y-1 overflow-y-auto px-2 py-2">
+          {currentGroup.items.map((item) => {
+            const showChildren = item.children && isActive(pathname, item.href);
+            const navItem =
+              item.href === "/brain" ? { ...item, href: brainHref } : item;
+            return (
+              <div key={item.href} className="space-y-0.5">
+                <NavLink item={navItem} pathname={pathname} />
+                {showChildren
+                  ? item.children!.map((child) => (
+                      <NavLink
+                        key={child.href}
+                        item={child}
+                        pathname={pathname}
+                        nested
+                      />
+                    ))
+                  : null}
+              </div>
+            );
+          })}
+        </nav>
+      </div>
     </aside>
   );
 }

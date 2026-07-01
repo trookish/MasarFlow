@@ -16,6 +16,7 @@ import {
 import {
   agentsRepo,
   agentRunsRepo,
+  agentStepsRepo,
   aiConnectionsRepo,
 } from "@/lib/db/repos";
 import type { Agent } from "@/lib/db/schema";
@@ -26,8 +27,14 @@ import {
   type Catalog,
   type AiProvider,
 } from "@/lib/ai/catalog";
-import { streamChat } from "@/lib/ai/chat-client";
+import { runWorkspaceChat } from "@/lib/ai/chat-client";
+import { WORKSPACE_TOOLS, executeWorkspaceTool } from "@/lib/ai/tools";
+import {
+  assembleWorkspaceContext,
+  buildAssistantSystemPrompt,
+} from "@/lib/ai/context";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { usePageSettings } from "@/lib/stores/page-settings";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +47,7 @@ import { ConnectionsDialog } from "@/components/chat/connections-dialog";
 
 export function AgentsView() {
   const projectId = useActiveProjectId();
+  const { showDisabled } = usePageSettings((s) => s.agents);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [connDialog, setConnDialog] = useState(false);
@@ -55,8 +63,10 @@ export function AgentsView() {
 
   const sorted = useMemo(
     () =>
-      [...(agentsRaw ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
-    [agentsRaw],
+      [...(agentsRaw ?? [])]
+        .filter((a) => showDisabled || a.enabled)
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [agentsRaw, showDisabled],
   );
   const selected = sorted.find((a) => a.id === selectedId) ?? sorted[0] ?? null;
 
@@ -192,22 +202,50 @@ function AgentWorkspace({
     const controller = new AbortController();
     abortRef.current = controller;
     try {
+      // Ground the agent in the live workspace and give it the tool belt so
+      // it can create/update notes, specs, tasks, dev logs, and memories.
+      const contextText = await assembleWorkspaceContext(projectId, {
+        query: task,
+      });
+      const system = buildAssistantSystemPrompt(contextText, {
+        withTools: true,
+        role: `${prompt}\n\nYou are running inside MasarFlow as the "${agent.name}" agent (role: ${agent.role}).`,
+      });
+
       let acc = "";
-      await streamChat({
+      const result = await runWorkspaceChat({
         provider,
         apiKey: connection.apiKey,
         baseUrl: connection.baseUrl,
         model: effModel,
-        system: prompt,
+        system,
         messages: [{ role: "user", content: task }],
+        tools: WORKSPACE_TOOLS,
+        executeTool: (call) => executeWorkspaceTool(projectId, call),
         signal: controller.signal,
-        onDelta: (chunk) => {
-          acc += chunk;
-          setActive({ id: record.id, text: acc });
+        onEvent: (e) => {
+          if (e.type === "text") {
+            acc += e.text;
+            setActive({ id: record.id, text: acc });
+          } else if (e.type === "round" && e.round > 0 && acc) {
+            acc += "\n\n";
+          } else if (e.type === "tool_call") {
+            void agentStepsRepo.append(
+              record.id,
+              "action",
+              JSON.stringify({ name: e.name, arguments: e.arguments }),
+            );
+          } else if (e.type === "tool_result") {
+            void agentStepsRepo.append(
+              record.id,
+              "result",
+              JSON.stringify({ name: e.name, ok: e.ok, content: e.content }),
+            );
+          }
         },
       });
       await agentRunsRepo.update(record.id, {
-        output: acc,
+        output: result.text || acc,
         status: "done",
         finishedAt: Date.now(),
       });
@@ -241,6 +279,13 @@ function AgentWorkspace({
             {agent.description}
           </p>
         </div>
+        <Button
+          variant={agent.enabled ? "outline" : "default"}
+          size="sm"
+          onClick={() => agentsRepo.update(agent.id, { enabled: !agent.enabled })}
+        >
+          {agent.enabled ? "Disable" : "Enable"}
+        </Button>
       </div>
 
       <ScrollArea className="flex-1">
@@ -347,6 +392,7 @@ function AgentWorkspace({
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
+                    <RunToolSteps runId={r.id} />
                     <div className="px-4 py-3">
                       {isError ? (
                         <div className="flex items-center gap-2 text-sm text-destructive">
@@ -370,6 +416,63 @@ function AgentWorkspace({
           )}
         </div>
       </ScrollArea>
+    </div>
+  );
+}
+
+/** Tool calls this run executed against the workspace, as compact chips. */
+function RunToolSteps({ runId }: { runId: string }) {
+  const steps = useLiveQuery(() => agentStepsRepo.listByRun(runId), [runId]) ?? [];
+  const actions = steps.filter((s) => s.type === "action");
+  const resultOk = new Map<number, boolean>();
+  let actionIdx = 0;
+  for (const s of steps) {
+    if (s.type === "action") actionIdx++;
+    if (s.type === "result") {
+      try {
+        resultOk.set(actionIdx - 1, JSON.parse(s.content).ok !== false);
+      } catch {
+        /* keep unknown */
+      }
+    }
+  }
+  if (actions.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1 border-b border-border px-3 py-2">
+      {actions.map((s, i) => {
+        let name = "tool";
+        let summary = "";
+        try {
+          const parsed = JSON.parse(s.content) as {
+            name: string;
+            arguments?: Record<string, unknown>;
+          };
+          name = parsed.name;
+          for (const k of ["title", "name", "query", "content", "id"]) {
+            const v = parsed.arguments?.[k];
+            if (typeof v === "string" && v.trim()) {
+              summary = v.slice(0, 60);
+              break;
+            }
+          }
+        } catch {
+          /* raw content */
+        }
+        const ok = resultOk.get(i) !== false;
+        return (
+          <span
+            key={s.id}
+            title={summary}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full border border-border bg-accent/40 px-2 py-0.5 text-[11px]",
+              ok ? "text-muted-foreground" : "text-destructive",
+            )}
+          >
+            {name}
+            {summary && <span className="max-w-32 truncate opacity-70">{summary}</span>}
+          </span>
+        );
+      })}
     </div>
   );
 }

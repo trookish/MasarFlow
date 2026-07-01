@@ -8,7 +8,6 @@ import {
   FileText,
   KanbanSquare,
   SunMoon,
-  Database,
   Trash2,
 } from "lucide-react";
 import {
@@ -25,7 +24,7 @@ import { useProjectStore } from "@/lib/stores/project";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { ALL_NAV_ITEMS } from "@/lib/nav";
 import { notesRepo, canvasRepo, specsRepo, tasksRepo } from "@/lib/db/repos";
-import { loadDemoData, resetData } from "@/lib/db/seed";
+import { resetData } from "@/lib/db/data";
 
 export function CommandPalette() {
   const open = useUIStore((s) => s.paletteOpen);
@@ -134,17 +133,6 @@ export function CommandPalette() {
           </CommandGroup>
 
           <CommandGroup heading="Data">
-            <CommandItem
-              value="load demo data seed"
-              onSelect={run(async () => {
-                const id = await loadDemoData();
-                setActiveProjectId(id);
-                router.push("/brain");
-              })}
-            >
-              <Database className="h-4 w-4 text-muted-foreground" />
-              Load demo data
-            </CommandItem>
             <CommandItem
               value="reset wipe clear all data"
               onSelect={run(async () => {

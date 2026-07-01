@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
-import { useLiveQuery } from "dexie-react-hooks";
 import {
   Moon,
   Sun,
+  Monitor,
+  Contrast,
   Database,
   Trash2,
   Check,
@@ -30,25 +30,28 @@ import {
   RotateCcw,
   type LucideIcon,
 } from "lucide-react";
-import { ACCENTS, useThemeStore } from "@/lib/stores/theme";
+import {
+  ACCENT_PRESETS,
+  GRADIENT_PRESETS,
+  useThemeStore,
+  type ThemeMode,
+  type AccentMode,
+  type LogoColorMode,
+  type LogoBgMode,
+} from "@/lib/stores/theme";
+import { MasarFlowLogo } from "@/components/shell/logo";
 import { useProjectStore } from "@/lib/stores/project";
 import { useActiveProject } from "@/lib/hooks/use-project";
 import { useMounted } from "@/lib/hooks/use-mounted";
 import {
   usePageSettings,
-  PAGE_SETTINGS_DEFAULTS,
   type PageKey,
   type AllPageSettings,
 } from "@/lib/stores/page-settings";
 import { projectsRepo } from "@/lib/db/repos";
 import type { Project } from "@/lib/db/schema";
-import { loadDemoData, resetData, isDemoLoaded } from "@/lib/db/seed";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardTitle,
-} from "@/components/ui/card";
+import { resetData } from "@/lib/db/data";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -238,59 +241,283 @@ function SectionPanel({
 
 // ─── Global sections ──────────────────────────────────────────────────────────
 
+const MODE_OPTIONS: { value: ThemeMode; label: string; icon: LucideIcon }[] = [
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+  { value: "amoled", label: "AMOLED", icon: Contrast },
+  { value: "system", label: "System", icon: Monitor },
+];
+
 function AppearanceSection() {
   const mounted = useMounted();
-  const { theme, setTheme } = useTheme();
-  const accent = useThemeStore((s) => s.accent);
-  const setAccent = useThemeStore((s) => s.setAccent);
-  const isDark = mounted ? theme !== "light" : true;
+  const s = useThemeStore();
+
+  if (!mounted) {
+    return (
+      <SectionPanel title="Appearance" description="Theme, accent, and layout.">
+        {null}
+      </SectionPanel>
+    );
+  }
 
   return (
     <SectionPanel
       title="Appearance"
-      description="Theme and accent color applied globally."
+      description="Theme, accent, and layout — applied across the whole app."
+      onReset={s.reset}
     >
-      <SettingRow label="Color scheme" description="Light or dark mode for the interface.">
-        <div className="flex gap-1">
-          <Button
-            variant={isDark ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTheme("dark")}
-          >
-            <Moon className="h-3.5 w-3.5" /> Dark
-          </Button>
-          <Button
-            variant={!isDark ? "default" : "outline"}
-            size="sm"
-            onClick={() => setTheme("light")}
-          >
-            <Sun className="h-3.5 w-3.5" /> Light
-          </Button>
+      {/* Color scheme */}
+      <SettingRow
+        label="Color scheme"
+        description="Light, dark, pure-black AMOLED, or follow the OS."
+      >
+        <div className="flex flex-wrap gap-1">
+          {MODE_OPTIONS.map((opt) => {
+            const Icon = opt.icon;
+            return (
+              <Button
+                key={opt.value}
+                size="sm"
+                variant={s.mode === opt.value ? "default" : "outline"}
+                onClick={() => s.setMode(opt.value)}
+              >
+                <Icon className="h-3.5 w-3.5" /> {opt.label}
+              </Button>
+            );
+          })}
         </div>
       </SettingRow>
-      <SettingRow label="Accent color" description="Primary accent color across all pages.">
-        <div className="flex flex-wrap gap-2">
-          {ACCENTS.map((a) => (
-            <button
-              key={a}
-              type="button"
-              data-accent={a}
-              onClick={() => setAccent(a)}
-              aria-label={`${a} accent`}
-              className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-full bg-primary transition-transform hover:scale-110",
-                accent === a &&
-                  "ring-2 ring-ring ring-offset-2 ring-offset-card",
-              )}
-            >
-              {accent === a ? (
-                <Check className="h-3.5 w-3.5 text-primary-foreground" />
-              ) : null}
-            </button>
-          ))}
+
+      {/* Accent style */}
+      <SettingRow label="Accent style" description="A single solid color or a two-stop gradient.">
+        <SegmentedControl<AccentMode>
+          value={s.accentMode}
+          options={[
+            { value: "solid", label: "Solid" },
+            { value: "gradient", label: "Gradient" },
+          ]}
+          onChange={s.setAccentMode}
+        />
+      </SettingRow>
+
+      {/* Solid controls */}
+      {s.accentMode === "solid" && (
+        <>
+          <SettingRow label="Accent color" description="Pick a preset or enter any custom color.">
+            <div className="flex max-w-[15rem] flex-wrap justify-end gap-2">
+              {ACCENT_PRESETS.map((p) => (
+                <button
+                  key={p.name}
+                  type="button"
+                  onClick={() => s.setAccentColor(p.color)}
+                  aria-label={p.name}
+                  title={p.name}
+                  style={{ backgroundColor: p.color }}
+                  className={cn(
+                    "flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110",
+                    s.accentColor.toLowerCase() === p.color.toLowerCase() &&
+                      "ring-2 ring-ring ring-offset-2 ring-offset-card",
+                  )}
+                >
+                  {s.accentColor.toLowerCase() === p.color.toLowerCase() && (
+                    <Check className="h-3.5 w-3.5 text-white mix-blend-difference" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </SettingRow>
+          <SettingRow label="Custom color" description="Exact hex value for the accent.">
+            <ColorField value={s.accentColor} onChange={s.setAccentColor} />
+          </SettingRow>
+        </>
+      )}
+
+      {/* Gradient controls */}
+      {s.accentMode === "gradient" && (
+        <>
+          <SettingRow label="Gradient presets" description="Quick-start gradients; tweak the stops below.">
+            <div className="flex max-w-[15rem] flex-wrap justify-end gap-2">
+              {GRADIENT_PRESETS.map((g) => (
+                <button
+                  key={g.name}
+                  type="button"
+                  onClick={() => s.applyGradientPreset(g)}
+                  aria-label={g.name}
+                  title={g.name}
+                  style={{
+                    backgroundImage: `linear-gradient(${g.angle}deg, ${g.from}, ${g.to})`,
+                  }}
+                  className={cn(
+                    "h-7 w-10 rounded-md transition-transform hover:scale-110",
+                    s.accentColor.toLowerCase() === g.from.toLowerCase() &&
+                      s.accentColor2.toLowerCase() === g.to.toLowerCase() &&
+                      "ring-2 ring-ring ring-offset-2 ring-offset-card",
+                  )}
+                />
+              ))}
+            </div>
+          </SettingRow>
+          <SettingRow label="Start color" description="Gradient's first stop.">
+            <ColorField value={s.accentColor} onChange={s.setAccentColor} />
+          </SettingRow>
+          <SettingRow label="End color" description="Gradient's second stop.">
+            <ColorField value={s.accentColor2} onChange={s.setAccentColor2} />
+          </SettingRow>
+          <SettingRow label="Angle" description={`Direction of the gradient (${s.gradientAngle}°).`}>
+            <RangeField
+              min={0}
+              max={360}
+              step={5}
+              value={s.gradientAngle}
+              onChange={s.setGradientAngle}
+            />
+          </SettingRow>
+        </>
+      )}
+
+      {/* Corner radius */}
+      <SettingRow label="Corner radius" description={`Roundness of cards, buttons, and inputs (${s.radius.toFixed(2)} rem).`}>
+        <RangeField min={0} max={1.5} step={0.0625} value={s.radius} onChange={s.setRadius} />
+      </SettingRow>
+
+      {/* UI scale */}
+      <SettingRow label="UI scale" description={`Overall interface size (${Math.round(s.fontScale * 100)}%).`}>
+        <RangeField min={0.85} max={1.25} step={0.05} value={s.fontScale} onChange={s.setFontScale} />
+      </SettingRow>
+
+      {/* Logo color */}
+      <SettingRow
+        label="Logo color"
+        description="Keep the original artwork, follow the accent, or pick a custom color."
+      >
+        <div className="flex items-center gap-3">
+          <MasarFlowLogo className="h-8 w-8 border border-border" />
+          <SegmentedControl<LogoColorMode>
+            value={s.logoColorMode}
+            options={[
+              { value: "original", label: "Original" },
+              { value: "accent", label: "Accent" },
+              { value: "custom", label: "Custom" },
+            ]}
+            onChange={s.setLogoColorMode}
+          />
+        </div>
+      </SettingRow>
+      {s.logoColorMode === "custom" && (
+        <SettingRow label="Logo custom color" description="Exact color for the logo mark.">
+          <ColorField value={s.logoColor} onChange={s.setLogoColor} />
+        </SettingRow>
+      )}
+
+      {/* Logo background */}
+      <SettingRow
+        label="Logo background"
+        description="Fill behind the logo: transparent, white, the accent, or custom."
+      >
+        <SegmentedControl<LogoBgMode>
+          value={s.logoBgMode}
+          options={[
+            { value: "none", label: "None" },
+            { value: "white", label: "White" },
+            { value: "accent", label: "Accent" },
+            { value: "custom", label: "Custom" },
+          ]}
+          onChange={s.setLogoBgMode}
+        />
+      </SettingRow>
+      {s.logoBgMode === "custom" && (
+        <SettingRow label="Logo background color" description="Exact fill behind the logo.">
+          <ColorField value={s.logoBgColor} onChange={s.setLogoBgColor} />
+        </SettingRow>
+      )}
+
+      {/* Live preview */}
+      <SettingRow label="Preview" description="A live sample of the current accent.">
+        <div className="flex items-center gap-2">
+          <Button size="sm" className="bg-primary text-primary-foreground">
+            Primary
+          </Button>
+          <span
+            className={cn(
+              "rounded-md border border-border px-2 py-1 text-xs font-medium",
+              s.accentMode === "gradient" ? "accent-gradient-text" : "text-primary",
+            )}
+          >
+            Accent text
+          </span>
+          <span className="accent-gradient-bg h-7 w-7 rounded-full" />
         </div>
       </SettingRow>
     </SectionPanel>
+  );
+}
+
+// Native color picker + hex text input, kept in sync.
+function ColorField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (hex: string) => void;
+}) {
+  const [text, setText] = useState(value);
+  // Reflect external changes (preset/swatch clicks) into the text field —
+  // render-phase state adjustment per the React "derived state" pattern.
+  const [prevValue, setPrevValue] = useState(value);
+  if (prevValue !== value) {
+    setPrevValue(value);
+    setText(value);
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="color"
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setText(e.target.value);
+        }}
+        aria-label="Color picker"
+        className="h-7 w-9 cursor-pointer rounded-md border border-border bg-transparent p-0.5"
+      />
+      <Input
+        value={text}
+        onChange={(e) => {
+          const v = e.target.value;
+          setText(v);
+          if (/^#[0-9a-fA-F]{6}$/.test(v)) onChange(v);
+        }}
+        onBlur={() => setText(value)}
+        placeholder="#7c5cfc"
+        className="h-7 w-24 font-mono text-xs"
+      />
+    </div>
+  );
+}
+
+function RangeField({
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <input
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+    />
   );
 }
 
@@ -315,30 +542,14 @@ function ProjectSection() {
 function DataSection() {
   const router = useRouter();
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
-  const demoLoaded = useLiveQuery(() => isDemoLoaded(), []);
   const [confirmReset, setConfirmReset] = useState(false);
 
   return (
     <>
       <SectionPanel
         title="Data Management"
-        description="Load demo content or wipe all local data. Everything lives in your browser (IndexedDB)."
+        description="Everything lives in your browser (IndexedDB) — real workspace data only, no demo content."
       >
-        <SettingRow label="Demo data" description="Populate the app with example projects, notes, and tasks.">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              const id = await loadDemoData();
-              setActiveProjectId(id);
-              router.push("/brain");
-            }}
-            disabled={Boolean(demoLoaded)}
-          >
-            <Database className="h-3.5 w-3.5" />
-            {demoLoaded ? "Demo loaded" : "Load demo"}
-          </Button>
-        </SettingRow>
         <SettingRow label="Reset" description="Permanently delete every project, note, spec, and task in this browser.">
           <Button
             variant="destructive"
@@ -772,9 +983,19 @@ function SyncSection() {
   return (
     <SectionPanel
       title="Sync Panel"
-      description="Obsidian and GitHub sync behavior."
+      description="Local (in-browser) or Obsidian vault sync behavior."
       onReset={() => reset("sync")}
     >
+      <SettingRow label="Sync target" description="Keep the vault index in the browser, or push to a real Obsidian vault.">
+        <SegmentedControl
+          value={sync.mode}
+          options={[
+            { value: "local", label: "Local" },
+            { value: "obsidian", label: "Obsidian" },
+          ]}
+          onChange={(v) => set("mode", v)}
+        />
+      </SettingRow>
       <SettingRow label="Auto-sync interval" description="How often to sync automatically in the background.">
         <SegmentedControl
           value={sync.autoSyncInterval}

@@ -6,6 +6,15 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: import.meta.dirname,
   },
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: ['**/.vs/**', '**/.obsidian/**', '**/node_modules/**'],
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

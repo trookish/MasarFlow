@@ -8,6 +8,7 @@ import {
   forceLink,
   forceCenter,
   forceCollide,
+  forceRadial,
   type Simulation,
   type SimulationNodeDatum,
   type SimulationLinkDatum,
@@ -23,6 +24,7 @@ import {
   linksRepo,
 } from "@/lib/db/repos";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { usePageSettings } from "@/lib/stores/page-settings";
 import { GRAPH_VAR, GRAPH_KIND_LABEL, type GraphKind } from "@/lib/colors";
 import { cn } from "@/lib/utils/cn";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -81,6 +83,20 @@ function linkEnd(end: GLink["source"]): string {
   return typeof end === "string" ? end : (end as GNode).key;
 }
 
+/** Best-effort relation label for an edge, derived from its endpoints. */
+function linkRelation(a: EntityCategory, b: EntityCategory): string {
+  const pair = [a, b].sort().join("-");
+  const map: Record<string, string> = {
+    "note-note": "links",
+    "spec-task": "implements",
+    "note-spec": "informs",
+    "spec-spec": "relates",
+    "system-system": "depends",
+    "commit-spec": "delivers",
+  };
+  return map[pair] ?? "linked";
+}
+
 export function KnowledgeGraph({
   initialCategories,
 }: {
@@ -90,6 +106,9 @@ export function KnowledgeGraph({
   const projectId = useActiveProjectId();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { layout, showOrphans, showEdgeLabels } = usePageSettings(
+    (s) => s.knowledge,
+  );
   const svgRef = useRef<SVGSVGElement>(null);
   const simRef = useRef<Simulation<GNode, GLink> | null>(null);
   const drag = useRef<{
@@ -183,13 +202,22 @@ export function KnowledgeGraph({
   // Restrict the graph to the active entity categories. Links survive only when
   // both endpoints are still visible.
   const filtered = useMemo(() => {
-    const nodes = (data?.nodes ?? []).filter((n) => activeCats.has(n.category));
+    let nodes = (data?.nodes ?? []).filter((n) => activeCats.has(n.category));
     const visible = new Set(nodes.map((n) => n.key));
     const links = (data?.links ?? []).filter(
       (l) => visible.has(linkEnd(l.source)) && visible.has(linkEnd(l.target)),
     );
+    // Hide orphan nodes (no surviving connections) when disabled.
+    if (!showOrphans) {
+      const connected = new Set<string>();
+      for (const l of links) {
+        connected.add(linkEnd(l.source));
+        connected.add(linkEnd(l.target));
+      }
+      nodes = nodes.filter((n) => connected.has(n.key));
+    }
     return { nodes, links };
-  }, [data, activeCats]);
+  }, [data, activeCats, showOrphans]);
 
   useEffect(() => {
     const nodes = filtered.nodes.map((n) => ({ ...n }));
@@ -211,12 +239,19 @@ export function KnowledgeGraph({
       )
       .force("center", forceCenter(W / 2, H / 2))
       .force("collide", forceCollide(28));
+    // Radial layout: pull nodes onto a ring around the center.
+    if (layout === "radial") {
+      sim.force(
+        "radial",
+        forceRadial<GNode>(Math.min(W, H) / 2 - 70, W / 2, H / 2).strength(0.55),
+      );
+    }
     sim.on("tick", () => setGnodes((cur) => [...cur]));
     simRef.current = sim;
     return () => {
       sim.stop();
     };
-  }, [filtered]);
+  }, [filtered, layout]);
 
   const selectedNode: SelectedGraphNode | null = (() => {
     const n = gnodes.find((x) => x.key === selectedKey);
@@ -413,16 +448,27 @@ export function KnowledgeGraph({
                   )
                     return null;
                   return (
-                    <line
-                      key={i}
-                      x1={s.x}
-                      y1={s.y}
-                      x2={t.x}
-                      y2={t.y}
-                      className="stroke-border"
-                      strokeWidth={1}
-                      strokeOpacity={0.7}
-                    />
+                    <g key={i}>
+                      <line
+                        x1={s.x}
+                        y1={s.y}
+                        x2={t.x}
+                        y2={t.y}
+                        className="stroke-border"
+                        strokeWidth={1}
+                        strokeOpacity={0.7}
+                      />
+                      {showEdgeLabels && (
+                        <text
+                          x={(s.x + t.x) / 2}
+                          y={(s.y + t.y) / 2}
+                          textAnchor="middle"
+                          className="pointer-events-none fill-muted-foreground/70 text-[7px]"
+                        >
+                          {linkRelation(s.category, t.category)}
+                        </text>
+                      )}
+                    </g>
                   );
                 })}
                 {gnodes.map((n) => {
