@@ -44,6 +44,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# IDE
+.vs/
+
 # python service (local AI runtime — see python-service/README.md)
 python-service/.venv/
 python-service/store/
