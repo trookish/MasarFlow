@@ -33,6 +33,7 @@ export const PLUGIN_CATEGORIES = [
   "Editor",
   "Tasks",
   "Productivity",
+  "Canvas",
   "Export",
 ] as const;
 
@@ -161,6 +162,54 @@ export const PLUGIN_CATALOG: PluginDef[] = [
     icon: "filedown",
     capabilities: ["Export"],
     settings: [],
+  },
+  {
+    id: "canvas-ai-assist",
+    name: "Canvas AI Assist",
+    description:
+      "AI-powered canvas operations: mind-map generation, auto-summary cards, and smart arrangement. Exposes the canvas AI seam to the chat agent.",
+    category: "Canvas",
+    author: "MasarFlow",
+    version: "0.1.0",
+    icon: "sparkles",
+    capabilities: ["AI", "Canvas"],
+    settings: [
+      { key: "model", label: "Model", type: "text", default: "claude-sonnet-4-5", placeholder: "claude-sonnet-4-5" },
+    ],
+    href: "/brain/canvas",
+    hrefLabel: "Open Canvas",
+  },
+  {
+    id: "canvas-mermaid",
+    name: "Canvas Mermaid Renderer",
+    description:
+      "Render Mermaid diagrams as interactive canvas cards. Registers a custom 'mermaid' card type via the canvas plugin registry.",
+    category: "Canvas",
+    author: "Community",
+    version: "0.1.0",
+    icon: "network",
+    capabilities: ["Canvas", "Rendering"],
+    settings: [
+      { key: "theme", label: "Diagram theme", type: "select", default: "default", options: ["default", "dark", "forest", "neutral"] },
+    ],
+    href: "/brain/canvas",
+    hrefLabel: "Open Canvas",
+  },
+  {
+    id: "canvas-collab",
+    name: "Canvas Collaboration (Preview)",
+    description:
+      "Real-time multi-user canvas editing with presence indicators and conflict resolution. Architecture-ready; transport backend not yet implemented.",
+    category: "Canvas",
+    author: "MasarFlow",
+    version: "0.1.0",
+    icon: "users",
+    capabilities: ["Canvas", "Collaboration"],
+    settings: [
+      { key: "transport", label: "Transport", type: "select", default: "local", options: ["local", "websocket", "webrtc"] },
+    ],
+    href: "/brain/canvas",
+    hrefLabel: "Open Canvas",
   },
 ];
 

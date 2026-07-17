@@ -28,6 +28,10 @@ export const foldersRepo = {
     await db.folders.update(id, { name, updatedAt: now() });
   },
 
+  async update(id: string, patch: Partial<Folder>): Promise<void> {
+    await db.folders.update(id, { ...patch, updatedAt: now() });
+  },
+
   /** Delete a folder; its notes fall back to the project root (folderId=null). */
   async remove(id: string): Promise<void> {
     await db.transaction("rw", [db.folders, db.notes], async () => {

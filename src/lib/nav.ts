@@ -21,8 +21,8 @@ import {
   Plug,
   Settings,
   Layers,
-  Cpu,
   Wrench,
+  ClipboardList,
   type LucideIcon,
 } from "lucide-react";
 
@@ -44,11 +44,11 @@ export interface NavGroup {
 }
 
 export const NAV_GROUPS: NavGroup[] = [
+  // ── Capture: where information is recorded and stored ────────────────────
   {
-    label: "Workspace",
-    icon: Layers,
+    label: "Capture",
+    icon: BookOpen,
     items: [
-      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       {
         label: "Brain",
         href: "/brain",
@@ -65,13 +65,6 @@ export const NAV_GROUPS: NavGroup[] = [
           { label: "Graph", href: "/knowledge?categories=note", icon: Network },
         ],
       },
-      {
-        label: "Specifications",
-        href: "/specs",
-        icon: FileText,
-        keywords: ["rfc", "specs"],
-      },
-      { label: "Standards", href: "/standards", icon: ShieldCheck },
       { label: "Documentation", href: "/docs", icon: BookOpen },
       {
         label: "Files",
@@ -79,12 +72,42 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: Layers,
         keywords: ["attachments", "gallery", "images", "media"],
       },
+    ],
+  },
+  // ── Planning: what to build and the rules it must follow ──────────────────
+  {
+    label: "Planning",
+    icon: ClipboardList,
+    items: [
+      {
+        label: "Specifications",
+        href: "/specs",
+        icon: FileText,
+        keywords: ["rfc", "specs"],
+      },
+      { label: "Standards", href: "/standards", icon: ShieldCheck },
+    ],
+  },
+  // ── Work: tracking execution and its history ─────────────────────────────
+  {
+    label: "Work",
+    icon: LayoutDashboard,
+    items: [
+      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      {
+        label: "Task Boards",
+        href: "/tasks",
+        icon: KanbanSquare,
+        keywords: ["kanban", "tasks"],
+      },
+      { label: "Sprints", href: "/sprints", icon: Flag },
       { label: "Dev Logs", href: "/devlogs", icon: ScrollText },
     ],
   },
+  // ── Structure: structural and relational maps of the project ─────────────
   {
-    label: "Intelligence",
-    icon: Cpu,
+    label: "Structure",
+    icon: Boxes,
     items: [
       { label: "Architecture", href: "/architecture", icon: Boxes },
       {
@@ -93,13 +116,13 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: Share2,
         keywords: ["graph", "links"],
       },
-      {
-        label: "Task Boards",
-        href: "/tasks",
-        icon: KanbanSquare,
-        keywords: ["kanban", "tasks"],
-      },
-      { label: "Sprints", href: "/sprints", icon: Flag },
+    ],
+  },
+  // ── AI: assisted thinking — conversation, agents, pipeline ───────────────
+  {
+    label: "AI",
+    icon: Bot,
+    items: [
       {
         label: "Chat",
         href: "/chat",
@@ -115,6 +138,7 @@ export const NAV_GROUPS: NavGroup[] = [
       },
     ],
   },
+  // ── System: integrations, tools, and configuration ───────────────────────
   {
     label: "System",
     icon: Wrench,

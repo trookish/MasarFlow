@@ -99,12 +99,15 @@ export function Sidebar() {
   const mounted = useMounted();
   const activeNavGroup = useUIStore((s) => s.activeNavGroup);
   const setActiveNavGroup = useUIStore((s) => s.setActiveNavGroup);
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const brainDefaultView = usePageSettings((s) => s.brain.defaultView);
 
   const brainHref = BRAIN_DEFAULT_HREF[brainDefaultView] ?? "/brain";
 
-  // Avoid hydration mismatch: server + first client render use "Workspace".
-  const openGroup = mounted ? activeNavGroup : "Workspace";
+  // Avoid hydration mismatch: server + first client render use the first
+  // group. A stale persisted group label (e.g. after a rename) resolves to
+  // the first group via the fallback below, so the rail stays consistent.
+  const openGroup = mounted ? activeNavGroup : NAV_GROUPS[0].label;
 
   // Detect which group owns the current pathname (for dot indicators).
   const activeGroup = NAV_GROUPS.find((g) =>
@@ -114,7 +117,15 @@ export function Sidebar() {
   const currentGroup = NAV_GROUPS.find((g) => g.label === openGroup) ?? NAV_GROUPS[0];
 
   return (
-    <aside className="flex h-screen shrink-0 border-r border-sidebar-border bg-sidebar">
+    <aside
+      aria-hidden={sidebarCollapsed}
+      className={cn(
+        "flex h-screen shrink-0 border-r border-sidebar-border bg-sidebar transition-all duration-200 ease-in-out",
+        sidebarCollapsed
+          ? "pointer-events-none -ml-[252px] opacity-0"
+          : "ml-0 opacity-100",
+      )}
+    >
       {/* ── Left icon rail ────────────────────────────────────────────── */}
       <div className="flex w-[60px] shrink-0 flex-col items-center gap-1 border-r border-sidebar-border/60 py-3">
         {/* Logo */}
@@ -132,7 +143,7 @@ export function Sidebar() {
             <GroupRailButton
               key={group.label}
               group={group}
-              active={openGroup === group.label}
+              active={currentGroup.label === group.label}
               anyChildActive={activeGroup?.label === group.label}
               onClick={() => setActiveNavGroup(group.label)}
             />

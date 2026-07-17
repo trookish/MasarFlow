@@ -14,6 +14,7 @@ import {
 import { highlightSegments, snippetAround, type Segment } from "@/lib/highlight";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { usePageSettings } from "@/lib/stores/page-settings";
+import { reindexProject } from "@/lib/ai/embedding-sync";
 import { cn } from "@/lib/utils/cn";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -83,6 +84,68 @@ export function SearchView() {
     };
   }, [projectId]);
 
+  // Freshen the local AI service's index for this project when the page
+  // opens — a no-op if the service isn't running (see embedding-sync.ts).
+  useEffect(() => {
+    if (projectId) void reindexProject(projectId);
+  }, [projectId]);
+
+  // Health-check the local AI service once — semantic/hybrid modes fall back
+  // to Fuse when it isn't reachable.
+  const [semanticHealthy, setSemanticHealthy] = useState(false);
+  useEffect(() => {
+    let on = true;
+    fetch("/api/python/health")
+      .then((r) => r.json())
+      .then((d: { ok?: boolean }) => {
+        if (on) setSemanticHealthy(d.ok === true);
+      })
+      .catch(() => {
+        if (on) setSemanticHealthy(false);
+      });
+    return () => {
+      on = false;
+    };
+  }, []);
+
+  // Debounced real semantic search against the local AI service. Results are
+  // mapped back to the local `items` so existing highlighting/snippet/href
+  // rendering can be reused as-is. `semanticQueryFor` tracks which query
+  // `semanticItems` answers, so the `ranked` memo below can ignore stale
+  // results without needing to eagerly clear state from this effect.
+  const [semanticItems, setSemanticItems] = useState<SearchItem[]>([]);
+  const [semanticQueryFor, setSemanticQueryFor] = useState<string | null>(null);
+  useEffect(() => {
+    const q = query.trim();
+    const wantsSemantic = defaultMode === "semantic" || defaultMode === "hybrid";
+    if (!wantsSemantic || !semanticHealthy || !q || !projectId) return;
+    let cancelled = false;
+    const handle = setTimeout(() => {
+      fetch("/api/python/search", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ projectId, query: q, limit: perPage * 2 }),
+      })
+        .then((res) => res.json())
+        .then((data: { ok?: boolean; results?: { id: string; kind: SearchKind }[] }) => {
+          if (cancelled || !data.ok || !data.results) return;
+          const byKey = new Map(items.map((it) => [`${it.kind}:${it.id}`, it]));
+          const mapped = data.results
+            .map((r) => byKey.get(`${r.kind}:${r.id}`))
+            .filter((it): it is SearchItem => Boolean(it));
+          setSemanticItems(mapped);
+          setSemanticQueryFor(q);
+        })
+        .catch(() => {
+          /* local AI service unavailable — ranked memo falls back to Fuse */
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [defaultMode, semanticHealthy, query, projectId, items, perPage]);
+
   const fuse = useMemo(() => createSearchIndex(items), [items]);
 
   // Kinds present in the corpus, and per-kind counts.
@@ -101,25 +164,63 @@ export function SearchView() {
         matches: [] as FuseResultMatch[],
       }));
     }
+    const substringMatch = (needle: string) =>
+      items.filter(
+        (it) =>
+          it.title.toLowerCase().includes(needle) ||
+          it.body.toLowerCase().includes(needle) ||
+          (it.subtitle?.toLowerCase().includes(needle) ?? false),
+      );
+    const fuzzy = () =>
+      fuse.search(q).map((r) => ({
+        item: r.item,
+        score: r.score ?? 0,
+        matches: r.matches ?? [],
+      }));
+    const noMatch = (item: SearchItem): Ranked => ({
+      item,
+      score: 0,
+      matches: [] as FuseResultMatch[],
+    });
+    // Only trust semanticItems when they actually answer the current query —
+    // the debounced fetch may not have resolved yet for a just-typed query.
+    const semanticReady = semanticHealthy && semanticQueryFor === q;
+
     // Keyword mode: exact case-insensitive substring match (no fuzzy).
     if (defaultMode === "keyword") {
-      const needle = q.toLowerCase();
-      return items
-        .filter(
-          (it) =>
-            it.title.toLowerCase().includes(needle) ||
-            it.body.toLowerCase().includes(needle) ||
-            (it.subtitle?.toLowerCase().includes(needle) ?? false),
-        )
-        .map((item) => ({ item, score: 0, matches: [] as FuseResultMatch[] }));
+      return substringMatch(q.toLowerCase()).map(noMatch);
     }
-    // Semantic / hybrid: fuzzy index search.
-    return fuse.search(q).map((r) => ({
-      item: r.item,
-      score: r.score ?? 0,
-      matches: r.matches ?? [],
-    }));
-  }, [query, items, fuse, defaultMode]);
+
+    // Semantic: real vector search via the local AI service when reachable
+    // (see the debounced effect above); Fuse fuzzy search otherwise.
+    if (defaultMode === "semantic") {
+      if (semanticReady && semanticItems.length > 0) {
+        return semanticItems.map(noMatch);
+      }
+      return fuzzy();
+    }
+
+    // Hybrid: merge semantic vector results with keyword substring hits,
+    // deduped, semantic first (higher relevance signal) — not a full
+    // BM25+dense fusion, just a simple union.
+    const keywordItems = substringMatch(q.toLowerCase());
+    const seen = new Set<string>();
+    const merged: SearchItem[] = [];
+    for (const it of semanticReady ? semanticItems : []) {
+      const key = `${it.kind}:${it.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(it);
+    }
+    for (const it of keywordItems) {
+      const key = `${it.kind}:${it.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(it);
+    }
+    if (merged.length === 0) return fuzzy();
+    return merged.map(noMatch);
+  }, [query, items, fuse, defaultMode, semanticHealthy, semanticItems, semanticQueryFor]);
 
   const results = useMemo(() => {
     const filtered = active

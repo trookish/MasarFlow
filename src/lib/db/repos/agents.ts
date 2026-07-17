@@ -42,6 +42,15 @@ export const agentsRepo = {
 };
 
 export const agentRunsRepo = {
+  async listByProject(projectId?: string | null): Promise<AgentRun[]> {
+    if (!projectId) return [];
+    return db.agentRuns
+      .where("projectId")
+      .equals(projectId)
+      .reverse()
+      .sortBy("createdAt");
+  },
+
   async listByAgent(
     projectId: string | null | undefined,
     agentId: string,

@@ -59,19 +59,23 @@ export const projectsRepo = {
 
   /** Delete a project and every record that belongs to it. */
   async remove(id: string): Promise<void> {
-    await db.transaction("rw", [db.projects, ...PROJECT_TABLES], async () => {
-      for (const table of PROJECT_TABLES) {
-        await table.where("projectId").equals(id).delete();
-      }
-      // Canvas children are keyed by canvasId — clear them by ownership.
-      const canvasIds = await db.canvases
-        .where("projectId")
-        .equals(id)
-        .primaryKeys();
-      await db.canvasNodes.where("canvasId").anyOf(canvasIds).delete();
-      await db.canvasEdges.where("canvasId").anyOf(canvasIds).delete();
-      await db.projects.delete(id);
-    });
+    await db.transaction(
+      "rw",
+      [db.projects, ...PROJECT_TABLES, db.canvasNodes, db.canvasEdges],
+      async () => {
+        for (const table of PROJECT_TABLES) {
+          await table.where("projectId").equals(id).delete();
+        }
+        // Canvas children are keyed by canvasId — clear them by ownership.
+        const canvasIds = await db.canvases
+          .where("projectId")
+          .equals(id)
+          .primaryKeys();
+        await db.canvasNodes.where("canvasId").anyOf(canvasIds).delete();
+        await db.canvasEdges.where("canvasId").anyOf(canvasIds).delete();
+        await db.projects.delete(id);
+      },
+    );
   },
 
   /**

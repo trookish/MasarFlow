@@ -382,7 +382,7 @@ export type Canvas = z.infer<typeof canvasSchema>;
 export const canvasNodeSchema = z.object({
   id: z.string(),
   canvasId: z.string(),
-  type: z.enum(["note", "text", "link", "media"]).default("text"),
+  type: z.enum(["note", "text", "link", "media", "group"]).default("text"),
   x: z.number().default(0),
   y: z.number().default(0),
   width: z.number().default(240),
@@ -479,10 +479,19 @@ export const chatThreadSchema = z.object({
   title: z.string().default("New chat"),
   connectionId: z.string(),
   modelId: z.string(),
+  /**
+   * agentic — grounded in the workspace briefing and able to act via tools;
+   * chat — a direct conversation with the model, no workspace injection.
+   * Not indexed — added without a Dexie version bump.
+   */
+  mode: z.enum(["agentic", "chat"]).default("agentic"),
+  /** Extended thinking/reasoning, for models that support it. Not indexed. */
+  reasoningEnabled: z.boolean().default(false),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
 export type ChatThread = z.infer<typeof chatThreadSchema>;
+export type ChatMode = ChatThread["mode"];
 
 /** One tool invocation recorded on an assistant chat message. */
 export const toolActivitySchema = z.object({
@@ -492,17 +501,39 @@ export const toolActivitySchema = z.object({
 });
 export type ToolActivity = z.infer<typeof toolActivitySchema>;
 
+/** An attachment carried on a chat message. */
+export const chatAttachmentSchema = z.object({
+  name: z.string(),
+  mimeType: z.string().default("application/octet-stream"),
+  kind: z.enum(["image", "file"]).default("file"),
+  /** Images: downscaled data URL used for display and resending. */
+  dataUrl: z.string().default(""),
+  /** Text files: extracted content that was inlined into the prompt. */
+  textContent: z.string().default(""),
+});
+export type ChatAttachment = z.infer<typeof chatAttachmentSchema>;
+
 export const chatMessageSchema = z.object({
   id: z.string(),
   threadId: z.string(),
   role: z.enum(["system", "user", "assistant"]),
   content: z.string().default(""),
+  /**
+   * The model's reasoning/thinking trace for this message (extended thinking,
+   * reasoning_content, etc.). Empty string when the model produced none.
+   * Not indexed — added without a Dexie version bump.
+   */
+  reasoning: z.string().default(""),
   error: z.string().nullable().default(null),
   /**
    * Workspace tool calls the assistant executed while producing this message.
    * Not indexed — added without a Dexie version bump.
    */
   toolActivity: z.array(toolActivitySchema).default([]),
+  /** Images/files the user attached to this message. Not indexed. */
+  attachments: z.array(chatAttachmentSchema).default([]),
+  /** Degradation notices from the proxy (e.g. "tools disabled"). Not indexed. */
+  notices: z.array(z.string()).default([]),
   createdAt: z.number(),
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
@@ -531,3 +562,86 @@ export const workflowStepSchema = z.object({
   updatedAt: z.number(),
 });
 export type WorkflowStep = z.infer<typeof workflowStepSchema>;
+
+/* ── Phase 2: Intelligence tier (Python-backed) ─────────────────────── */
+
+/**
+ * A code-analysis report for one source file, produced by the Python
+ * tree-sitter service (#4). Persists violations, metrics, and symbols so the
+ * enforcer panel and tech-debt metric don't recompute on every render.
+ */
+export const codeFindingSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  path: z.string(),
+  language: z.string().default(""),
+  violations: z
+    .array(
+      z.object({
+        rule: z.string(),
+        severity: z.enum(["error", "warning", "info"]).default("warning"),
+        message: z.string().default(""),
+        line: z.number().int().min(1).default(1),
+        snippet: z.string().default(""),
+      }),
+    )
+    .default([]),
+  metrics: z
+    .object({
+      loc: z.number().int().min(0).default(0),
+      cyclomatic: z.number().int().min(0).default(0),
+      cognitive: z.number().int().min(0).default(0),
+    })
+    .default({ loc: 0, cyclomatic: 0, cognitive: 0 }),
+  symbols: z
+    .array(
+      z.object({
+        name: z.string(),
+        kind: z.string().default(""),
+        line: z.number().int().min(1).default(1),
+      }),
+    )
+    .default([]),
+  analyzedAt: z.number(),
+  updatedAt: z.number(),
+});
+export type CodeFinding = z.infer<typeof codeFindingSchema>;
+
+/**
+ * A reviewable predicted graph edge (#5), produced by the Python networkx
+ * service. Accepting one promotes it to a real `Link`.
+ */
+export const linkSuggestionSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  sourceType: entityKindSchema,
+  sourceId: z.string(),
+  targetType: entityKindSchema,
+  targetId: z.string(),
+  linkType: z
+    .enum(["wikilink", "dependency", "reference", "implements", "relates"])
+    .default("relates"),
+  score: z.number().min(0).max(1).default(0.5),
+  reason: z.string().default(""),
+  status: z.enum(["pending", "accepted", "dismissed"]).default("pending"),
+  createdAt: z.number(),
+});
+export type LinkSuggestion = z.infer<typeof linkSuggestionSchema>;
+
+/**
+ * Extracted-text cache for binary/non-text files (#7), so the embedding
+ * pipeline can index PDFs/Office docs/images/audio/web pages without
+ * re-parsing on every sync. `hash` detects when re-parse is needed.
+ */
+export const parsedContentSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  path: z.string(),
+  modality: z.enum(["web", "pdf", "office", "image", "audio"]).default("web"),
+  text: z.string().default(""),
+  meta: z.record(z.string(), z.unknown()).default({}),
+  hash: z.string().default(""),
+  parsedAt: z.number(),
+  updatedAt: z.number(),
+});
+export type ParsedContent = z.infer<typeof parsedContentSchema>;

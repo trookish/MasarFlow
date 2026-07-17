@@ -29,8 +29,9 @@ import {
 } from "@/lib/ai/workflow";
 import {
   fetchCatalog,
-  modelsForProvider,
+  defaultModelId,
   searchModels,
+  modelSupportsTools,
   type Catalog,
   type AiProvider,
 } from "@/lib/ai/catalog";
@@ -200,9 +201,7 @@ function NewRun({
   const provider = (catalog && connection && catalog[connection.providerId]) || null;
   const [model, setModel] = useState("");
   const effModel =
-    provider && !provider.models[model]
-      ? (modelsForProvider(provider)[0]?.id ?? "")
-      : model;
+    provider && !provider.models[model] ? defaultModelId(provider) : model;
 
   async function start() {
     if (!projectId || !connection) return;
@@ -283,7 +282,7 @@ function RunDetail({
 
   async function runStep(step: WorkflowStep, prior: PriorOutput[]): Promise<string> {
     if (!connection || !provider) throw new Error("No connection");
-    if (!connection.apiKey) {
+    if (!connection.apiKey && !provider.noAuth) {
       onManageConnections();
       throw new Error("Missing API key");
     }
@@ -295,12 +294,15 @@ function RunDetail({
     try {
       // Ground the step's agent in the live workspace; materializing steps
       // also get the tool belt so their artifacts (specs, tasks, docs,
-      // memories) are created for real.
+      // memories) are created for real — but only when the model can call
+      // tools at all.
+      const withTools =
+        Boolean(def.materialize) && modelSupportsTools(provider, run.modelId);
       const contextText = await assembleWorkspaceContext(run.projectId, {
         query: `${run.idea} ${def.title}`,
       });
       const system = buildAssistantSystemPrompt(contextText, {
-        withTools: Boolean(def.materialize),
+        withTools,
         role: `${stepSystemPrompt(def)}\n\nYou are executing step "${def.title}" of MasarFlow's 16-step idea→implementation workflow.`,
       });
 
@@ -311,9 +313,19 @@ function RunDetail({
         baseUrl: connection.baseUrl,
         model: run.modelId,
         system,
-        messages: [{ role: "user", content: buildStepPrompt(run.idea, prior, def) }],
-        tools: def.materialize ? WORKSPACE_TOOLS : undefined,
-        executeTool: def.materialize
+        messages: [
+          {
+            role: "user",
+            // Skip the "persist via tools" instruction when tools are off.
+            content: buildStepPrompt(
+              run.idea,
+              prior,
+              withTools ? def : { ...def, materialize: undefined },
+            ),
+          },
+        ],
+        tools: withTools ? WORKSPACE_TOOLS : undefined,
+        executeTool: withTools
           ? (call) => executeWorkspaceTool(run.projectId, call)
           : undefined,
         signal: controller.signal,
@@ -327,6 +339,14 @@ function RunDetail({
         },
       });
       const output = result.text || acc;
+      // A step with no text and no executed tools produced nothing usable —
+      // mark it as an error so the pipeline stops instead of feeding empty
+      // context to later steps.
+      if (!output.trim() && result.executed.length === 0) {
+        throw new Error(
+          "The model returned an empty response — rerun this step, or try another model.",
+        );
+      }
       await workflowRepo.updateStep(step.id, { status: "done", output });
       return output;
     } catch (e) {
@@ -438,7 +458,7 @@ function RunDetail({
               const prov = catalog?.[c.providerId];
               workflowRepo.updateRun(run.id, {
                 connectionId: c.id,
-                modelId: prov ? (modelsForProvider(prov)[0]?.id ?? "") : "",
+                modelId: prov ? defaultModelId(prov) : "",
               });
             }}
             onManage={onManageConnections}

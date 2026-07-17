@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Command as CommandIcon, Keyboard } from "lucide-react";
+import { Search, Command as CommandIcon, Keyboard, PanelLeft } from "lucide-react";
 import { useUIStore } from "@/lib/stores/ui";
 import { ProjectSwitcher } from "./project-switcher";
 import { ThemeToggle } from "./theme-toggle";
@@ -13,9 +13,22 @@ export function Topbar() {
   const setSearchOpen = useUIStore((s) => s.setSearchOpen);
   const setPaletteOpen = useUIStore((s) => s.setPaletteOpen);
   const setShortcutsOpen = useUIStore((s) => s.setShortcutsOpen);
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
 
   return (
     <header className="relative z-40 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur">
+      <Tooltip label={sidebarCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"} side="bottom" align="start">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          onClick={toggleSidebar}
+        >
+          <PanelLeft className="h-4 w-4" />
+        </Button>
+      </Tooltip>
+
       <ProjectSwitcher />
 
       <button

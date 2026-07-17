@@ -24,3 +24,6 @@ export {
 } from "./chat";
 export { agentsRepo, agentRunsRepo, agentStepsRepo } from "./agents";
 export { workflowRepo } from "./workflow";
+export { codeFindingsRepo } from "./codeFindings";
+export { linkSuggestionsRepo } from "./linkSuggestions";
+export { parsedContentsRepo } from "./parsedContents";

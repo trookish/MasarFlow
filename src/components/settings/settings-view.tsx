@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Moon,
@@ -28,6 +28,9 @@ import {
   Search,
   Plug,
   RotateCcw,
+  Sparkles,
+  LayoutTemplate,
+  Cpu,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -41,7 +44,8 @@ import {
 } from "@/lib/stores/theme";
 import { MasarFlowLogo } from "@/components/shell/logo";
 import { useProjectStore } from "@/lib/stores/project";
-import { useActiveProject } from "@/lib/hooks/use-project";
+import { useActiveProject, useActiveProjectId } from "@/lib/hooks/use-project";
+import { reindexProject } from "@/lib/ai/embedding-sync";
 import { useMounted } from "@/lib/hooks/use-mounted";
 import {
   usePageSettings,
@@ -51,6 +55,7 @@ import {
 import { projectsRepo } from "@/lib/db/repos";
 import type { Project } from "@/lib/db/schema";
 import { resetData } from "@/lib/db/data";
+import { seedDemoProject } from "@/lib/db/demo-seed";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,7 +71,7 @@ import { cn } from "@/lib/utils/cn";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type GlobalSection = "appearance" | "project" | "data";
+type GlobalSection = "appearance" | "project" | "data" | "ai-service";
 type Section = GlobalSection | PageKey;
 
 interface NavEntry {
@@ -110,6 +115,7 @@ const NAV: NavGroup[] = [
       { id: "chat", label: "Chat", icon: MessageSquare },
       { id: "agents", label: "AI Agents", icon: Bot },
       { id: "workflow", label: "AI Workflow", icon: Workflow },
+      { id: "ai-service", label: "Local AI Service", icon: Cpu },
     ],
   },
   {
@@ -120,6 +126,7 @@ const NAV: NavGroup[] = [
       { id: "sync", label: "Sync Panel", icon: RefreshCw },
       { id: "watcher", label: "Project Watcher", icon: Eye },
       { id: "search", label: "Semantic Search", icon: Search },
+      { id: "canvas", label: "Canvas", icon: LayoutTemplate },
       { id: "plugins", label: "Plugins", icon: Plug },
     ],
   },
@@ -543,13 +550,38 @@ function DataSection() {
   const router = useRouter();
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+
+  async function loadDemo() {
+    setSeeding(true);
+    try {
+      const id = await seedDemoProject();
+      setActiveProjectId(id);
+      router.push("/dashboard");
+    } finally {
+      setSeeding(false);
+    }
+  }
 
   return (
     <>
       <SectionPanel
         title="Data Management"
-        description="Everything lives in your browser (IndexedDB) — real workspace data only, no demo content."
+        description="Everything lives in your browser (IndexedDB). Load a demo project to see every feature in action, or reset to start clean."
       >
+        <SettingRow
+          label="Load demo project"
+          description="Seeds a sample game project — Lumen: Echoes of the Last Forge — with notes, specs, tasks, sprints, systems, docs, commits, a canvas, and an AI chat, all interlinked. Safe to run; never duplicates."
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void loadDemo()}
+            disabled={seeding}
+          >
+            <Sparkles className="h-3.5 w-3.5" /> {seeding ? "Loading…" : "Load demo"}
+          </Button>
+        </SettingRow>
         <SettingRow label="Reset" description="Permanently delete every project, note, spec, and task in this browser.">
           <Button
             variant="destructive"
@@ -912,6 +944,93 @@ function WorkflowSection() {
   );
 }
 
+function AiServiceSection() {
+  const projectId = useActiveProjectId();
+  const [health, setHealth] = useState<
+    { checked: false } | { checked: true; ok: boolean; ollamaAvailable: boolean }
+  >({ checked: false });
+  const [reindexing, setReindexing] = useState(false);
+  const [lastReindexed, setLastReindexed] = useState<number | null>(null);
+
+  async function checkHealth() {
+    try {
+      const res = await fetch("/api/python/health");
+      const data = (await res.json()) as {
+        ok?: boolean;
+        ollama?: { available?: boolean };
+      };
+      setHealth({ checked: true, ok: data.ok === true, ollamaAvailable: data.ollama?.available === true });
+    } catch {
+      setHealth({ checked: true, ok: false, ollamaAvailable: false });
+    }
+  }
+
+  useEffect(() => {
+    // Deferred via a microtask (rather than an immediate `void checkHealth()`)
+    // so this effect never synchronously triggers a setState call.
+    void Promise.resolve().then(() => checkHealth());
+  }, []);
+
+  async function runReindex() {
+    if (!projectId) return;
+    setReindexing(true);
+    try {
+      await reindexProject(projectId);
+      setLastReindexed(Date.now());
+      await checkHealth();
+    } finally {
+      setReindexing(false);
+    }
+  }
+
+  return (
+    <SectionPanel
+      title="Local AI Service"
+      description="The local Python service (python-service/) powers semantic search, RAG-grounded chat, code analysis, and graph intelligence. It's a required runtime — the workspace won't open without it."
+    >
+      <SettingRow
+        label="Status"
+        description="Whether the local service — and Ollama, for local model chat — are reachable."
+      >
+        <div className="flex items-center gap-2 text-xs">
+          {!health.checked ? (
+            <span className="text-muted-foreground">Checking…</span>
+          ) : health.ok ? (
+            <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Connected
+              {health.ollamaAvailable ? " · Ollama detected" : ""}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" /> Not running
+            </span>
+          )}
+          <Button variant="ghost" size="sm" onClick={() => void checkHealth()}>
+            <RefreshCw className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </SettingRow>
+      <SettingRow
+        label="Reindex workspace"
+        description={
+          lastReindexed
+            ? `Last reindexed ${new Date(lastReindexed).toLocaleTimeString()}. Notes, specs, tasks, docs, and more are also reindexed automatically every ~10 minutes.`
+            : "Sends the current workspace to the local service for embedding. Also runs automatically every ~10 minutes."
+        }
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!projectId || !health.checked || !health.ok || reindexing}
+          onClick={() => void runReindex()}
+        >
+          <Cpu className="h-3.5 w-3.5" /> {reindexing ? "Reindexing…" : "Reindex now"}
+        </Button>
+      </SettingRow>
+    </SectionPanel>
+  );
+}
+
 function DocsSection() {
   const { docs, update, reset } = usePageSettings();
   const set = <K extends keyof AllPageSettings["docs"]>(
@@ -1113,6 +1232,53 @@ function PluginsSection() {
   );
 }
 
+function CanvasSection() {
+  const { canvas, update, reset } = usePageSettings();
+  const set = <K extends keyof AllPageSettings["canvas"]>(
+    k: K,
+    v: AllPageSettings["canvas"][K],
+  ) => update("canvas", { [k]: v } as Partial<AllPageSettings["canvas"]>);
+
+  return (
+    <SectionPanel
+      title="Canvas"
+      description="Visual canvas display, snapping, and performance defaults."
+      onReset={() => reset("canvas")}
+    >
+      <SettingRow label="Background grid" description="Show a dot grid on the canvas background.">
+        <Toggle value={canvas.showGrid} onChange={(v) => set("showGrid", v)} />
+      </SettingRow>
+      <SettingRow label="Grid size" description="Spacing between grid dots, in pixels.">
+        <SegmentedControl
+          value={String(canvas.gridSize) as "16" | "20" | "24" | "32"}
+          options={[
+            { value: "16", label: "16" },
+            { value: "20", label: "20" },
+            { value: "24", label: "24" },
+            { value: "32", label: "32" },
+          ]}
+          onChange={(v) => set("gridSize", Number(v))}
+        />
+      </SettingRow>
+      <SettingRow label="Snap to grid" description="Align nodes to the grid when dragging.">
+        <Toggle value={canvas.snapToGrid} onChange={(v) => set("snapToGrid", v)} />
+      </SettingRow>
+      <SettingRow label="Snap to objects" description="Show alignment guides near other nodes.">
+        <Toggle value={canvas.snapToObjects} onChange={(v) => set("snapToObjects", v)} />
+      </SettingRow>
+      <SettingRow label="Card shadows" description="Render subtle shadows under canvas cards.">
+        <Toggle value={canvas.cardShadows} onChange={(v) => set("cardShadows", v)} />
+      </SettingRow>
+      <SettingRow
+        label="LOD threshold"
+        description={`Below this zoom level, cards render simplified previews (${Math.round(canvas.lodThreshold * 100)}%).`}
+      >
+        <RangeField min={0.1} max={1} step={0.1} value={canvas.lodThreshold} onChange={(v) => set("lodThreshold", v)} />
+      </SettingRow>
+    </SectionPanel>
+  );
+}
+
 // ─── Main view ────────────────────────────────────────────────────────────────
 
 const SECTION_COMPONENTS: Record<Section, () => React.ReactElement> = {
@@ -1130,11 +1296,13 @@ const SECTION_COMPONENTS: Record<Section, () => React.ReactElement> = {
   chat: ChatSection,
   agents: AgentsSection,
   workflow: WorkflowSection,
+  "ai-service": AiServiceSection,
   docs: DocsSection,
   devlogs: DevlogsSection,
   sync: SyncSection,
   watcher: WatcherSection,
   search: SearchSection,
+  canvas: CanvasSection,
   plugins: PluginsSection,
 };
 

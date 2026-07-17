@@ -17,6 +17,9 @@ export const commitsRepo = {
   get(id: string): Promise<Commit | undefined> {
     return db.commits.get(id);
   },
+  async update(id: string, patch: Partial<Commit>): Promise<void> {
+    await db.commits.update(id, patch);
+  },
   async create(input: CommitInput): Promise<Commit> {
     const commit = commitSchema.parse({
       ...input,

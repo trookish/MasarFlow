@@ -92,6 +92,17 @@ export interface PluginsPageSettings {
   showDisabled: boolean;
 }
 
+export interface CanvasSettings {
+  showGrid: boolean;
+  gridSize: number;
+  snapToGrid: boolean;
+  snapToObjects: boolean;
+  zoomSpeed: number;
+  cardShadows: boolean;
+  /** Below this zoom level (0–1), nodes render simplified previews (LOD). */
+  lodThreshold: number;
+}
+
 export interface AllPageSettings {
   dashboard: DashboardSettings;
   brain: BrainSettings;
@@ -110,6 +121,7 @@ export interface AllPageSettings {
   watcher: WatcherSettings;
   search: SearchSettings;
   plugins: PluginsPageSettings;
+  canvas: CanvasSettings;
 }
 
 export type PageKey = keyof AllPageSettings;
@@ -137,6 +149,15 @@ export const PAGE_SETTINGS_DEFAULTS: AllPageSettings = {
   watcher: { showHiddenFiles: false, watchDepth: "3", watchDir: "" },
   search: { defaultMode: "semantic", resultsPerPage: "20" },
   plugins: { showDisabled: true },
+  canvas: {
+    showGrid: true,
+    gridSize: 20,
+    snapToGrid: false,
+    snapToObjects: true,
+    zoomSpeed: 1,
+    cardShadows: true,
+    lodThreshold: 0.5,
+  },
 };
 
 interface PageSettingsStore extends AllPageSettings {

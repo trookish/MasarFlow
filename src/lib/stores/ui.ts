@@ -28,7 +28,7 @@ export const useUIStore = create<UIState>()(
         set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
 
-      activeNavGroup: "Workspace",
+      activeNavGroup: "Capture",
       setActiveNavGroup: (activeNavGroup) => set({ activeNavGroup }),
 
       paletteOpen: false,

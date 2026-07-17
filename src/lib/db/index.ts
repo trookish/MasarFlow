@@ -31,6 +31,9 @@ import type {
   ChatMessage,
   WorkflowRun,
   WorkflowStep,
+  CodeFinding,
+  LinkSuggestion,
+  ParsedContent,
 } from "./schema";
 
 /**
@@ -69,6 +72,9 @@ export class MasarFlowDB extends Dexie {
   chatMessages!: EntityTable<ChatMessage, "id">;
   workflowRuns!: EntityTable<WorkflowRun, "id">;
   workflowSteps!: EntityTable<WorkflowStep, "id">;
+  codeFindings!: EntityTable<CodeFinding, "id">;
+  linkSuggestions!: EntityTable<LinkSuggestion, "id">;
+  parsedContents!: EntityTable<ParsedContent, "id">;
 
   constructor() {
     super("masarflow");
@@ -118,6 +124,13 @@ export class MasarFlowDB extends Dexie {
     this.version(5).stores({
       workflowRuns: "id, projectId, updatedAt",
       workflowSteps: "id, runId, order",
+    });
+    // v6: Phase 2 intelligence — code analysis reports, reviewable link
+    // suggestions, and parsed-content cache for binary files (additive).
+    this.version(6).stores({
+      codeFindings: "id, projectId, path, analyzedAt",
+      linkSuggestions: "id, projectId, status, [projectId+status]",
+      parsedContents: "id, projectId, path, modality",
     });
   }
 }

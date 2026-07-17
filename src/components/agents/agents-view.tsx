@@ -8,10 +8,13 @@ import {
   Play,
   Square,
   ChevronDown,
+  ChevronRight,
   Search,
   Trash2,
   AlertCircle,
   Sparkles,
+  BrainCircuit,
+  Info,
 } from "lucide-react";
 import {
   agentsRepo,
@@ -22,8 +25,10 @@ import {
 import type { Agent } from "@/lib/db/schema";
 import {
   fetchCatalog,
-  modelsForProvider,
+  defaultModelId,
   searchModels,
+  modelSupportsTools,
+  modelSupportsReasoning,
   type Catalog,
   type AiProvider,
 } from "@/lib/ai/catalog";
@@ -154,6 +159,7 @@ function AgentWorkspace({
   const [input, setInput] = useState("");
   const [connId, setConnId] = useState(connections[0]?.id ?? "");
   const [model, setModel] = useState(agent.model);
+  const [thinking, setThinking] = useState(false);
   const [active, setActive] = useState<{ id: string; text: string } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -175,18 +181,18 @@ function AgentWorkspace({
     return () => clearTimeout(h);
   }, [prompt, agent.id, agent.systemPrompt]);
 
-  // The effective model falls back to the provider's first model when the
-  // stored choice isn't available on the selected connection's provider.
+  // The effective model falls back to a chat-capable default when the stored
+  // choice isn't available on the selected connection's provider.
   const effModel =
     provider && !provider.models[model]
-      ? (modelsForProvider(provider)[0]?.id ?? model)
+      ? (defaultModelId(provider) || model)
       : model;
 
   async function run() {
     if (!projectId || !connection || !provider || active) return;
     const task = input.trim();
     if (!task) return;
-    if (!connection.apiKey) {
+    if (!connection.apiKey && !provider.noAuth) {
       onManageConnections();
       return;
     }
@@ -202,13 +208,14 @@ function AgentWorkspace({
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      // Ground the agent in the live workspace and give it the tool belt so
-      // it can create/update notes, specs, tasks, dev logs, and memories.
+      // Ground the agent in the live workspace; the tool belt is only sent
+      // when the selected model can actually call tools.
+      const withTools = modelSupportsTools(provider, effModel);
       const contextText = await assembleWorkspaceContext(projectId, {
         query: task,
       });
       const system = buildAssistantSystemPrompt(contextText, {
-        withTools: true,
+        withTools,
         role: `${prompt}\n\nYou are running inside MasarFlow as the "${agent.name}" agent (role: ${agent.role}).`,
       });
 
@@ -220,8 +227,14 @@ function AgentWorkspace({
         model: effModel,
         system,
         messages: [{ role: "user", content: task }],
-        tools: WORKSPACE_TOOLS,
-        executeTool: (call) => executeWorkspaceTool(projectId, call),
+        tools: withTools ? WORKSPACE_TOOLS : undefined,
+        executeTool: withTools
+          ? (call) => executeWorkspaceTool(projectId, call)
+          : undefined,
+        reasoning:
+          thinking && modelSupportsReasoning(provider, effModel)
+            ? { enabled: true, budget: 8000 }
+            : undefined,
         signal: controller.signal,
         onEvent: (e) => {
           if (e.type === "text") {
@@ -229,6 +242,8 @@ function AgentWorkspace({
             setActive({ id: record.id, text: acc });
           } else if (e.type === "round" && e.round > 0 && acc) {
             acc += "\n\n";
+          } else if (e.type === "notice") {
+            void agentStepsRepo.append(record.id, "status", e.message);
           } else if (e.type === "tool_call") {
             void agentStepsRepo.append(
               record.id,
@@ -244,9 +259,16 @@ function AgentWorkspace({
           }
         },
       });
+      if (result.reasoning) {
+        await agentStepsRepo.append(record.id, "think", result.reasoning);
+      }
+      const output = result.text || acc;
+      const didWork = Boolean(output.trim()) || result.executed.length > 0;
       await agentRunsRepo.update(record.id, {
-        output: result.text || acc,
-        status: "done",
+        output: didWork
+          ? output
+          : "The model returned an empty response — rerun the task, or try another model.",
+        status: didWork ? "done" : "error",
         finishedAt: Date.now(),
       });
     } catch (e) {
@@ -313,6 +335,21 @@ function AgentWorkspace({
             />
             {provider && (
               <ModelMenu provider={provider} value={effModel} onChange={setModel} />
+            )}
+            {provider && modelSupportsReasoning(provider, effModel) && (
+              <Button
+                variant={thinking ? "default" : "outline"}
+                size="sm"
+                onClick={() => setThinking((v) => !v)}
+                title="Extended thinking: the model reasons before acting"
+              >
+                <BrainCircuit className="h-3.5 w-3.5" /> Thinking
+              </Button>
+            )}
+            {provider && !modelSupportsTools(provider, effModel) && (
+              <span className="text-[11px] text-muted-foreground">
+                This model can’t call tools — the agent will advise instead of act.
+              </span>
             )}
           </section>
 
@@ -420,10 +457,15 @@ function AgentWorkspace({
   );
 }
 
-/** Tool calls this run executed against the workspace, as compact chips. */
+/** Tool calls, notices, and thinking recorded for a run. */
 function RunToolSteps({ runId }: { runId: string }) {
   const steps = useLiveQuery(() => agentStepsRepo.listByRun(runId), [runId]) ?? [];
   const actions = steps.filter((s) => s.type === "action");
+  const notices = steps.filter((s) => s.type === "status");
+  const thinkText = steps
+    .filter((s) => s.type === "think")
+    .map((s) => s.content)
+    .join("\n\n");
   const resultOk = new Map<number, boolean>();
   let actionIdx = 0;
   for (const s of steps) {
@@ -436,43 +478,85 @@ function RunToolSteps({ runId }: { runId: string }) {
       }
     }
   }
-  if (actions.length === 0) return null;
+  if (actions.length === 0 && notices.length === 0 && !thinkText) return null;
+  if (actions.length === 0) {
+    return (
+      <div className="border-b border-border px-3 py-2">
+        {notices.map((n) => (
+          <p key={n.id} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Info className="h-3 w-3 shrink-0" /> {n.content}
+          </p>
+        ))}
+        {thinkText && <AgentThinking text={thinkText} />}
+      </div>
+    );
+  }
   return (
-    <div className="flex flex-wrap gap-1 border-b border-border px-3 py-2">
-      {actions.map((s, i) => {
-        let name = "tool";
-        let summary = "";
-        try {
-          const parsed = JSON.parse(s.content) as {
-            name: string;
-            arguments?: Record<string, unknown>;
-          };
-          name = parsed.name;
-          for (const k of ["title", "name", "query", "content", "id"]) {
-            const v = parsed.arguments?.[k];
-            if (typeof v === "string" && v.trim()) {
-              summary = v.slice(0, 60);
-              break;
+    <div className="space-y-1.5 border-b border-border px-3 py-2">
+      {notices.map((n) => (
+        <p key={n.id} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <Info className="h-3 w-3 shrink-0" /> {n.content}
+        </p>
+      ))}
+      <div className="flex flex-wrap gap-1">
+        {actions.map((s, i) => {
+          let name = "tool";
+          let summary = "";
+          try {
+            const parsed = JSON.parse(s.content) as {
+              name: string;
+              arguments?: Record<string, unknown>;
+            };
+            name = parsed.name;
+            for (const k of ["title", "name", "query", "content", "id"]) {
+              const v = parsed.arguments?.[k];
+              if (typeof v === "string" && v.trim()) {
+                summary = v.slice(0, 60);
+                break;
+              }
             }
+          } catch {
+            /* raw content */
           }
-        } catch {
-          /* raw content */
-        }
-        const ok = resultOk.get(i) !== false;
-        return (
-          <span
-            key={s.id}
-            title={summary}
-            className={cn(
-              "inline-flex items-center gap-1 rounded-full border border-border bg-accent/40 px-2 py-0.5 text-[11px]",
-              ok ? "text-muted-foreground" : "text-destructive",
-            )}
-          >
-            {name}
-            {summary && <span className="max-w-32 truncate opacity-70">{summary}</span>}
-          </span>
-        );
-      })}
+          const ok = resultOk.get(i) !== false;
+          return (
+            <span
+              key={s.id}
+              title={summary}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full border border-border bg-accent/40 px-2 py-0.5 text-[11px]",
+                ok ? "text-muted-foreground" : "text-destructive",
+              )}
+            >
+              {name}
+              {summary && <span className="max-w-32 truncate opacity-70">{summary}</span>}
+            </span>
+          );
+        })}
+      </div>
+      {thinkText && <AgentThinking text={thinkText} />}
+    </div>
+  );
+}
+
+/** Collapsible extended-thinking trace for a run. */
+function AgentThinking({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+      >
+        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        <BrainCircuit className="h-3 w-3" /> Thinking
+      </button>
+      {open && (
+        <div className="mt-1 max-h-48 overflow-y-auto rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs whitespace-pre-wrap text-muted-foreground">
+          {text}
+        </div>
+      )}
     </div>
   );
 }
