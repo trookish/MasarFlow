@@ -36,6 +36,10 @@ export const canvasRepo = {
     await db.canvases.update(id, { name, updatedAt: now() });
   },
 
+  async update(id: string, patch: Partial<Canvas>): Promise<void> {
+    await db.canvases.update(id, { ...patch, updatedAt: now() });
+  },
+
   async touch(id: string): Promise<void> {
     await db.canvases.update(id, { updatedAt: now() });
   },
