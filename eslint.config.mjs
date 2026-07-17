@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     // Agent worktrees carry their own build artifacts — never lint them.
     ".claude/**",
     ".vs/**",
+    // Python local AI service — not JS/TS, and its .venv bundles vendored
+    // JS from ML packages (torch, sklearn) that ESLint should never touch.
+    "python-service/**",
   ]),
 ]);
 

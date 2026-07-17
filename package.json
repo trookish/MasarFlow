@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
+    "dev:full": "concurrently -n next,py -c blue,green \"next dev --webpack\" \"python-service/.venv/Scripts/python -m uvicorn main:app --app-dir python-service --port 8000 --reload\"",
     "build": "next build",
-    "start": "next start",
+    "start": "node scripts/start.mjs",
+    "setup:python": "node scripts/start.mjs --setup-only",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
@@ -55,6 +57,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.0",
+    "concurrently": "^9.1.0",
     "@tailwindcss/postcss": "^4",
     "@types/d3-force": "^3.0.10",
     "@types/d3-zoom": "^3.0.8",

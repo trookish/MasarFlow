@@ -35,6 +35,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.local.example
 
 # vercel
 .vercel
@@ -42,3 +43,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# python service (local AI runtime — see python-service/README.md)
+python-service/.venv/
+python-service/store/
+python-service/__pycache__/
+python-service/**/__pycache__/
+python-service/*.egg-info/
