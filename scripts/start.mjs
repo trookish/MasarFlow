@@ -12,7 +12,6 @@
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { existsSync } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,7 +27,11 @@ const venvPython = path.join(pyDir, ".venv", venvBin, venvPythonExe);
 
 function run(cmd, args, opts = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { stdio: "inherit", shell: process.platform === "win32", ...opts });
+    const child = spawn(cmd, args, {
+      stdio: "inherit",
+      shell: process.platform === "win32",
+      ...opts,
+    });
     child.on("error", reject);
     child.on("exit", (code) =>
       code === 0 ? resolve() : reject(new Error(`${cmd} exited with ${code}`)),
@@ -41,7 +44,9 @@ async function ensureVenv() {
   console.log("[setup] creating python-service/.venv …");
   await run("python", ["-m", "venv", ".venv"], { cwd: pyDir });
   console.log("[setup] installing requirements.txt …");
-  await run(venvPython, ["-m", "pip", "install", "-r", "requirements.txt"], { cwd: pyDir });
+  await run(venvPython, ["-m", "pip", "install", "-r", "requirements.txt"], {
+    cwd: pyDir,
+  });
   console.log("[setup] python service ready.");
 }
 
@@ -81,19 +86,38 @@ async function main() {
     process.exit(1);
   }
 
-  const nextArgs = process.env.PORT ? ["start", "-p", String(process.env.PORT)] : ["start"];
-  const nextChild = startProcess("next", process.execPath, [nextCli, ...nextArgs], { cwd: root });
+  const nextArgs = process.env.PORT
+    ? ["start", "-p", String(process.env.PORT)]
+    : ["start"];
+  const nextChild = startProcess(
+    "next",
+    process.execPath,
+    [nextCli, ...nextArgs],
+    { cwd: root },
+  );
   const pyChild = startProcess(
     "py",
     venvPython,
-    ["-m", "uvicorn", "main:app", "--app-dir", "python-service", "--port", PYTHON_PORT],
+    [
+      "-m",
+      "uvicorn",
+      "main:app",
+      "--app-dir",
+      "python-service",
+      "--port",
+      PYTHON_PORT,
+    ],
     { cwd: root },
   );
 
   const cleanup = (signal) => {
     for (const c of [nextChild, pyChild]) {
       try {
-        process.platform === "win32" ? c.kill("SIGKILL") : c.kill(signal);
+        if (process.platform === "win32") {
+          c.kill("SIGKILL");
+        } else {
+          c.kill(signal);
+        }
       } catch {}
     }
     process.exit(0);

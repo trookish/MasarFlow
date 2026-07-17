@@ -47,7 +47,11 @@ import {
   autoGrid,
 } from "./canvas-alignment";
 import { useCanvasShortcuts } from "./canvas-shortcuts";
-import { setCanvasAIContext, type CanvasAIContext, type CanvasNodeSummary } from "@/lib/canvas-ai";
+import {
+  setCanvasAIContext,
+  type CanvasAIContext,
+  type CanvasNodeSummary,
+} from "@/lib/canvas-ai";
 
 type AnyNodeData = Record<string, unknown> & BaseNodeData;
 
@@ -83,7 +87,9 @@ function CanvasBoardInner() {
     [projectId],
   );
 
-  const [nodes, setNodesState, onNodesChange] = useNodesState<Node<AnyNodeData>>([]);
+  const [nodes, setNodesState, onNodesChange] = useNodesState<
+    Node<AnyNodeData>
+  >([]);
   const [edges, setEdgesState, onEdgesChange] = useEdgesState<Edge>([]);
   const seededRef = useRef<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -120,7 +126,9 @@ function CanvasBoardInner() {
     (id: string, data: Record<string, unknown>) => {
       persistNodeData(id, data);
       setNodesState((ns) =>
-        ns.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...data } } : n)),
+        ns.map((n) =>
+          n.id === id ? { ...n, data: { ...n.data, ...data } } : n,
+        ),
       );
     },
     [persistNodeData, setNodesState],
@@ -186,59 +194,71 @@ function CanvasBoardInner() {
     [canvasId, setEdgesState],
   );
 
-  const onNodeDragStop = useCallback(
-    (_evt: unknown, node: Node) => {
-      void canvasRepo.updateNode(node.id, {
-        x: node.position.x,
-        y: node.position.y,
-        ...(node.width ? { width: node.width } : {}),
-        ...(node.height ? { height: node.height } : {}),
-      });
-    },
-    [],
-  );
+  const onNodeDragStop = useCallback((_evt: unknown, node: Node) => {
+    void canvasRepo.updateNode(node.id, {
+      x: node.position.x,
+      y: node.position.y,
+      ...(node.width ? { width: node.width } : {}),
+      ...(node.height ? { height: node.height } : {}),
+    });
+  }, []);
 
   /* ── Node creation ──────────────────────────────────────────────────────── */
 
-  function nextPosition() {
+  const nextPosition = useCallback(() => {
     const i = nodes.length;
     return { x: 100 + (i % 6) * 48, y: 90 + (i % 6) * 44 };
-  }
+  }, [nodes.length]);
 
-  async function addNode(
-    type: CanvasNode["type"],
-    data: Record<string, unknown>,
-    pos?: { x: number; y: number },
-  ) {
-    if (!canvasId) return;
-    const node = await canvasRepo.addNode({
-      canvasId,
-      type,
-      x: (pos ?? nextPosition()).x,
-      y: (pos ?? nextPosition()).y,
-      data,
-      width: type === "group" ? 400 : 280,
-      height: type === "group" ? 300 : 160,
-    });
-    setNodesState((ns) => [...ns, toFlowNode(node)]);
-  }
+  const addNode = useCallback(
+    async (
+      type: CanvasNode["type"],
+      data: Record<string, unknown>,
+      pos?: { x: number; y: number },
+    ) => {
+      if (!canvasId) return;
+      const node = await canvasRepo.addNode({
+        canvasId,
+        type,
+        x: (pos ?? nextPosition()).x,
+        y: (pos ?? nextPosition()).y,
+        data,
+        width: type === "group" ? 400 : 280,
+        height: type === "group" ? 300 : 160,
+      });
+      setNodesState((ns) => [...ns, toFlowNode(node)]);
+    },
+    [canvasId, nextPosition, setNodesState, toFlowNode],
+  );
 
-  const addTextNode = (pos?: { x: number; y: number }) => addNode("text", { text: "" }, pos);
+  const addTextNode = (pos?: { x: number; y: number }) =>
+    addNode("text", { text: "" }, pos);
   const addNoteNode = (noteId: string, title: string, excerpt: string) =>
     addNode("note", { noteId, title, excerpt, mode: "preview" });
   const addGroupNode = () => addNode("group", { label: "New group" });
 
-  async function addWebNode(url: string, pos?: { x: number; y: number }) {
-    const { detectWebKind } = await import("./nodes/types");
-    const kind = detectWebKind(url);
-    await addNode("link", { url, title: url, kind }, pos);
-  }
+  const addWebNode = useCallback(
+    async (url: string, pos?: { x: number; y: number }) => {
+      const { detectWebKind } = await import("./nodes/types");
+      const kind = detectWebKind(url);
+      await addNode("link", { url, title: url, kind }, pos);
+    },
+    [addNode],
+  );
 
-  async function addMediaNodeFromFile(file: File, pos?: { x: number; y: number }) {
+  async function addMediaNodeFromFile(
+    file: File,
+    pos?: { x: number; y: number },
+  ) {
     const mediaData = await fileToMediaNodeData(file);
     await addNode(
       "media",
-      { attachmentId: mediaData.attachmentId, name: mediaData.name, mimeType: mediaData.mimeType, dataUrl: mediaData.dataUrl },
+      {
+        attachmentId: mediaData.attachmentId,
+        name: mediaData.name,
+        mimeType: mediaData.mimeType,
+        dataUrl: mediaData.dataUrl,
+      },
       pos,
     );
   }
@@ -251,11 +271,18 @@ function CanvasBoardInner() {
       if (!original || !canvasId) return;
       const dbNode = await canvasRepo.addNode({
         canvasId,
-        type: rfTypeFor(original.type ?? "textNode") === "textNode" ? "text" :
-              rfTypeFor(original.type ?? "textNode") === "noteNode" ? "note" :
-              rfTypeFor(original.type ?? "textNode") === "mediaNode" ? "media" :
-              rfTypeFor(original.type ?? "textNode") === "webNode" ? "link" :
-              rfTypeFor(original.type ?? "textNode") === "groupNode" ? "group" : "text",
+        type:
+          rfTypeFor(original.type ?? "textNode") === "textNode"
+            ? "text"
+            : rfTypeFor(original.type ?? "textNode") === "noteNode"
+              ? "note"
+              : rfTypeFor(original.type ?? "textNode") === "mediaNode"
+                ? "media"
+                : rfTypeFor(original.type ?? "textNode") === "webNode"
+                  ? "link"
+                  : rfTypeFor(original.type ?? "textNode") === "groupNode"
+                    ? "group"
+                    : "text",
         x: original.position.x + 40,
         y: original.position.y + 40,
         width: original.width ?? 280,
@@ -290,7 +317,11 @@ function CanvasBoardInner() {
       setNodesState((ns) =>
         ns.map((n) =>
           n.id === id
-            ? { ...n, draggable: !n.draggable, data: { ...n.data, locked: !n.data.locked } }
+            ? {
+                ...n,
+                draggable: !n.draggable,
+                data: { ...n.data, locked: !n.data.locked },
+              }
             : n,
         ),
       );
@@ -328,13 +359,26 @@ function CanvasBoardInner() {
       if (selNodes.length < 2) return;
       let posMap: Record<string, { x: number; y: number }>;
       switch (mode) {
-        case "left": posMap = alignLeft(selNodes); break;
-        case "right": posMap = alignRight(selNodes); break;
-        case "top": posMap = alignTop(selNodes); break;
-        case "bottom": posMap = alignBottom(selNodes); break;
-        case "centerH": posMap = alignCenterH(selNodes); break;
-        case "centerV": posMap = alignCenterV(selNodes); break;
-        default: return;
+        case "left":
+          posMap = alignLeft(selNodes);
+          break;
+        case "right":
+          posMap = alignRight(selNodes);
+          break;
+        case "top":
+          posMap = alignTop(selNodes);
+          break;
+        case "bottom":
+          posMap = alignBottom(selNodes);
+          break;
+        case "centerH":
+          posMap = alignCenterH(selNodes);
+          break;
+        case "centerV":
+          posMap = alignCenterV(selNodes);
+          break;
+        default:
+          return;
       }
       setNodesState((ns) =>
         ns.map((n) => {
@@ -352,7 +396,8 @@ function CanvasBoardInner() {
     (axis: "h" | "v") => {
       const selNodes = getNodes().filter((n) => selectedNodeIds.includes(n.id));
       if (selNodes.length < 3) return;
-      const posMap = axis === "h" ? distributeH(selNodes) : distributeV(selNodes);
+      const posMap =
+        axis === "h" ? distributeH(selNodes) : distributeV(selNodes);
       setNodesState((ns) =>
         ns.map((n) => {
           const p = posMap[n.id];
@@ -386,19 +431,27 @@ function CanvasBoardInner() {
 
   /* ── Context menu handlers ──────────────────────────────────────────────── */
 
-  const onPaneContextMenu = useCallback(
-    (e: React.MouseEvent | MouseEvent) => {
-      e.preventDefault();
-      setCtxMenu({ x: e.clientX, y: e.clientY, nodeId: null, multiSelect: false });
-    },
-    [],
-  );
+  const onPaneContextMenu = useCallback((e: React.MouseEvent | MouseEvent) => {
+    e.preventDefault();
+    setCtxMenu({
+      x: e.clientX,
+      y: e.clientY,
+      nodeId: null,
+      multiSelect: false,
+    });
+  }, []);
 
   const onNodeContextMenu = useCallback(
     (e: React.MouseEvent | MouseEvent, node: Node) => {
       e.preventDefault();
-      const multi = selectedNodeIds.length >= 2 && selectedNodeIds.includes(node.id);
-      setCtxMenu({ x: e.clientX, y: e.clientY, nodeId: node.id, multiSelect: multi });
+      const multi =
+        selectedNodeIds.length >= 2 && selectedNodeIds.includes(node.id);
+      setCtxMenu({
+        x: e.clientX,
+        y: e.clientY,
+        nodeId: node.id,
+        multiSelect: multi,
+      });
     },
     [selectedNodeIds],
   );
@@ -482,7 +535,12 @@ function CanvasBoardInner() {
           target: toId,
           label: label ?? "",
         });
-        setEdgesState((es) => addEdge({ id: edge.id, source: fromId, target: toId, ...EDGE_DEFAULTS }, es));
+        setEdgesState((es) =>
+          addEdge(
+            { id: edge.id, source: fromId, target: toId, ...EDGE_DEFAULTS },
+            es,
+          ),
+        );
         return edge.id;
       },
       deleteNode: (id) => deleteNode(id),
@@ -499,7 +557,17 @@ function CanvasBoardInner() {
     };
     setCanvasAIContext(ctx);
     return () => setCanvasAIContext(null);
-  }, [canvasId, currentCanvas, nodes, edges, addNode, addWebNode, applyAutoGrid, deleteNode, setEdgesState]);
+  }, [
+    canvasId,
+    currentCanvas,
+    nodes,
+    edges,
+    addNode,
+    addWebNode,
+    applyAutoGrid,
+    deleteNode,
+    setEdgesState,
+  ]);
 
   /* ── Lifecycle ──────────────────────────────────────────────────────────── */
 
@@ -530,7 +598,10 @@ function CanvasBoardInner() {
   }
 
   const ctxTargetNode = ctxMenu?.nodeId
-    ? { id: ctxMenu.nodeId, type: nodes.find((n) => n.id === ctxMenu.nodeId)?.type ?? "text" }
+    ? {
+        id: ctxMenu.nodeId,
+        type: nodes.find((n) => n.id === ctxMenu.nodeId)?.type ?? "text",
+      }
     : null;
   const ctxLocked = ctxMenu?.nodeId
     ? !!nodes.find((n) => n.id === ctxMenu.nodeId)?.data?.locked
@@ -551,7 +622,10 @@ function CanvasBoardInner() {
       />
 
       <div
-        className={"min-h-0 flex-1 " + (dragOver ? "ring-2 ring-primary/40 ring-inset" : "")}
+        className={
+          "min-h-0 flex-1 " +
+          (dragOver ? "ring-2 ring-primary/40 ring-inset" : "")
+        }
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={(e) => void onDrop(e)}

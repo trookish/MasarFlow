@@ -19,6 +19,20 @@ const eslintConfig = defineConfig([
     // JS from ML packages (torch, sklearn) that ESLint should never touch.
     "python-service/**",
   ]),
+  {
+    // Local-first app: these components render blob:/data: URLs (IndexedDB
+    // attachments) and arbitrary user-provided external URLs, where the
+    // next/image optimizer cannot help. Plain <img> is correct here.
+    files: [
+      "src/components/brain/markdown-preview.tsx",
+      "src/components/canvas/nodes/media-node.tsx",
+      "src/components/canvas/nodes/web-node.tsx",
+      "src/components/files/files-view.tsx",
+    ],
+    rules: {
+      "@next/next/no-img-element": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

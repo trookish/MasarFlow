@@ -52,15 +52,14 @@ function fromInputDate(value: string): number | null {
 export function SprintsView() {
   const projectId = useActiveProjectId();
   const { showCompleted, velocityDisplay } = usePageSettings((s) => s.sprints);
-  const sprintsRaw =
-    useLiveQuery(() => sprintsRepo.listByProject(projectId), [projectId]) ?? [];
-  const sprints = useMemo(
-    () =>
-      showCompleted
-        ? sprintsRaw
-        : sprintsRaw.filter((s) => s.status !== "completed"),
-    [sprintsRaw, showCompleted],
+  const sprintsRaw = useLiveQuery(
+    () => sprintsRepo.listByProject(projectId),
+    [projectId],
   );
+  const sprints = useMemo(() => {
+    const all = sprintsRaw ?? [];
+    return showCompleted ? all : all.filter((s) => s.status !== "completed");
+  }, [sprintsRaw, showCompleted]);
   const tasksRaw = useLiveQuery(
     () => tasksRepo.listByProject(projectId),
     [projectId],
