@@ -52,6 +52,15 @@ export interface WorkspaceSnapshot {
   commits: Commit[];
 }
 
+/** A query-relevant passage retrieved from the local AI service's RAG index. */
+export interface RagChunk {
+  entityId: string;
+  kind: "note" | "doc";
+  title: string;
+  text: string;
+  score: number;
+}
+
 export interface ContextOptions {
   /** Free-text query used to pick which note/doc bodies are inlined in full. */
   query?: string;
@@ -59,11 +68,20 @@ export interface ContextOptions {
   budget?: number;
   /** How many of the most relevant notes/docs get their full body inlined. */
   fullBodies?: number;
+  /**
+   * Pre-fetched RAG chunks for note/doc retrieval. When present, these
+   * replace the Fuse-based `pickFullBodies` selection — real query-relevant
+   * passages instead of whichever notes fuzzy-matched the query. Fetched by
+   * `assembleWorkspaceContext`; passed through here so this function stays a
+   * pure formatter.
+   */
+  ragChunks?: RagChunk[];
 }
 
 const DEFAULT_BUDGET = 28_000;
 const DEFAULT_FULL_BODIES = 6;
 const BODY_CLIP = 4_000;
+const RAG_BUDGET_CHARS = 8_000;
 
 /** Fetch the entire workspace for a project. */
 export async function fetchWorkspaceSnapshot(
@@ -187,12 +205,32 @@ export function formatWorkspaceContext(
   opts: ContextOptions = {},
 ): string {
   const budget = opts.budget ?? DEFAULT_BUDGET;
-  const { noteIds: fullNoteIds, docIds: fullDocIds } = pickFullBodies(
-    snapshot.notes,
-    snapshot.docs,
-    opts.query,
-    opts.fullBodies ?? DEFAULT_FULL_BODIES,
-  );
+
+  // RAG chunks (when available) replace Fuse-based full-body selection with
+  // real query-relevant passages, grouped back by source entity.
+  let fullNoteIds: Set<string>;
+  let fullDocIds: Set<string>;
+  let noteChunks: Map<string, string[]> | null = null;
+  let docChunks: Map<string, string[]> | null = null;
+  if (opts.ragChunks?.length) {
+    noteChunks = new Map();
+    docChunks = new Map();
+    for (const c of opts.ragChunks) {
+      const target = c.kind === "doc" ? docChunks : noteChunks;
+      const list = target.get(c.entityId) ?? [];
+      list.push(c.text);
+      target.set(c.entityId, list);
+    }
+    fullNoteIds = new Set(noteChunks.keys());
+    fullDocIds = new Set(docChunks.keys());
+  } else {
+    ({ noteIds: fullNoteIds, docIds: fullDocIds } = pickFullBodies(
+      snapshot.notes,
+      snapshot.docs,
+      opts.query,
+      opts.fullBodies ?? DEFAULT_FULL_BODIES,
+    ));
+  }
 
   const sections: string[] = [];
   let used = 0;
@@ -295,7 +333,8 @@ export function formatWorkspaceContext(
     for (const n of [...snapshot.notes].sort((a, b) => b.updatedAt - a.updatedAt)) {
       const head = `"${n.title}" (${n.type}${n.tags.length ? `, tags: ${n.tags.join(", ")}` : ""}, id: ${n.id})`;
       if (fullNoteIds.has(n.id)) {
-        full.push(`### Note: ${head}\n${clip(n.body, BODY_CLIP)}`);
+        const body = noteChunks?.get(n.id)?.join("\n…\n") ?? clip(n.body, BODY_CLIP);
+        full.push(`### Note: ${head}\n${body}`);
       } else {
         brief.push(`- ${head}${n.excerpt ? ` — ${clip(n.excerpt, 180)}` : ""}`);
       }
@@ -311,7 +350,8 @@ export function formatWorkspaceContext(
     for (const d of [...snapshot.docs].sort((a, b) => b.updatedAt - a.updatedAt)) {
       const head = `"${d.title}" (category: ${d.category}, id: ${d.id})`;
       if (fullDocIds.has(d.id)) {
-        full.push(`### Doc: ${head}\n${clip(d.body, BODY_CLIP)}`);
+        const body = docChunks?.get(d.id)?.join("\n…\n") ?? clip(d.body, BODY_CLIP);
+        full.push(`### Doc: ${head}\n${body}`);
       } else {
         brief.push(`- ${head} — ${clip(stripMarkdown(d.body), 180)}`);
       }
@@ -343,13 +383,45 @@ export function formatWorkspaceContext(
   return sections.join("");
 }
 
+/**
+ * Retrieves query-relevant note/doc chunks from the optional local AI
+ * service. Returns `undefined` (never throws) when the service isn't
+ * running, times out, or returns nothing — callers fall back to the
+ * Fuse-based `pickFullBodies` path in that case.
+ */
+async function fetchRagChunks(
+  projectId: string,
+  query: string,
+  topK: number,
+): Promise<RagChunk[] | undefined> {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const res = await fetch("/api/python/rag", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ projectId, query, topK, budgetChars: RAG_BUDGET_CHARS }),
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) return undefined;
+    const data = (await res.json()) as { ok?: boolean; chunks?: RagChunk[] };
+    if (!data.ok || !data.chunks?.length) return undefined;
+    return data.chunks;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Fetch + format in one call. */
 export async function assembleWorkspaceContext(
   projectId: string,
   opts: ContextOptions = {},
 ): Promise<string> {
   const snapshot = await fetchWorkspaceSnapshot(projectId);
-  return formatWorkspaceContext(snapshot, opts);
+  const query = opts.query?.trim();
+  const ragChunks = query
+    ? await fetchRagChunks(projectId, query, opts.fullBodies ?? DEFAULT_FULL_BODIES)
+    : undefined;
+  return formatWorkspaceContext(snapshot, { ...opts, ragChunks });
 }
 
 /**
@@ -366,11 +438,18 @@ export function buildAssistantSystemPrompt(
     "You are the MasarFlow workspace assistant — the intelligence layer of this software project. You have the user's entire local workspace in front of you: brain notes, specifications, tasks, sprints, architecture systems, coding standards, documentation, memories, dev logs, and commits.";
   const toolGuidance = opts.withTools
     ? `
-You can ACT on the workspace through tools, not just advise:
-- Use tools to create/update notes, specs, tasks, dev log entries, and memories when the user asks for changes or when recording your work is clearly useful.
-- Prefer reading with the search/read tools before claiming something does not exist.
+You can ACT on the workspace through tools, not just advise. Your tool belt covers the whole project page-to-page:
+- Brain: create/update/read notes, list/read note templates, create/read/update canvases, and manage folders.
+- Planning: create/update/read specs, and create/read/update coding standards.
+- Work: create/update/list tasks, and create/read/update/list sprints.
+- Structure: create/read/update/list architecture systems, and manage knowledge-graph links (create/list/remove).
+- Capture: create/update/read docs, dev-log entries, and long-term memories; annotate commits with AI summaries.
+- Read-only insight into config/pipeline: files & attachments, agents, agent runs, workflow state, plugins, sync index, and watcher events.
+Always:
+- When the user asks you to create, update, or look up something, CALL the matching tool right away — do not merely describe what you would do. Emit the tool call, then act on its result.
+- Use the search or list/read tools before claiming something does not exist.
 - After mutating the workspace, briefly tell the user what you changed.
-- Reference entities precisely (spec numbers like RFC-001, task titles, note titles).
+- Reference entities precisely (spec numbers like RFC-001, task titles, note titles, system names).
 - Never invent workspace content: if it is not in the briefing or a tool result, say so.`
     : `
 Answer strictly from the workspace briefing below. If something is not in it, say you don't see it in the workspace rather than inventing it.`;

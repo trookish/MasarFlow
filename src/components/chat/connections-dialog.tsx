@@ -209,12 +209,12 @@ function AddConnection({
         />
       </Field>
 
-      <Field label="API key">
+      <Field label={selected?.noAuth ? "API key (not required for local providers)" : "API key"}>
         <Input
           type="password"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
-          placeholder="sk-…"
+          placeholder={selected?.noAuth ? "(none)" : "sk-…"}
           className="h-9 font-mono text-sm"
         />
       </Field>

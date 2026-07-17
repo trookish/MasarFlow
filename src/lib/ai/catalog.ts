@@ -22,6 +22,8 @@ export interface AiProvider {
   npm?: string;
   env?: string[];
   models: Record<string, AiModel>;
+  /** Provider doesn't require an API key (e.g. a local server like Ollama). */
+  noAuth?: boolean;
 }
 
 export type Catalog = Record<string, AiProvider>;
@@ -44,9 +46,53 @@ export function providerFormat(provider: Pick<AiProvider, "id" | "npm">): Provid
 
 /** Default base URL for a provider's API (models.dev `api`, with fallbacks). */
 export function providerBaseUrl(provider: AiProvider): string {
+  // Google's OpenAI-compatible surface lives under /openai — the raw
+  // generativelanguage base from models.dev would 404 on /chat/completions.
+  if (provider.id === "google") {
+    return "https://generativelanguage.googleapis.com/v1beta/openai";
+  }
   if (provider.api) return provider.api;
   if (provider.id === "anthropic") return "https://api.anthropic.com";
   return "https://api.openai.com/v1";
+}
+
+/* ── Model capabilities ───────────────────────────────────────────────── */
+
+/** Catalog metadata for a model id, if the catalog knows it. */
+export function modelMeta(
+  provider: AiProvider,
+  modelId: string,
+): AiModel | undefined {
+  return provider.models[modelId];
+}
+
+/**
+ * Whether a model can do function/tool calling. Unknown models default to
+ * true — the /api/chat proxy degrades gracefully (retries without tools) if
+ * the provider rejects them, so optimism costs one retried request at worst.
+ */
+export function modelSupportsTools(
+  provider: AiProvider,
+  modelId: string,
+): boolean {
+  const m = modelMeta(provider, modelId);
+  return m ? m.tool_call === true : true;
+}
+
+/** Whether a model accepts image input. Unknown models default to false. */
+export function modelSupportsImages(
+  provider: AiProvider,
+  modelId: string,
+): boolean {
+  return modelMeta(provider, modelId)?.attachment === true;
+}
+
+/** Whether a model exposes reasoning/extended thinking. Unknown → false. */
+export function modelSupportsReasoning(
+  provider: AiProvider,
+  modelId: string,
+): boolean {
+  return modelMeta(provider, modelId)?.reasoning === true;
 }
 
 // ── Pure helpers ──────────────────────────────────────────────────────────────
@@ -61,6 +107,34 @@ export function modelsForProvider(provider: AiProvider): AiModel[] {
   return Object.values(provider.models).sort((a, b) =>
     a.name.localeCompare(b.name),
   );
+}
+
+// Names that indicate a model can't do chat completions (embeddings, image
+// generation, speech, moderation, video). Used to keep them from becoming a
+// thread's default and silently "not responding".
+const NON_CHAT_RE =
+  /embed|embedding|imagen|image-gen|dall-?e|tts|whisper|speech|audio|transcri|moderation|rerank|guard|veo|video|vision-only/i;
+
+/** Whether a model can plausibly handle a chat/completions request. */
+export function isChatModel(model: AiModel): boolean {
+  if (NON_CHAT_RE.test(model.id) || NON_CHAT_RE.test(model.name)) return false;
+  // Text output is required for chat; models.dev marks output modalities.
+  const outputs = model.modalities?.output;
+  if (outputs && outputs.length > 0 && !outputs.includes("text")) return false;
+  return true;
+}
+
+/**
+ * The best default model for a new thread on a provider: the first chat-capable
+ * model, preferring one that supports tools. Falls back to the first model when
+ * the catalog has no clearly chat-capable entry.
+ */
+export function defaultModelId(provider: AiProvider): string {
+  const models = modelsForProvider(provider);
+  const chat = models.filter(isChatModel);
+  const pool = chat.length ? chat : models;
+  const withTools = pool.find((m) => m.tool_call);
+  return (withTools ?? pool[0])?.id ?? "";
 }
 
 /** Filter a provider's models by a free-text query over id/name. */
@@ -167,12 +241,49 @@ export const FALLBACK_CATALOG: Catalog = {
       },
     },
   },
+  ollama: {
+    id: "ollama",
+    name: "Local (Ollama)",
+    api: "http://localhost:11434/v1",
+    doc: "https://github.com/ollama/ollama/blob/main/docs/api.md",
+    noAuth: true,
+    // Populated dynamically from the local Ollama server — see /api/ollama/models.
+    models: {},
+  },
 };
 
 const CATALOG_URL = "https://models.dev/api.json";
 
 let cache: Catalog | null = null;
 let inflight: Promise<Catalog> | null = null;
+
+/**
+ * The "Local (Ollama)" catalog entry ships with no models — Ollama's
+ * installed models vary per machine. Ask the local server (via the
+ * loopback-only /api/ollama/models proxy) what's actually installed.
+ * Never throws: an unreachable Ollama server just leaves the entry empty.
+ */
+async function withLocalOllamaModels(catalog: Catalog): Promise<Catalog> {
+  if (typeof window === "undefined" || !catalog.ollama) return catalog;
+  try {
+    const res = await fetch("/api/ollama/models", { signal: AbortSignal.timeout(2000) });
+    if (!res.ok) return catalog;
+    const data = (await res.json()) as {
+      ok: boolean;
+      models?: { id: string; name: string }[];
+    };
+    if (!data.ok || !data.models?.length) return catalog;
+    const models: Record<string, AiModel> = {};
+    for (const m of data.models) {
+      // Ollama's tool-calling support varies by model; offer tools and let
+      // /api/chat's degradation ladder drop them if the model rejects.
+      models[m.id] = { id: m.id, name: m.name, tool_call: true };
+    }
+    return { ...catalog, ollama: { ...catalog.ollama, models } };
+  } catch {
+    return catalog;
+  }
+}
 
 /**
  * Fetch the full models.dev catalog, cached for the session. Returns the
@@ -182,19 +293,19 @@ export async function fetchCatalog(): Promise<Catalog> {
   if (cache) return cache;
   if (inflight) return inflight;
   inflight = (async () => {
+    let base: Catalog;
     try {
       const res = await fetch(CATALOG_URL, { cache: "force-cache" });
       if (!res.ok) throw new Error(`models.dev ${res.status}`);
       const data = (await res.json()) as Catalog;
       // Merge so the well-known providers always have a sane base URL/format.
-      cache = { ...FALLBACK_CATALOG, ...data };
-      return cache;
+      base = { ...FALLBACK_CATALOG, ...data };
     } catch {
-      cache = FALLBACK_CATALOG;
-      return cache;
-    } finally {
-      inflight = null;
+      base = FALLBACK_CATALOG;
     }
+    cache = await withLocalOllamaModels(base);
+    inflight = null;
+    return cache;
   })();
   return inflight;
 }
