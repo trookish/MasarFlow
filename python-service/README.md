@@ -1,9 +1,9 @@
 # MasarFlow local AI service
 
-Optional. Provides embeddings, semantic search, and RAG context retrieval to
-the Next.js app via `src/app/api/python/*` proxy routes. If this isn't
-running, the app falls back to Fuse-based search and full-snapshot chat
-context — nothing breaks.
+Required runtime. Provides embeddings, semantic search, and RAG context
+retrieval to the Next.js app via `src/app/api/python/*` proxy routes. The
+workspace shell holds on a setup screen until this service is healthy
+(`npm start` and `npm run dev:full` launch it for you).
 
 ## Setup
 
