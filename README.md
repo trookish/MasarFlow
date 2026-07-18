@@ -13,10 +13,20 @@ cloud, no telemetry.
 - **Canvas** — infinite board (text, note, media, web-embed, group nodes) with
   Obsidian `.canvas` import/export and AI-operable tools.
 - **Knowledge graph** — d3-force visualization of note/entity links.
-- **Chat** — multi-provider (OpenAI/Anthropic/Ollama) streaming chat with
-  `@`/`/`/`#` mentions, tool-calling over your workspace, image attachments,
-  and voice input. API keys stay in localStorage and are only sent to the
-  same-origin proxy route.
+- **Chat** — multi-provider (OpenAI/Anthropic/OpenRouter/Groq/Ollama…)
+  streaming chat with `@`/`/`/`#` mentions, tool-calling over your workspace,
+  image attachments, and voice input. API keys stay in localStorage and are
+  only sent to the same-origin proxy route. Two modes: **Agentic** (grounded
+  in the live workspace, acts via tools) and **Chat** (direct, no injection).
+  Connection dialog has a **Test** button that probes exactly what your
+  model/gateway supports (streaming, function calling).
+- **Linked projects (agentic coding)** — attach an external folder (e.g. a
+  Unity game project) to the workspace project and the AI gets opencode-style
+  tools on it: `fs_list` / `fs_read` / `fs_search` (free) plus `fs_write` /
+  `shell_run` (**per-action user approval**, opencode-style). Paths are
+  sandboxed to linked roots; secret files (`.env`, keys) are never exposed;
+  every machine-touching action lands in Dev Logs. Code replies get syntax
+  highlighting, one-click copy, and save-as-note.
 - **Agents & Workflow** — agent roster with run inspector, and a 16-step
   agentic pipeline runner.
 - **Tasks, Sprints, Specs, Standards** — kanban board, sprint velocity, spec
@@ -85,9 +95,10 @@ src/
   app/            App Router: (workspace) routes + /api proxy routes
   components/     Feature components per module + ui/ primitives
   lib/
-    ai/           Chat client (NDJSON stream), tools, context, catalog
+    ai/           Chat client (NDJSON stream), tools (workspace + fs/shell),
+                  context, catalog, connection probe
     chat/         Mention engine + resolvers
-    db/           Dexie schema, Zod models, 27 repos, demo seed
+    db/           Dexie schema, Zod models, 28 repos, demo seed
     hooks/        React hooks (speech, python health, hotkeys, ...)
     stores/       Zustand stores (persisted UI state)
     utils/        cn, ids, markdown, Fuse search
@@ -98,10 +109,15 @@ e2e/              Playwright specs
 
 ## Architecture notes
 
-- **Local-first**: all workspace data is in IndexedDB (Dexie, ~30 tables,
+- **Local-first**: all workspace data is in IndexedDB (Dexie, ~31 tables,
   repository pattern). Reset or seed demo data from Settings → Data.
 - **AI layer**: hand-rolled NDJSON streaming proxy at `api/chat` (OpenAI +
-  Anthropic wire formats) driving an agentic tool loop over workspace repos.
+  Anthropic wire formats, explicit `tool_choice`, degradation ladder) driving
+  an agentic tool loop over workspace repos and linked external projects.
+- **Filesystem/shell agency**: sandboxed routes under `api/fs/*` (loopback
+  server-side path validation, traversal + secret-file denial). `fs_write`
+  and `shell_run` require per-action approval in the chat UI; "always allow"
+  is session-scoped only.
 - **Python sidecar**: reached only from server-side routes under
   `api/python/*` (loopback-enforced, graceful degradation). Roadmap for its
   Phase-2 modules lives in `PYTHON_INTEGRATION_ANALYSIS.md`.
