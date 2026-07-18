@@ -38,11 +38,16 @@ import {
   ImageIcon,
   AtSign,
   Hash,
+  FolderGit2,
+  ShieldAlert,
+  Terminal,
 } from "lucide-react";
 import {
   aiConnectionsRepo,
   chatThreadsRepo,
   chatMessagesRepo,
+  notesRepo,
+  linkedProjectsRepo,
 } from "@/lib/db/repos";
 import type {
   AiConnection,
@@ -58,15 +63,23 @@ import {
   modelSupportsTools,
   modelSupportsImages,
   modelSupportsReasoning,
+  modelMeta,
   type Catalog,
   type AiProvider,
 } from "@/lib/ai/catalog";
+import { friendlyChatError } from "@/lib/ai/errors";
 import {
   runWorkspaceChat,
   type WireMessage,
   type WireImage,
 } from "@/lib/ai/chat-client";
 import { WORKSPACE_TOOLS, executeWorkspaceTool } from "@/lib/ai/tools";
+import {
+  FS_TOOLS,
+  FS_TOOL_NAMES,
+  executeFsTool,
+  type ApprovalRequest,
+} from "@/lib/ai/fs-tools";
 import {
   assembleWorkspaceContext,
   buildAssistantSystemPrompt,
@@ -89,6 +102,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Tooltip } from "@/components/ui/tooltip";
 import { MarkdownPreview } from "@/components/brain/markdown-preview";
 import { ConnectionsDialog } from "./connections-dialog";
+import { LinkedProjectsDialog } from "./linked-projects-dialog";
 import {
   MentionMenu,
   getCaretCoordinates,
@@ -153,6 +167,13 @@ export function ChatView() {
   const [pending, setPending] = useState<PreparedAttachment[]>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
   const [stream, setStream] = useState<LiveStream | null>(null);
+  const [linkDialog, setLinkDialog] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState<{
+    req: ApprovalRequest;
+    resolve: (allowed: boolean) => void;
+  } | null>(null);
+  /** Session-scoped "always allow" signatures (never persisted). */
+  const alwaysAllowRef = useRef(new Set<string>());
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -177,7 +198,15 @@ export function ChatView() {
   );
   const threads = useMemo(() => threadsRaw ?? [], [threadsRaw]);
   const messages =
-    useLiveQuery(() => chatMessagesRepo.listByThread(threadId), [threadId]) ?? [];
+    useLiveQuery(() => chatMessagesRepo.listByThread(threadId), [threadId]) ??
+    [];
+  const linkedRoots = useLiveQuery(
+    () =>
+      projectId
+        ? linkedProjectsRepo.listByProject(projectId)
+        : Promise.resolve([]),
+    [projectId],
+  );
 
   const thread = threads.find((t) => t.id === threadId) ?? null;
   const connection =
@@ -191,7 +220,9 @@ export function ChatView() {
   const canUseImages =
     provider && thread ? modelSupportsImages(provider, thread.modelId) : false;
   const canReason =
-    provider && thread ? modelSupportsReasoning(provider, thread.modelId) : false;
+    provider && thread
+      ? modelSupportsReasoning(provider, thread.modelId)
+      : false;
 
   const speech = useSpeechInput({
     onTranscript: (text) =>
@@ -234,6 +265,51 @@ export function ChatView() {
   async function deleteThread(id: string) {
     await chatThreadsRepo.remove(id);
     if (id === threadId) select(null);
+  }
+
+  /** Save a fenced code block from an assistant reply as a brain note. */
+  async function saveCodeAsNote(code: string, language: string) {
+    if (!projectId) return;
+    const firstLine = code.split("\n").find((l) => l.trim()) ?? "snippet";
+    const title =
+      firstLine.replace(/^[#/\s*-]+/, "").slice(0, 60) || "Code snippet";
+    await notesRepo.create({
+      projectId,
+      title,
+      body: `\`\`\`${language}\n${code}\n\`\`\``,
+      type: "note",
+    });
+  }
+
+  /* ── Approval flow for sensitive fs/shell tools (opencode-style) ────── */
+
+  function approvalSignature(req: ApprovalRequest): string {
+    if (req.name === "shell_run") {
+      // "Always allow" remembers the command's first token (e.g. `npm`).
+      const first = String(req.arguments.command ?? "")
+        .trim()
+        .split(/\s+/)[0];
+      return `shell_run:${first}`;
+    }
+    return `${req.name}:${String(req.arguments.path ?? "")}`;
+  }
+
+  function requestApproval(req: ApprovalRequest): Promise<boolean> {
+    if (alwaysAllowRef.current.has(approvalSignature(req))) {
+      return Promise.resolve(true);
+    }
+    return new Promise<boolean>((resolve) => {
+      setPendingApproval({ req, resolve });
+    });
+  }
+
+  function settleApproval(allowed: boolean, remember: boolean) {
+    if (!pendingApproval) return;
+    if (allowed && remember) {
+      alwaysAllowRef.current.add(approvalSignature(pendingApproval.req));
+    }
+    pendingApproval.resolve(allowed);
+    setPendingApproval(null);
   }
 
   /* ── Attachments ──────────────────────────────────────────────────── */
@@ -303,7 +379,10 @@ export function ChatView() {
         if (!t) return;
         const range = firstPlaceholderRange(insert);
         if (range) {
-          t.setSelectionRange(before.length + range.start, before.length + range.end);
+          t.setSelectionRange(
+            before.length + range.start,
+            before.length + range.end,
+          );
         } else {
           const p = (before + insert).length;
           t.setSelectionRange(p, p);
@@ -413,19 +492,45 @@ export function ChatView() {
       role: "assistant",
       content: "",
     });
-    setStream({ id: assistant.id, text: "", reasoning: "", tools: [], notices: [] });
+    setStream({
+      id: assistant.id,
+      text: "",
+      reasoning: "",
+      tools: [],
+      notices: [],
+    });
     const controller = new AbortController();
     abortRef.current = controller;
 
     try {
       const agentic = mode === "agentic";
       const withTools = agentic && canUseTools;
+      const roots = agentic ? (linkedRoots ?? []) : [];
+      // Context-window guard: cap the workspace briefing at ~half the model's
+      // context so history + answer always fit; tell the user when trimmed.
+      const contextLimit =
+        provider && thread
+          ? modelMeta(provider, thread.modelId)?.limit?.context
+          : undefined;
+      const briefingBudget = contextLimit
+        ? Math.min(28_000, Math.floor(contextLimit * 4 * 0.5))
+        : 28_000;
+      const trimmed = briefingBudget < 28_000;
       // Agentic turns are grounded in the live workspace; chat turns talk to
       // the model directly.
       const system = agentic
         ? buildAssistantSystemPrompt(
-            await assembleWorkspaceContext(projectId!, { query: userText }),
-            { withTools },
+            await assembleWorkspaceContext(projectId!, {
+              query: userText,
+              budget: briefingBudget,
+            }),
+            {
+              withTools,
+              linkedRoots: roots.map((r) => ({
+                name: r.name,
+                rootPath: r.rootPath,
+              })),
+            },
           )
         : undefined;
 
@@ -433,6 +538,11 @@ export function ChatView() {
       let reasoningAcc = "";
       const tools: ToolActivity[] = [];
       const notices: string[] = [];
+      if (agentic && trimmed) {
+        notices.push(
+          "Workspace briefing trimmed to fit this model's small context window.",
+        );
+      }
       const toolIndexById = new Map<string, number>();
       const summarize = (args: Record<string, unknown>): string => {
         const s = (k: string): string | undefined => {
@@ -443,6 +553,8 @@ export function ChatView() {
         // like "createNote hello" or "readNote North Star: A Fading Sun".
         const title = s("title") ?? s("name");
         if (title) return title.slice(0, 80);
+        if (s("command")) return s("command")!.slice(0, 80);
+        if (s("path")) return s("path")!.slice(0, 80);
         if (s("number")) return s("number")!.slice(0, 80);
         if (s("query")) return `"${s("query")!.slice(0, 60)}"`;
         if (s("content")) return s("content")!.slice(0, 80);
@@ -460,6 +572,11 @@ export function ChatView() {
           notices: [...notices],
         });
 
+      // Workspace tools are always on in agentic mode; filesystem/shell tools
+      // join when an external project is linked.
+      const turnTools = withTools
+        ? [...WORKSPACE_TOOLS, ...(roots.length ? FS_TOOLS : [])]
+        : undefined;
       const result = await runWorkspaceChat({
         provider,
         apiKey: connection.apiKey,
@@ -467,9 +584,12 @@ export function ChatView() {
         model: thread.modelId,
         system,
         messages: history,
-        tools: withTools ? WORKSPACE_TOOLS : undefined,
+        tools: turnTools,
         executeTool: withTools
-          ? (call) => executeWorkspaceTool(projectId!, call)
+          ? (call) =>
+              FS_TOOL_NAMES.has(call.name)
+                ? executeFsTool({ roots, requestApproval }, call)
+                : executeWorkspaceTool(projectId!, call)
           : undefined,
         reasoning:
           thread.reasoningEnabled && canReason
@@ -483,7 +603,11 @@ export function ChatView() {
           else if (e.type === "notice") notices.push(e.message);
           else if (e.type === "tool_call") {
             toolIndexById.set(e.id, tools.length);
-            tools.push({ name: e.name, summary: summarize(e.arguments), ok: true });
+            tools.push({
+              name: e.name,
+              summary: summarize(e.arguments),
+              ok: true,
+            });
           } else if (e.type === "tool_result") {
             const i = toolIndexById.get(e.id);
             if (i !== undefined) tools[i] = { ...tools[i], ok: e.ok };
@@ -493,6 +617,25 @@ export function ChatView() {
       });
       const finalText = result.text || acc;
       const finalReasoning = result.reasoning || reasoningAcc;
+      // Silent tool-ignoring: the user asked for an action, the turn had
+      // tools available, and the model answered with plain text and zero
+      // tool calls. Aggregator gateways often swallow tools without an
+      // error — say so instead of looking broken.
+      const actionIntent =
+        /\b(create|add|make|update|edit|delete|remove|fix|implement|write|rename|move|scaffold|generate|build|set up)\b/i.test(
+          userText,
+        );
+      if (
+        agentic &&
+        withTools &&
+        actionIntent &&
+        result.executed.length === 0 &&
+        finalText.trim()
+      ) {
+        notices.push(
+          "The model answered without calling workspace tools — this model/gateway may not support function calling. Use Connections → Test to verify, or pick a tool-capable model.",
+        );
+      }
       // Never leave a silent blank bubble: if the model produced no answer
       // and did no work, surface it as a retryable error (thinking, tool
       // chips, and notices stay visible either way).
@@ -506,12 +649,12 @@ export function ChatView() {
           ? null
           : finalReasoning.trim()
             ? "The model spent its output on thinking and returned no answer — Retry, or turn off extended thinking for this model."
-            : "The model returned an empty response — Retry, or try another model.",
+            : "The model returned an empty response — Retry, or use Connections → Test to check what this model/gateway supports.",
       });
     } catch (e) {
       const message = controller.signal.aborted
         ? "Stopped."
-        : (e as Error).message;
+        : friendlyChatError((e as Error).message);
       await chatMessagesRepo.update(assistant.id, { error: message });
     } finally {
       setStream(null);
@@ -606,14 +749,20 @@ export function ChatView() {
     abortRef.current?.abort();
   }
 
-  const sendDisabled = (!input.trim() && pending.length === 0) || Boolean(stream);
+  const sendDisabled =
+    (!input.trim() && pending.length === 0) || Boolean(stream);
 
   return (
     <div className="flex h-full min-h-0">
       {/* Threads sidebar */}
       <div className="flex w-64 shrink-0 flex-col border-r border-border">
         <div className="flex items-center gap-2 border-b border-border p-2">
-          <Button size="sm" className="flex-1" onClick={newChat} disabled={!projectId}>
+          <Button
+            size="sm"
+            className="flex-1"
+            onClick={newChat}
+            disabled={!projectId}
+          >
             <Plus className="h-4 w-4" /> New chat
           </Button>
           <Tooltip label="AI connections" side="bottom">
@@ -662,7 +811,9 @@ export function ChatView() {
         {!thread ? (
           <EmptyState
             icon={MessageSquare}
-            title={connections.length === 0 ? "Connect a provider" : "Start a chat"}
+            title={
+              connections.length === 0 ? "Connect a provider" : "Start a chat"
+            }
             description={
               connections.length === 0
                 ? "Add an AI provider (Claude, OpenAI, Google, OpenRouter, Groq, and more) with your API key to begin. Keys stay in your browser."
@@ -697,7 +848,9 @@ export function ChatView() {
                 <ModelMenu
                   provider={provider}
                   value={thread.modelId}
-                  onChange={(m) => chatThreadsRepo.update(thread.id, { modelId: m })}
+                  onChange={(m) =>
+                    chatThreadsRepo.update(thread.id, { modelId: m })
+                  }
                 />
               )}
 
@@ -705,6 +858,26 @@ export function ChatView() {
                 mode={mode}
                 onChange={(m) => chatThreadsRepo.update(thread.id, { mode: m })}
               />
+
+              {mode === "agentic" && (
+                <Tooltip
+                  label={
+                    linkedRoots?.length
+                      ? `Linked projects: ${linkedRoots.map((r) => r.name).join(", ")} — the AI can read them freely and asks before writes/commands`
+                      : "Link an external project folder (e.g. a Unity project) so the AI can read files, write code, and run commands in it"
+                  }
+                  side="bottom"
+                >
+                  <Button
+                    variant={linkedRoots?.length ? "default" : "outline"}
+                    size="icon-sm"
+                    aria-label="Linked projects"
+                    onClick={() => setLinkDialog(true)}
+                  >
+                    <FolderGit2 className="h-4 w-4" />
+                  </Button>
+                </Tooltip>
+              )}
 
               {canReason && (
                 <Tooltip
@@ -741,7 +914,7 @@ export function ChatView() {
                 <Sparkles className="h-3.5 w-3.5 text-primary" />
                 {mode === "agentic"
                   ? canUseTools
-                    ? "Workspace-aware · can act"
+                    ? `Workspace-aware · can act${linkedRoots?.length ? ` · +${linkedRoots.length} linked` : ""}`
                     : "Workspace-aware · read-only (model lacks tools)"
                   : "Direct chat"}
               </span>
@@ -773,6 +946,7 @@ export function ChatView() {
                     onCopy={() => navigator.clipboard.writeText(m.content)}
                     onDelete={() => chatMessagesRepo.remove(m.id)}
                     onRegenerate={() => void regenerate(m.id)}
+                    onSaveCodeAsNote={saveCodeAsNote}
                   />
                 ))}
                 <div ref={bottomRef} />
@@ -782,9 +956,16 @@ export function ChatView() {
             {/* Composer */}
             <div className="shrink-0 border-t border-border p-3">
               <div className="mx-auto max-w-3xl">
+                {pendingApproval && (
+                  <ApprovalCard
+                    req={pendingApproval.req}
+                    onSettle={settleApproval}
+                  />
+                )}
                 {attachError && (
                   <p className="mb-1.5 flex items-center gap-1.5 text-xs text-destructive">
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {attachError}
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />{" "}
+                    {attachError}
                   </p>
                 )}
                 {pending.length > 0 && (
@@ -804,11 +985,15 @@ export function ChatView() {
                         ) : (
                           <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                         )}
-                        <span className="max-w-36 truncate">{p.attachment.name}</span>
+                        <span className="max-w-36 truncate">
+                          {p.attachment.name}
+                        </span>
                         <button
                           type="button"
                           aria-label={`Remove ${p.attachment.name}`}
-                          onClick={() => setPending((prev) => prev.filter((_, j) => j !== i))}
+                          onClick={() =>
+                            setPending((prev) => prev.filter((_, j) => j !== i))
+                          }
                           className="text-muted-foreground hover:text-destructive"
                         >
                           <X className="h-3 w-3" />
@@ -881,14 +1066,24 @@ export function ChatView() {
                   </Tooltip>
                   {speech.supported && (
                     <Tooltip
-                      label={speech.listening ? "Stop dictation" : "Dictate with your voice"}
+                      label={
+                        speech.listening
+                          ? "Stop dictation"
+                          : "Dictate with your voice"
+                      }
                       side="top"
                     >
                       <Button
                         variant={speech.listening ? "default" : "ghost"}
                         size="icon-sm"
-                        aria-label={speech.listening ? "Stop dictation" : "Start dictation"}
-                        onClick={() => (speech.listening ? speech.stop() : speech.start())}
+                        aria-label={
+                          speech.listening
+                            ? "Stop dictation"
+                            : "Start dictation"
+                        }
+                        onClick={() =>
+                          speech.listening ? speech.stop() : speech.start()
+                        }
                         className={cn(speech.listening && "animate-pulse")}
                       >
                         {speech.listening ? (
@@ -902,7 +1097,11 @@ export function ChatView() {
                   <div className="relative min-w-0 flex-1">
                     <Textarea
                       ref={textareaRef}
-                      value={interim ? `${input}${input ? " " : ""}${interim}` : input}
+                      value={
+                        interim
+                          ? `${input}${input ? " " : ""}${interim}`
+                          : input
+                      }
                       onChange={(e) => {
                         setInput(e.target.value);
                         updateTrigger();
@@ -912,7 +1111,8 @@ export function ChatView() {
                       onKeyUp={updateTrigger}
                       onClick={updateTrigger}
                       onKeyDown={(e) => {
-                        if (trigger && menuRef.current?.handleKeyDown(e)) return;
+                        if (trigger && menuRef.current?.handleKeyDown(e))
+                          return;
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
                           void send();
@@ -946,7 +1146,12 @@ export function ChatView() {
                     )}
                   </div>
                   {stream ? (
-                    <Button variant="outline" size="icon" aria-label="Stop" onClick={stop}>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      aria-label="Stop"
+                      onClick={stop}
+                    >
                       <Square className="h-4 w-4" />
                     </Button>
                   ) : (
@@ -962,15 +1167,23 @@ export function ChatView() {
                 </div>
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   Type{" "}
-                  <kbd className="rounded border border-border bg-muted px-1">/</kbd>{" "}
+                  <kbd className="rounded border border-border bg-muted px-1">
+                    /
+                  </kbd>{" "}
                   commands ·{" "}
-                  <kbd className="rounded border border-border bg-muted px-1">@</kbd>{" "}
+                  <kbd className="rounded border border-border bg-muted px-1">
+                    @
+                  </kbd>{" "}
                   pages ·{" "}
-                  <kbd className="rounded border border-border bg-muted px-1">#</kbd>{" "}
+                  <kbd className="rounded border border-border bg-muted px-1">
+                    #
+                  </kbd>{" "}
                   records
                 </p>
                 {speech.error && (
-                  <p className="mt-1 text-xs text-destructive">{speech.error}</p>
+                  <p className="mt-1 text-xs text-destructive">
+                    {speech.error}
+                  </p>
                 )}
               </div>
             </div>
@@ -979,8 +1192,95 @@ export function ChatView() {
       </div>
 
       {connDialog && catalog && (
-        <ConnectionsDialog catalog={catalog} onClose={() => setConnDialog(false)} />
+        <ConnectionsDialog
+          catalog={catalog}
+          onClose={() => setConnDialog(false)}
+        />
       )}
+      {linkDialog && projectId && (
+        <LinkedProjectsDialog
+          projectId={projectId}
+          roots={linkedRoots ?? []}
+          onClose={() => setLinkDialog(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── Approval card for sensitive fs/shell actions ─────────────────────── */
+
+function ApprovalCard({
+  req,
+  onSettle,
+}: {
+  req: ApprovalRequest;
+  onSettle: (allowed: boolean, remember: boolean) => void;
+}) {
+  const isShell = req.name === "shell_run";
+  const detail = isShell
+    ? String(req.arguments.command ?? "")
+    : String(req.arguments.path ?? "");
+  const content = !isShell ? String(req.arguments.content ?? "") : "";
+  const previewLines = content.split("\n");
+  const PREVIEW_CAP = 24;
+
+  return (
+    <div className="mb-2 overflow-hidden rounded-md border border-warning/50 bg-card">
+      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+        <ShieldAlert className="h-4 w-4 shrink-0 text-warning" />
+        <div className="min-w-0 flex-1">
+          <div className="text-xs font-medium">
+            {isShell ? "Run this command?" : "Write this file?"}
+          </div>
+          <div className="truncate text-[11px] text-muted-foreground">
+            {req.rootLabel}
+          </div>
+        </div>
+      </div>
+      <div className="px-3 py-2">
+        <div
+          className={cn(
+            "flex items-start gap-1.5 rounded bg-muted px-2.5 py-1.5 font-mono text-xs",
+            isShell && "items-center",
+          )}
+        >
+          {isShell && (
+            <Terminal className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          )}
+          {isShell ? (
+            <span className="break-all">{detail}</span>
+          ) : (
+            <span className="break-all font-sans font-medium">{detail}</span>
+          )}
+        </div>
+        {!isShell && content && (
+          <pre className="mt-1.5 max-h-56 overflow-auto rounded bg-muted px-2.5 py-1.5 text-[11px] leading-relaxed">
+            {previewLines.slice(0, PREVIEW_CAP).join("\n")}
+            {previewLines.length > PREVIEW_CAP &&
+              `\n… (${previewLines.length - PREVIEW_CAP} more lines)`}
+          </pre>
+        )}
+      </div>
+      <div className="flex items-center justify-end gap-2 border-t border-border px-3 py-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onSettle(false, false)}
+        >
+          Deny
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onSettle(true, true)}
+        >
+          Always allow{isShell ? ` "${detail.split(/\s+/)[0]}"` : " this file"}
+        </Button>
+        <Button size="sm" onClick={() => onSettle(true, false)}>
+          Approve
+        </Button>
+      </div>
     </div>
   );
 }
@@ -1083,8 +1383,16 @@ function ModeToggle({
     <div className="flex shrink-0 items-center rounded-md border border-border p-0.5">
       {(
         [
-          { value: "agentic", label: "Agentic", hint: "Grounded in your workspace; can create and update entities via tools." },
-          { value: "chat", label: "Chat", hint: "Direct conversation with the model — nothing from the workspace is sent." },
+          {
+            value: "agentic",
+            label: "Agentic",
+            hint: "Grounded in your workspace; can create and update entities via tools.",
+          },
+          {
+            value: "chat",
+            label: "Chat",
+            hint: "Direct conversation with the model — nothing from the workspace is sent.",
+          },
         ] as const
       ).map((opt) => (
         <button
@@ -1149,6 +1457,7 @@ function MessageRow({
   onCopy,
   onDelete,
   onRegenerate,
+  onSaveCodeAsNote,
 }: {
   message: ChatMessage;
   live: LiveStream | null;
@@ -1157,6 +1466,7 @@ function MessageRow({
   onCopy: () => void;
   onDelete: () => void;
   onRegenerate: () => void;
+  onSaveCodeAsNote: (code: string, language: string) => void;
 }) {
   const [copied, setCopied] = useState(false);
   const content = live ? live.text : m.content;
@@ -1189,7 +1499,12 @@ function MessageRow({
         )}
 
         {attachments.length > 0 && (
-          <div className={cn("mb-1.5 flex flex-wrap gap-2", isUser && "justify-end")}>
+          <div
+            className={cn(
+              "mb-1.5 flex flex-wrap gap-2",
+              isUser && "justify-end",
+            )}
+          >
             {attachments.map((a, i) => (
               <AttachmentChip key={`${a.name}-${i}`} attachment={a} />
             ))}
@@ -1219,7 +1534,9 @@ function MessageRow({
                 <Wrench className="h-3 w-3" />
                 {prettyToolName(t.name)}
                 {t.summary && (
-                  <span className="max-w-36 truncate opacity-70">{t.summary}</span>
+                  <span className="max-w-36 truncate opacity-70">
+                    {t.summary}
+                  </span>
                 )}
                 {t.ok ? (
                   <Check className="h-3 w-3 text-node-lore" />
@@ -1231,14 +1548,24 @@ function MessageRow({
           </div>
         )}
 
-        {reasoning && <ThinkingBlock text={reasoning} streaming={Boolean(live) && !content} />}
+        {reasoning && (
+          <ThinkingBlock
+            text={reasoning}
+            streaming={Boolean(live) && !content}
+          />
+        )}
 
         {m.error ? (
           <div className="flex flex-wrap items-center gap-2 text-sm text-destructive">
             <AlertCircle className="h-4 w-4 shrink-0" />
             {m.error}
             {m.error !== "Stopped." && (
-              <Button variant="outline" size="sm" onClick={onRegenerate} disabled={busy}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRegenerate}
+                disabled={busy}
+              >
                 <RotateCw className="h-3 w-3" /> Retry
               </Button>
             )}
@@ -1247,11 +1574,14 @@ function MessageRow({
           <div className="rounded-lg bg-primary/10 px-3 py-2 text-sm whitespace-pre-wrap">
             {content}
           </div>
-        ) : content && !live ? (
-          <MarkdownPreview content={content} />
         ) : (
-          <div className="text-sm whitespace-pre-wrap">
-            {content}
+          // Assistant replies render as markdown both persisted and live —
+          // partial markdown while streaming degrades gracefully.
+          <div className="text-sm">
+            <MarkdownPreview
+              content={content}
+              onSaveCodeAsNote={onSaveCodeAsNote}
+            />
             {live && (
               <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-primary align-text-bottom" />
             )}
@@ -1279,7 +1609,11 @@ function MessageRow({
                   }}
                   className="h-6 w-6 text-muted-foreground"
                 >
-                  {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                  {copied ? (
+                    <Check className="h-3 w-3" />
+                  ) : (
+                    <Copy className="h-3 w-3" />
+                  )}
                 </Button>
               </Tooltip>
             )}
@@ -1337,7 +1671,13 @@ function AttachmentChip({ attachment: a }: { attachment: ChatAttachment }) {
 }
 
 /** Collapsible extended-thinking block. */
-function ThinkingBlock({ text, streaming }: { text: string; streaming: boolean }) {
+function ThinkingBlock({
+  text,
+  streaming,
+}: {
+  text: string;
+  streaming: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const show = open || streaming;
   return (
@@ -1347,7 +1687,11 @@ function ThinkingBlock({ text, streaming }: { text: string; streaming: boolean }
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
       >
-        {show ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        {show ? (
+          <ChevronDown className="h-3 w-3" />
+        ) : (
+          <ChevronRight className="h-3 w-3" />
+        )}
         <BrainCircuit className="h-3 w-3" />
         Thinking{streaming ? "…" : ""}
       </button>
@@ -1378,7 +1722,9 @@ function ConnectionMenu({
     <div className="relative shrink-0">
       <Button variant="outline" size="sm" onClick={() => setOpen((v) => !v)}>
         <Plug className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="max-w-32 truncate">{value?.label ?? "Connection"}</span>
+        <span className="max-w-32 truncate">
+          {value?.label ?? "Connection"}
+        </span>
         <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
       </Button>
       {open && (

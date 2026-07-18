@@ -29,6 +29,7 @@ import type {
   AiConnection,
   ChatThread,
   ChatMessage,
+  LinkedProject,
   WorkflowRun,
   WorkflowStep,
   CodeFinding,
@@ -70,6 +71,7 @@ export class MasarFlowDB extends Dexie {
   aiConnections!: EntityTable<AiConnection, "id">;
   chatThreads!: EntityTable<ChatThread, "id">;
   chatMessages!: EntityTable<ChatMessage, "id">;
+  linkedProjects!: EntityTable<LinkedProject, "id">;
   workflowRuns!: EntityTable<WorkflowRun, "id">;
   workflowSteps!: EntityTable<WorkflowStep, "id">;
   codeFindings!: EntityTable<CodeFinding, "id">;
@@ -131,6 +133,11 @@ export class MasarFlowDB extends Dexie {
       codeFindings: "id, projectId, path, analyzedAt",
       linkSuggestions: "id, projectId, status, [projectId+status]",
       parsedContents: "id, projectId, path, modality",
+    });
+    // v7: external project folders linked to workspace projects for the
+    // agentic filesystem/shell tools (additive).
+    this.version(7).stores({
+      linkedProjects: "id, projectId",
     });
   }
 }

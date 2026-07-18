@@ -455,7 +455,9 @@ export const pluginStateSchema = z.object({
   projectId: z.string(),
   pluginId: z.string(),
   enabled: z.boolean().default(true),
-  settings: z.record(z.string(), z.union([z.string(), z.boolean()])).default({}),
+  settings: z
+    .record(z.string(), z.union([z.string(), z.boolean()]))
+    .default({}),
   installedAt: z.number(),
   updatedAt: z.number(),
 });
@@ -537,6 +539,24 @@ export const chatMessageSchema = z.object({
   createdAt: z.number(),
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
+
+/**
+ * An external project folder on the user's machine linked to a workspace
+ * project — e.g. a Unity game project. In agentic chat mode the AI gets
+ * filesystem/shell tools scoped to linked roots (reads auto-allowed, writes
+ * and shell commands need explicit per-action user approval).
+ */
+export const linkedProjectSchema = z.object({
+  id: z.string(),
+  /** The workspace project this external folder augments. */
+  projectId: z.string(),
+  /** Display label (defaults to the folder's basename). */
+  name: z.string(),
+  /** Absolute path to the folder root. */
+  rootPath: z.string(),
+  createdAt: z.number(),
+});
+export type LinkedProject = z.infer<typeof linkedProjectSchema>;
 
 /** A run of the 16-step idea → implementation workflow. */
 export const workflowRunSchema = z.object({

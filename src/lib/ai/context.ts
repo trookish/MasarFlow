@@ -143,7 +143,13 @@ function pickFullBodies(
   query: string | undefined,
   count: number,
 ): { noteIds: Set<string>; docIds: Set<string> } {
-  type Entry = { kind: "note" | "doc"; id: string; title: string; body: string; updatedAt: number };
+  type Entry = {
+    kind: "note" | "doc";
+    id: string;
+    title: string;
+    body: string;
+    updatedAt: number;
+  };
   const entries: Entry[] = [
     ...notes.map((n) => ({
       kind: "note" as const,
@@ -269,7 +275,8 @@ export function formatWorkspaceContext(
         `- ${s.number} "${s.title}" — status: ${s.status}, progress: ${s.implementationProgress}%`,
       ];
       if (s.purpose) parts.push(`  Purpose: ${clip(s.purpose, 240)}`);
-      if (s.goals.length) parts.push(`  Goals: ${clip(s.goals.join("; "), 300)}`);
+      if (s.goals.length)
+        parts.push(`  Goals: ${clip(s.goals.join("; "), 300)}`);
       if (s.constraints.length)
         parts.push(`  Constraints: ${clip(s.constraints.join("; "), 240)}`);
       if (s.acceptance.length)
@@ -292,9 +299,7 @@ export function formatWorkspaceContext(
       ...byStatus("todo"),
     ].map(fmt);
     const backlog = byStatus("backlog").map(fmt);
-    const done = byStatus("done")
-      .slice(-15)
-      .map(fmt);
+    const done = byStatus("done").slice(-15).map(fmt);
     push(
       `\n## Tasks\n### Active\n${active.join("\n") || "(none)"}\n### Backlog\n${backlog.join("\n") || "(none)"}\n### Recently done\n${done.join("\n") || "(none)"}\n`,
     );
@@ -303,7 +308,9 @@ export function formatWorkspaceContext(
   if (snapshot.sprints.length) {
     const lines = snapshot.sprints.map((s) => {
       const range =
-        s.startDate && s.endDate ? ` (${day(s.startDate)} → ${day(s.endDate)})` : "";
+        s.startDate && s.endDate
+          ? ` (${day(s.startDate)} → ${day(s.endDate)})`
+          : "";
       return `- "${s.name}" — ${s.status}${range}${s.goal ? ` — goal: ${clip(s.goal, 160)}` : ""}`;
     });
     push(`\n## Sprints\n${lines.join("\n")}\n`);
@@ -330,10 +337,13 @@ export function formatWorkspaceContext(
   if (snapshot.notes.length) {
     const full: string[] = [];
     const brief: string[] = [];
-    for (const n of [...snapshot.notes].sort((a, b) => b.updatedAt - a.updatedAt)) {
+    for (const n of [...snapshot.notes].sort(
+      (a, b) => b.updatedAt - a.updatedAt,
+    )) {
       const head = `"${n.title}" (${n.type}${n.tags.length ? `, tags: ${n.tags.join(", ")}` : ""}, id: ${n.id})`;
       if (fullNoteIds.has(n.id)) {
-        const body = noteChunks?.get(n.id)?.join("\n…\n") ?? clip(n.body, BODY_CLIP);
+        const body =
+          noteChunks?.get(n.id)?.join("\n…\n") ?? clip(n.body, BODY_CLIP);
         full.push(`### Note: ${head}\n${body}`);
       } else {
         brief.push(`- ${head}${n.excerpt ? ` — ${clip(n.excerpt, 180)}` : ""}`);
@@ -347,10 +357,13 @@ export function formatWorkspaceContext(
   if (snapshot.docs.length) {
     const full: string[] = [];
     const brief: string[] = [];
-    for (const d of [...snapshot.docs].sort((a, b) => b.updatedAt - a.updatedAt)) {
+    for (const d of [...snapshot.docs].sort(
+      (a, b) => b.updatedAt - a.updatedAt,
+    )) {
       const head = `"${d.title}" (category: ${d.category}, id: ${d.id})`;
       if (fullDocIds.has(d.id)) {
-        const body = docChunks?.get(d.id)?.join("\n…\n") ?? clip(d.body, BODY_CLIP);
+        const body =
+          docChunks?.get(d.id)?.join("\n…\n") ?? clip(d.body, BODY_CLIP);
         full.push(`### Doc: ${head}\n${body}`);
       } else {
         brief.push(`- ${head} — ${clip(stripMarkdown(d.body), 180)}`);
@@ -376,7 +389,10 @@ export function formatWorkspaceContext(
     const lines = [...snapshot.devLogs]
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, 20)
-      .map((l) => `- ${day(l.createdAt)} [${l.type}] ${l.title}${l.body ? ` — ${clip(stripMarkdown(l.body), 140)}` : ""}`);
+      .map(
+        (l) =>
+          `- ${day(l.createdAt)} [${l.type}] ${l.title}${l.body ? ` — ${clip(stripMarkdown(l.body), 140)}` : ""}`,
+      );
     push(`\n## Recent dev log\n${lines.join("\n")}\n`);
   }
 
@@ -399,7 +415,12 @@ async function fetchRagChunks(
     const res = await fetch("/api/python/rag", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ projectId, query, topK, budgetChars: RAG_BUDGET_CHARS }),
+      body: JSON.stringify({
+        projectId,
+        query,
+        topK,
+        budgetChars: RAG_BUDGET_CHARS,
+      }),
       signal: AbortSignal.timeout(4000),
     });
     if (!res.ok) return undefined;
@@ -419,7 +440,11 @@ export async function assembleWorkspaceContext(
   const snapshot = await fetchWorkspaceSnapshot(projectId);
   const query = opts.query?.trim();
   const ragChunks = query
-    ? await fetchRagChunks(projectId, query, opts.fullBodies ?? DEFAULT_FULL_BODIES)
+    ? await fetchRagChunks(
+        projectId,
+        query,
+        opts.fullBodies ?? DEFAULT_FULL_BODIES,
+      )
     : undefined;
   return formatWorkspaceContext(snapshot, { ...opts, ragChunks });
 }
@@ -431,7 +456,12 @@ export async function assembleWorkspaceContext(
  */
 export function buildAssistantSystemPrompt(
   contextText: string,
-  opts: { withTools?: boolean; role?: string } = {},
+  opts: {
+    withTools?: boolean;
+    role?: string;
+    /** External projects linked to this workspace project (fs/shell tools). */
+    linkedRoots?: { name: string; rootPath: string }[];
+  } = {},
 ): string {
   const identity =
     opts.role ??
@@ -454,8 +484,20 @@ Always:
     : `
 Answer strictly from the workspace briefing below. If something is not in it, say you don't see it in the workspace rather than inventing it.`;
 
+  const linked = opts.linkedRoots?.length
+    ? `
+
+LINKED EXTERNAL PROJECTS (real folders on the user's machine — you have opencode-style agency over them):
+${opts.linkedRoots.map((r) => `- "${r.name}" at ${r.rootPath}`).join("\n")}
+Filesystem/shell tools (agentic mode): fs_list, fs_read, fs_search are read-only and run freely; fs_write and shell_run REQUIRE user approval — the user sees each command/file before it executes, so propose them confidently but expect review. Rules of engagement:
+- Orient with fs_list before reading/writing; read a file before overwriting it.
+- Keep the workspace and the external project in sync: when you change code, update the matching notes/specs/docs via the workspace tools, and vice versa.
+- Prefer fs_search over guessing paths; prefer small, reviewable fs_write diffs over full-file rewrites when possible.
+- Use shell_run for builds/tests/package commands; report failures honestly and propose fixes.`
+    : "";
+
   return `${identity}
-${toolGuidance}
+${toolGuidance}${linked}
 
 Respond in concise Markdown. Use [[Note Title]] wikilink syntax when referring to brain notes.
 

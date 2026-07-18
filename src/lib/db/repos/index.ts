@@ -17,11 +17,8 @@ export { docsRepo } from "./docs";
 export { syncRepo } from "./sync";
 export { watchEventsRepo } from "./watchEvents";
 export { pluginsRepo } from "./plugins";
-export {
-  aiConnectionsRepo,
-  chatThreadsRepo,
-  chatMessagesRepo,
-} from "./chat";
+export { aiConnectionsRepo, chatThreadsRepo, chatMessagesRepo } from "./chat";
+export { linkedProjectsRepo } from "./linkedProjects";
 export { agentsRepo, agentRunsRepo, agentStepsRepo } from "./agents";
 export { workflowRepo } from "./workflow";
 export { codeFindingsRepo } from "./codeFindings";
