@@ -3,9 +3,11 @@
 import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
 import { cn } from "@/lib/utils/cn";
 import { usePlugin, settingStr } from "@/lib/plugins-runtime";
 import { MermaidBlock } from "./mermaid-block";
+import { CodeBlock } from "@/components/chat/code-block";
 import { useObsidianStore } from "@/lib/stores/obsidian";
 import {
   OBSIDIAN_VIDEO_EXTENSIONS,
@@ -28,12 +30,15 @@ interface MarkdownPreviewProps {
   content: string;
   /** Invoked when a wikilink is clicked, with the target note title. */
   onWikilink?: (title: string) => void;
+  /** When provided, code blocks get a "save as note" action. */
+  onSaveCodeAsNote?: (code: string, language: string) => void;
   className?: string;
 }
 
 export function MarkdownPreview({
   content,
   onWikilink,
+  onSaveCodeAsNote,
   className,
 }: MarkdownPreviewProps) {
   const processed = preprocessWikilinks(content);
@@ -70,7 +75,6 @@ export function MarkdownPreview({
         "[&_li]:my-0.5",
         "[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2",
         "[&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-xs",
-        "[&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:border-border [&_pre]:bg-muted [&_pre]:p-3",
         "[&_pre_code]:bg-transparent [&_pre_code]:p-0",
         "[&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground",
         "[&_hr]:my-4 [&_hr]:border-border",
@@ -80,27 +84,38 @@ export function MarkdownPreview({
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={[
+          [rehypeHighlight, { detect: false, ignoreMissing: true }],
+        ]}
         components={{
           pre({ children, ...props }) {
+            const child = Array.isArray(children) ? children[0] : children;
+            const cls =
+              child && typeof child === "object" && "props" in child
+                ? String(
+                    (child.props as { className?: string }).className ?? "",
+                  )
+                : "";
             // Mermaid plugin: render ```mermaid blocks as live diagrams.
-            if (mermaid.active) {
-              const child = Array.isArray(children) ? children[0] : children;
-              const cls =
-                child && typeof child === "object" && "props" in child
-                  ? String(
-                      (child.props as { className?: string }).className ?? "",
-                    )
-                  : "";
-              if (cls.includes("language-mermaid")) {
-                return (
-                  <MermaidBlock
-                    code={codeText(children).trim()}
-                    theme={settingStr(mermaid.settings, "theme", "dark")}
-                  />
-                );
-              }
+            if (mermaid.active && cls.includes("language-mermaid")) {
+              return (
+                <MermaidBlock
+                  code={codeText(children).trim()}
+                  theme={settingStr(mermaid.settings, "theme", "dark")}
+                />
+              );
             }
-            return <pre {...props}>{children}</pre>;
+            const language = /language-([\w-]+)/.exec(cls)?.[1] ?? "text";
+            return (
+              <CodeBlock
+                language={language}
+                rawText={codeText(children).replace(/\n$/, "")}
+                onSaveAsNote={onSaveCodeAsNote}
+                {...props}
+              >
+                {children}
+              </CodeBlock>
+            );
           },
           img({ src, alt }) {
             if (typeof src === "string" && src.startsWith("wikilink:")) {
@@ -110,7 +125,10 @@ export function MarkdownPreview({
 
               if (OBSIDIAN_VIDEO_EXTENSIONS.has(ext)) {
                 return (
-                  <video controls className="w-full max-w-2xl rounded-md border my-4">
+                  <video
+                    controls
+                    className="w-full max-w-2xl rounded-md border my-4"
+                  >
                     <source src={mediaUrl} />
                     Your browser does not support the video tag.
                   </video>
@@ -134,9 +152,21 @@ export function MarkdownPreview({
                 );
               }
               // Default to image
-              return <img src={mediaUrl} alt={alt} className="max-w-full rounded-md border my-4" />;
+              return (
+                <img
+                  src={mediaUrl}
+                  alt={alt}
+                  className="max-w-full rounded-md border my-4"
+                />
+              );
             }
-            return <img src={src as string} alt={alt} className="max-w-full rounded-md border my-4" />;
+            return (
+              <img
+                src={src as string}
+                alt={alt}
+                className="max-w-full rounded-md border my-4"
+              />
+            );
           },
           a({ href, children, ...props }) {
             if (typeof href === "string" && href.startsWith("wikilink:")) {

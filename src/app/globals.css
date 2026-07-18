@@ -52,6 +52,17 @@
   --node-task: #14b8a6;
   --node-commit: #fb923c;
   --node-system-module: #0ea5e9;
+
+  /* Syntax highlighting (hljs) */
+  --code-keyword: #7c3aed;
+  --code-string: #16a34a;
+  --code-comment: #6b7280;
+  --code-number: #d97706;
+  --code-title: #2563eb;
+  --code-attr: #0891b2;
+  --code-built-in: #db2777;
+  --code-type: #7c3aed;
+  --code-literal: #dc2626;
 }
 
 .dark {
@@ -76,6 +87,17 @@
   --sidebar: #0c0c10;
   --sidebar-foreground: #cfcfd6;
   --sidebar-border: #1e1e23;
+
+  /* Syntax highlighting (hljs) */
+  --code-keyword: #c4b5fd;
+  --code-string: #86efac;
+  --code-comment: #71717a;
+  --code-number: #fbbf24;
+  --code-title: #93c5fd;
+  --code-attr: #67e8f9;
+  --code-built-in: #f9a8d4;
+  --code-type: #c4b5fd;
+  --code-literal: #fca5a5;
 }
 
 /* ── AMOLED surface ──────────────────────────────────────────────────────
@@ -171,6 +193,57 @@
   /* Offset sticky headers when anchor-navigating */
   html {
     scroll-padding-top: 4rem;
+  }
+
+  /* ── Syntax highlighting (rehype-highlight / hljs classes) ────────────── */
+  .hljs-keyword,
+  .hljs-selector-tag,
+  .hljs-template-tag {
+    color: var(--code-keyword);
+  }
+  .hljs-string,
+  .hljs-regexp,
+  .hljs-addition {
+    color: var(--code-string);
+  }
+  .hljs-comment,
+  .hljs-quote,
+  .hljs-deletion {
+    color: var(--code-comment);
+    font-style: italic;
+  }
+  .hljs-number,
+  .hljs-symbol,
+  .hljs-bullet {
+    color: var(--code-number);
+  }
+  .hljs-title,
+  .hljs-title.function_,
+  .hljs-section {
+    color: var(--code-title);
+  }
+  .hljs-attribute,
+  .hljs-attr,
+  .hljs-variable,
+  .hljs-template-variable {
+    color: var(--code-attr);
+  }
+  .hljs-built_in,
+  .hljs-class .hljs-title,
+  .hljs-title.class_ {
+    color: var(--code-built-in);
+  }
+  .hljs-type,
+  .hljs-name,
+  .hljs-selector-id,
+  .hljs-selector-class {
+    color: var(--code-type);
+  }
+  .hljs-literal,
+  .hljs-link,
+  .hljs-operator,
+  .hljs-meta {
+    color: var(--code-literal);
   }
 }
 
