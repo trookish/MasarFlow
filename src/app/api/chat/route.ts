@@ -61,6 +61,8 @@ interface ChatRequest {
   system?: string;
   messages: WireMessage[];
   tools?: WireToolDef[];
+  /** Tool-calling mode when tools are present. Default: "auto". */
+  toolChoice?: "auto" | "required" | "none";
   maxTokens?: number;
   /**
    * Reasoning/thinking controls. When `enabled`, Anthropic requests get a
@@ -101,7 +103,12 @@ function toAnthropicMessages(messages: WireMessage[]): Json[] {
       const content: Json[] = [];
       if (m.content) content.push({ type: "text", text: m.content });
       for (const c of m.toolCalls) {
-        content.push({ type: "tool_use", id: c.id, name: c.name, input: c.arguments });
+        content.push({
+          type: "tool_use",
+          id: c.id,
+          name: c.name,
+          input: c.arguments,
+        });
       }
       out.push({ role: "assistant", content });
       continue;
@@ -133,7 +140,11 @@ function toOpenAiMessages(
   }
   for (const m of messages) {
     if (m.role === "tool") {
-      out.push({ role: "tool", tool_call_id: m.toolCallId, content: m.content });
+      out.push({
+        role: "tool",
+        tool_call_id: m.toolCallId,
+        content: m.content,
+      });
       continue;
     }
     if (m.role === "assistant" && m.toolCalls?.length) {
@@ -155,7 +166,9 @@ function toOpenAiMessages(
       pendingSystem = undefined;
     }
     if (m.role === "user" && m.images?.length) {
-      const content: Json[] = [{ type: "text", text: text || "(see attached image)" }];
+      const content: Json[] = [
+        { type: "text", text: text || "(see attached image)" },
+      ];
       for (const img of m.images) {
         content.push({
           type: "image_url",
@@ -180,14 +193,21 @@ interface CallFlags {
   stream: boolean;
 }
 
-function buildPayload(body: ChatRequest, flags: CallFlags): {
+function buildPayload(
+  body: ChatRequest,
+  flags: CallFlags,
+): {
   url: string;
   headers: Record<string, string>;
   payload: Json;
 } {
-  const { format, baseUrl, apiKey, model, system, messages, tools, reasoning } = body;
+  const { format, baseUrl, apiKey, model, system, messages, tools, reasoning } =
+    body;
+  const choice = body.toolChoice ?? "auto";
   const thinkBudget =
-    reasoning?.enabled && typeof reasoning.budget === "number" && reasoning.budget > 0
+    reasoning?.enabled &&
+    typeof reasoning.budget === "number" &&
+    reasoning.budget > 0
       ? Math.min(Math.floor(reasoning.budget), 28000)
       : 4096;
 
@@ -220,6 +240,12 @@ function buildPayload(body: ChatRequest, flags: CallFlags): {
                 input_schema: t.parameters,
               }))
             : undefined,
+        // Explicit choice: some gateways default to "none" when tools are
+        // present without one, silently disabling tool use.
+        tool_choice:
+          flags.withTools && tools?.length
+            ? { type: choice === "required" ? "any" : choice }
+            : undefined,
         thinking:
           flags.withThinking && reasoning?.enabled
             ? { type: "enabled", budget_tokens: thinkBudget }
@@ -237,7 +263,9 @@ function buildPayload(body: ChatRequest, flags: CallFlags): {
     },
     payload: {
       model,
-      messages: toOpenAiMessages(system, messages, { foldSystem: flags.foldSystem }),
+      messages: toOpenAiMessages(system, messages, {
+        foldSystem: flags.foldSystem,
+      }),
       tools:
         flags.withTools && tools?.length
           ? tools.map((t) => ({
@@ -249,6 +277,10 @@ function buildPayload(body: ChatRequest, flags: CallFlags): {
               },
             }))
           : undefined,
+      // Explicit choice: some OpenAI-compatible gateways (aggregators like
+      // OpenCode Go / OpenRouter) silently ignore tools unless tool_choice
+      // is set — without it the model answers but never calls functions.
+      tool_choice: flags.withTools && tools?.length ? choice : undefined,
       // Ask OpenAI-compatible reasoning models (o-series, Gemini 2.5, R1
       // aggregators) to surface their thinking when the user enabled it.
       reasoning_effort:
@@ -280,11 +312,7 @@ function degrade(
   errorText: string,
 ): { flags: CallFlags; notice: string } | null {
   const err = errorText.toLowerCase();
-  if (
-    flags.withTools &&
-    body.tools?.length &&
-    /tool|function/.test(err)
-  ) {
+  if (flags.withTools && body.tools?.length && /tool|function/.test(err)) {
     return {
       flags: { ...flags, withTools: false },
       notice:
@@ -309,13 +337,15 @@ function degrade(
   ) {
     return {
       flags: { ...flags, foldSystem: true },
-      notice: "This model rejected the system role — instructions were folded into the message.",
+      notice:
+        "This model rejected the system role — instructions were folded into the message.",
     };
   }
   if (flags.stream && /stream/.test(err)) {
     return {
       flags: { ...flags, stream: false },
-      notice: "This model doesn't support streaming — the reply arrives all at once.",
+      notice:
+        "This model doesn't support streaming — the reply arrives all at once.",
     };
   }
   // Nuclear fallback: any other 4xx we couldn't classify (an unusual schema
@@ -349,8 +379,10 @@ export async function POST(req: Request): Promise<Response> {
 
   if (!body.apiKey && !body.noAuth)
     return Response.json({ error: "Missing API key" }, { status: 400 });
-  if (!body.model) return Response.json({ error: "Missing model" }, { status: 400 });
-  if (!body.baseUrl) return Response.json({ error: "Missing base URL" }, { status: 400 });
+  if (!body.model)
+    return Response.json({ error: "Missing model" }, { status: 400 });
+  if (!body.baseUrl)
+    return Response.json({ error: "Missing base URL" }, { status: 400 });
 
   let flags: CallFlags = {
     withTools: true,
@@ -422,7 +454,10 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   if (!upstream?.body) {
-    return Response.json({ error: lastError || "Provider request failed" }, { status: lastStatus });
+    return Response.json(
+      { error: lastError || "Provider request failed" },
+      { status: lastStatus },
+    );
   }
 
   const ndjsonHeaders = {
@@ -438,7 +473,10 @@ export async function POST(req: Request): Promise<Response> {
     const raw = await upstream.text();
     const events = nonStreamToEvents(raw, body.format);
     if (events !== null) {
-      const lines = [...notices.map((message) => ({ type: "notice", message })), ...events]
+      const lines = [
+        ...notices.map((message) => ({ type: "notice", message })),
+        ...events,
+      ]
         .map((e) => JSON.stringify(e))
         .join("\n");
       return new Response(`${lines}\n`, { headers: ndjsonHeaders });
@@ -511,7 +549,8 @@ function nonStreamToEvents(
         events.push({ type: "text", text: content });
       } else if (Array.isArray(content)) {
         for (const part of content as Json[]) {
-          if (typeof part === "string") events.push({ type: "text", text: part });
+          if (typeof part === "string")
+            events.push({ type: "text", text: part });
           else if (part.type === "text" && part.text) {
             events.push({ type: "text", text: String(part.text) });
           }
@@ -556,7 +595,10 @@ function nonStreamToEvents(
     }
   }
 
-  events.push({ type: "done", stopReason: sawToolCalls ? "tool_calls" : "end" });
+  events.push({
+    type: "done",
+    stopReason: sawToolCalls ? "tool_calls" : "end",
+  });
   return events;
 }
 
@@ -592,7 +634,10 @@ function transformSSE(
   // OpenAI: tool calls keyed by delta index.
   const openaiCalls = new Map<number, PendingToolCall>();
 
-  const emit = (controller: ReadableStreamDefaultController<Uint8Array>, event: Json) => {
+  const emit = (
+    controller: ReadableStreamDefaultController<Uint8Array>,
+    event: Json,
+  ) => {
     controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
   };
 
@@ -600,13 +645,17 @@ function transformSSE(
     if (!raw.trim()) return {};
     try {
       const v = JSON.parse(raw);
-      return typeof v === "object" && v !== null ? (v as Record<string, unknown>) : {};
+      return typeof v === "object" && v !== null
+        ? (v as Record<string, unknown>)
+        : {};
     } catch {
       return {};
     }
   };
 
-  const flushOpenAiCalls = (controller: ReadableStreamDefaultController<Uint8Array>) => {
+  const flushOpenAiCalls = (
+    controller: ReadableStreamDefaultController<Uint8Array>,
+  ) => {
     for (const call of openaiCalls.values()) {
       if (!call.name) continue;
       sawToolCalls = true;
@@ -621,7 +670,9 @@ function transformSSE(
   };
 
   /** Emit the final "done" event and close the output stream. */
-  const finishStream = (controller: ReadableStreamDefaultController<Uint8Array>) => {
+  const finishStream = (
+    controller: ReadableStreamDefaultController<Uint8Array>,
+  ) => {
     flushOpenAiCalls(controller);
     emit(controller, {
       type: "done",
@@ -759,7 +810,8 @@ function transformSSE(
     async pull(controller) {
       if (!sentNotices) {
         sentNotices = true;
-        for (const message of notices) emit(controller, { type: "notice", message });
+        for (const message of notices)
+          emit(controller, { type: "notice", message });
       }
       if (streamDone) {
         finishStream(controller);

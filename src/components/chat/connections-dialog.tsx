@@ -2,13 +2,26 @@
 
 import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Trash2, KeyRound, Search, ChevronDown } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  KeyRound,
+  Search,
+  ChevronDown,
+  Loader2,
+  CircleCheck,
+  CircleAlert,
+} from "lucide-react";
 import { aiConnectionsRepo } from "@/lib/db/repos";
+import type { AiConnection } from "@/lib/db/schema";
 import {
   flattenProviders,
   providerBaseUrl,
+  defaultModelId,
   type Catalog,
+  type AiProvider,
 } from "@/lib/ai/catalog";
+import { probeConnection, type ProbeResult } from "@/lib/ai/probe";
 import { cn } from "@/lib/utils/cn";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -24,8 +37,7 @@ export function ConnectionsDialog({
 }) {
   const connections = useLiveQuery(() => aiConnectionsRepo.list(), []) ?? [];
   const providers = useMemo(() => flattenProviders(catalog), [catalog]);
-  const providerName = (id: string) =>
-    catalog[id]?.name ?? id;
+  const providerName = (id: string) => catalog[id]?.name ?? id;
 
   const [adding, setAdding] = useState(false);
 
@@ -66,30 +78,12 @@ export function ConnectionsDialog({
             ) : (
               <ul className="space-y-1">
                 {connections.map((c) => (
-                  <li
+                  <ConnectionRow
                     key={c.id}
-                    className="flex items-center gap-3 rounded-md border border-border px-3 py-2"
-                  >
-                    <KeyRound className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium">
-                        {c.label}
-                      </div>
-                      <div className="truncate text-xs text-muted-foreground">
-                        {providerName(c.providerId)} ·{" "}
-                        {c.apiKey ? "key set" : "no key"}
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label="Remove connection"
-                      onClick={() => aiConnectionsRepo.remove(c.id)}
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </li>
+                    connection={c}
+                    catalog={catalog}
+                    providerName={providerName(c.providerId)}
+                  />
                 ))}
               </ul>
             )}
@@ -120,7 +114,9 @@ function AddConnection({
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return providers.slice(0, 50);
-    return providers.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 50);
+    return providers
+      .filter((p) => p.name.toLowerCase().includes(q))
+      .slice(0, 50);
   }, [providers, search]);
 
   function choose(id: string, name: string) {
@@ -209,7 +205,13 @@ function AddConnection({
         />
       </Field>
 
-      <Field label={selected?.noAuth ? "API key (not required for local providers)" : "API key"}>
+      <Field
+        label={
+          selected?.noAuth
+            ? "API key (not required for local providers)"
+            : "API key"
+        }
+      >
         <Input
           type="password"
           value={apiKey}
@@ -237,6 +239,121 @@ function AddConnection({
         </Button>
       </div>
     </div>
+  );
+}
+
+/* ── One saved connection with a live capability probe ────────────────── */
+
+function ConnectionRow({
+  connection: c,
+  catalog,
+  providerName,
+}: {
+  connection: AiConnection;
+  catalog: Catalog;
+  providerName: string;
+}) {
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<ProbeResult | null>(null);
+
+  async function test() {
+    setTesting(true);
+    setResult(null);
+    try {
+      const provider: AiProvider = catalog[c.providerId] ?? {
+        id: c.providerId,
+        name: c.providerId,
+        models: {},
+      };
+      const model = defaultModelId(provider);
+      if (!model) {
+        setResult({
+          ok: false,
+          latencyMs: 0,
+          streaming: false,
+          tools: null,
+          error: "No model in the catalog to test with.",
+        });
+        return;
+      }
+      setResult(
+        await probeConnection({
+          provider,
+          apiKey: c.apiKey,
+          baseUrl: c.baseUrl || undefined,
+          model,
+        }),
+      );
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  return (
+    <li className="rounded-md border border-border px-3 py-2">
+      <div className="flex items-center gap-3">
+        <KeyRound className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium">{c.label}</div>
+          <div className="truncate text-xs text-muted-foreground">
+            {providerName} · {c.apiKey ? "key set" : "no key"}
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={test}
+          disabled={testing}
+          aria-label="Test connection"
+        >
+          {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+          Test
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Remove connection"
+          onClick={() => aiConnectionsRepo.remove(c.id)}
+          className="text-muted-foreground hover:text-destructive"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+      {result && (
+        <div
+          className={cn(
+            "mt-2 flex items-start gap-1.5 text-[11px]",
+            result.ok && result.tools !== false
+              ? "text-muted-foreground"
+              : "text-destructive",
+          )}
+        >
+          {result.ok && result.tools !== false ? (
+            <CircleCheck className="mt-0.5 h-3 w-3 shrink-0" />
+          ) : (
+            <CircleAlert className="mt-0.5 h-3 w-3 shrink-0" />
+          )}
+          <span>
+            {result.ok ? (
+              <>
+                Connected in {result.latencyMs}ms · streaming{" "}
+                {result.streaming ? "✓" : "✗"} · function calling{" "}
+                {result.tools ? "✓" : "✗"}
+                {result.tools === false && (
+                  <span className="mt-0.5 block text-muted-foreground">
+                    The model/gateway ignored a forced tool call — agentic
+                    workspace tools will not work with this model. Pick a
+                    tool-capable model.
+                  </span>
+                )}
+              </>
+            ) : (
+              (result.error ?? "Connection failed.")
+            )}
+          </span>
+        </div>
+      )}
+    </li>
   );
 }
 

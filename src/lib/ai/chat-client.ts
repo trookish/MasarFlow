@@ -1,8 +1,4 @@
-import {
-  providerFormat,
-  providerBaseUrl,
-  type AiProvider,
-} from "./catalog";
+import { providerFormat, providerBaseUrl, type AiProvider } from "./catalog";
 import type { WorkspaceToolDef, ToolCallRequest } from "./tools";
 
 /**
@@ -31,8 +27,19 @@ export type WireMessage =
 export type StreamEvent =
   | { type: "text"; text: string }
   | { type: "reasoning"; text: string }
-  | { type: "tool_call"; id: string; name: string; arguments: Record<string, unknown> }
-  | { type: "tool_result"; id: string; name: string; ok: boolean; content: string }
+  | {
+      type: "tool_call";
+      id: string;
+      name: string;
+      arguments: Record<string, unknown>;
+    }
+  | {
+      type: "tool_result";
+      id: string;
+      name: string;
+      ok: boolean;
+      content: string;
+    }
   | { type: "notice"; message: string }
   | { type: "round"; round: number }
   | { type: "done"; stopReason: "end" | "tool_calls" };
@@ -45,6 +52,8 @@ export interface StreamTurnOptions {
   system?: string;
   messages: WireMessage[];
   tools?: WorkspaceToolDef[];
+  /** Tool-calling mode when tools are present (default "auto"). */
+  toolChoice?: "auto" | "required" | "none";
   /** Reasoning/thinking controls forwarded to /api/chat. */
   reasoning?: { enabled: boolean; budget?: number };
   onEvent?: (event: StreamEvent) => void;
@@ -72,6 +81,7 @@ export async function streamTurn(opts: StreamTurnOptions): Promise<TurnResult> {
       system: opts.system,
       messages: opts.messages,
       tools: opts.tools,
+      toolChoice: opts.toolChoice,
       reasoning: opts.reasoning,
     }),
     signal: opts.signal,
@@ -107,7 +117,11 @@ export async function streamTurn(opts: StreamTurnOptions): Promise<TurnResult> {
     if (event.type === "text") text += event.text;
     else if (event.type === "reasoning") reasoning += event.text;
     else if (event.type === "tool_call") {
-      toolCalls.push({ id: event.id, name: event.name, arguments: event.arguments });
+      toolCalls.push({
+        id: event.id,
+        name: event.name,
+        arguments: event.arguments,
+      });
     } else if (event.type === "done") stopReason = event.stopReason;
     opts.onEvent?.(event);
   };
@@ -125,7 +139,10 @@ export async function streamTurn(opts: StreamTurnOptions): Promise<TurnResult> {
   return { text, reasoning, toolCalls, stopReason };
 }
 
-export interface WorkspaceChatOptions extends Omit<StreamTurnOptions, "messages"> {
+export interface WorkspaceChatOptions extends Omit<
+  StreamTurnOptions,
+  "messages"
+> {
   messages: WireMessage[];
   /** Executes one tool call and resolves with its JSON result string. */
   executeTool?: (call: ToolCallRequest) => Promise<string>;
