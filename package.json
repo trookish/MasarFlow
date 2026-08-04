@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
-    "dev:full": "concurrently -n next,py -c blue,green \"next dev --webpack\" \"python-service/.venv/Scripts/python -m uvicorn main:app --app-dir python-service --port 8000 --reload\"",
+    "dev:full": "node scripts/start.mjs --dev",
     "build": "next build",
     "start": "node scripts/start.mjs",
     "setup:python": "node scripts/start.mjs --setup-only",

@@ -29,7 +29,7 @@ function run(cmd, args, opts = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, {
       stdio: "inherit",
-      shell: process.platform === "win32",
+      shell: false,
       ...opts,
     });
     child.on("error", reject);
@@ -53,7 +53,7 @@ async function ensureVenv() {
 function startProcess(label, cmd, args, opts = {}) {
   const child = spawn(cmd, args, {
     stdio: ["ignore", "pipe", "pipe"],
-    shell: process.platform === "win32",
+    shell: false,
     ...opts,
   });
   const prefix = `[${label}] `;
@@ -86,27 +86,38 @@ async function main() {
     process.exit(1);
   }
 
-  const nextArgs = process.env.PORT
-    ? ["start", "-p", String(process.env.PORT)]
-    : ["start"];
+  const isDev = process.argv.includes("--dev");
+  const nextArgs = isDev
+    ? ["dev", "--webpack"]
+    : (process.env.PORT ? ["start", "-p", String(process.env.PORT)] : ["start"]);
+  if (isDev && process.env.PORT) {
+    nextArgs.push("-p", String(process.env.PORT));
+  }
+
   const nextChild = startProcess(
     "next",
     process.execPath,
     [nextCli, ...nextArgs],
     { cwd: root },
   );
+
+  const pyArgs = [
+    "-m",
+    "uvicorn",
+    "main:app",
+    "--app-dir",
+    "python-service",
+    "--port",
+    PYTHON_PORT,
+  ];
+  if (isDev) {
+    pyArgs.push("--reload");
+  }
+
   const pyChild = startProcess(
     "py",
     venvPython,
-    [
-      "-m",
-      "uvicorn",
-      "main:app",
-      "--app-dir",
-      "python-service",
-      "--port",
-      PYTHON_PORT,
-    ],
+    pyArgs,
     { cwd: root },
   );
 
