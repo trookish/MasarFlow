@@ -108,4 +108,52 @@ describe("executeWorkspaceToolWithUndo", () => {
     );
     expect(await aiUndoRepo.listByMessage(MESSAGE)).toHaveLength(0);
   });
+
+  it("returns the post-write entity state (read-after-write)", async () => {
+    const note = await notesRepo.create({
+      projectId: PROJECT,
+      title: "Before",
+      body: "old",
+    });
+    const result = await executeWorkspaceToolWithUndo(
+      PROJECT,
+      call("update_note", { id: note.id, title: "After", body: "new body" }),
+      MESSAGE,
+    );
+    const parsed = JSON.parse(result) as {
+      ok: boolean;
+      state?: { title?: string; body?: string; id?: string };
+    };
+    expect(parsed.ok).toBe(true);
+    expect(parsed.state?.title).toBe("After");
+    expect(parsed.state?.body).toBe("new body");
+    // Bookkeeping fields are not echoed back to the model.
+    expect(parsed.state?.id).toBeUndefined();
+  });
+
+  it("does not enrich failed results with state", async () => {
+    const result = await executeWorkspaceToolWithUndo(
+      PROJECT,
+      call("update_note", { id: "missing-id", body: "nope" }),
+      MESSAGE,
+    );
+    const parsed = JSON.parse(result) as { ok: boolean; state?: unknown };
+    expect(parsed.ok).toBe(false);
+    expect(parsed.state).toBeUndefined();
+  });
+
+  it("does not enrich read-only tool results", async () => {
+    const note = await notesRepo.create({
+      projectId: PROJECT,
+      title: "Readonly",
+      body: "x",
+    });
+    const result = await executeWorkspaceToolWithUndo(
+      PROJECT,
+      call("read_note", { id: note.id }),
+      MESSAGE,
+    );
+    const parsed = JSON.parse(result) as { state?: unknown };
+    expect(parsed.state).toBeUndefined();
+  });
 });

@@ -87,6 +87,31 @@ function succeeded(result: string): boolean {
   }
 }
 
+/**
+ * Read-after-write: attach the post-mutation entity state to a successful
+ * tool result so the model sees what it actually wrote and can spot (and
+ * correct) mangled content in the same turn. Long strings are truncated to
+ * bound context cost; bookkeeping fields are dropped.
+ */
+function enrichWithState(result: string, after: unknown): string {
+  if (after === null || typeof after !== "object") return result;
+  try {
+    const j = JSON.parse(result) as Record<string, unknown>;
+    if (j.ok === false) return result;
+    const state: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(after as Record<string, unknown>)) {
+      if (["id", "projectId", "createdAt", "updatedAt"].includes(k)) continue;
+      state[k] =
+        typeof v === "string" && v.length > 4000
+          ? `${v.slice(0, 4000)}…`
+          : v;
+    }
+    return JSON.stringify({ ...j, state });
+  } catch {
+    return result;
+  }
+}
+
 /** True when two entity rows are identical except for `updatedAt` bumps. */
 function sameRow(a: unknown, b: unknown): boolean {
   if (typeof a !== "object" || a === null || typeof b !== "object" || b === null) {
@@ -141,5 +166,5 @@ export async function executeWorkspaceToolWithUndo(
     before,
     after,
   });
-  return result;
+  return after !== null ? enrichWithState(result, after) : result;
 }
