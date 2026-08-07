@@ -1358,9 +1358,9 @@ async function seedChat(projectId: string, connectionId: string): Promise<void> 
       "I'd lock the **perfect-block window at 100ms** with a 60ms forgiving tail.\n\nWhy 100ms:\n- Sits inside your 40–80ms hitstop range's upper bound, so a successful block *feels* like the impact it cancels.\n- Matches the coyote time (100ms) you already use — one internal 'forgiveness budget' to teach.\n- 120ms started to feel unearned in playtests; 80ms punished latency above human reaction.\n\nThe 60ms tail tapers the window (partial parry) so near-misses still sting slightly. I've drafted a decision note and a task to implement the curve — see the linked task.",
     reasoning: "",
     toolActivity: [
-      { name: "readNote", summary: "North Star: A Fading Sun", ok: true },
-      { name: "readNote", summary: "Game-feel Research: Hitstop", ok: true },
-      { name: "createTask", summary: "Perfect-block window decision", ok: true },
+      { name: "readNote", summary: "North Star: A Fading Sun", ok: true, running: false },
+      { name: "readNote", summary: "Game-feel Research: Hitstop", ok: true, running: false },
+      { name: "createTask", summary: "Perfect-block window decision", ok: true, running: false },
     ],
     createdAt: ago(3 * HOUR),
   });

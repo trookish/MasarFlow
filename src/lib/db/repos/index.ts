@@ -24,3 +24,4 @@ export { workflowRepo } from "./workflow";
 export { codeFindingsRepo } from "./codeFindings";
 export { linkSuggestionsRepo } from "./linkSuggestions";
 export { parsedContentsRepo } from "./parsedContents";
+export { aiUndoRepo } from "./aiUndo";

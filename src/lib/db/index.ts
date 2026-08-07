@@ -35,6 +35,7 @@ import type {
   CodeFinding,
   LinkSuggestion,
   ParsedContent,
+  AiUndo,
 } from "./schema";
 
 /**
@@ -77,6 +78,7 @@ export class MasarFlowDB extends Dexie {
   codeFindings!: EntityTable<CodeFinding, "id">;
   linkSuggestions!: EntityTable<LinkSuggestion, "id">;
   parsedContents!: EntityTable<ParsedContent, "id">;
+  aiUndo!: EntityTable<AiUndo, "id">;
 
   constructor() {
     super("masarflow");
@@ -189,6 +191,11 @@ export class MasarFlowDB extends Dexie {
             if (!Array.isArray(c.linkedTaskIds)) c.linkedTaskIds = [];
           },
         );
+    });
+    // v9: reversible AI workspace mutations (additive). Each row captures the
+    // entity before/after a mutating agent tool call so chat can roll back.
+    this.version(9).stores({
+      aiUndo: "id, projectId, chatMessageId, createdAt",
     });
   }
 }

@@ -500,8 +500,53 @@ export const toolActivitySchema = z.object({
   name: z.string(),
   summary: z.string().default(""),
   ok: z.boolean().default(true),
+  /** True while the tool is executing during a live stream (not persisted). */
+  running: z.boolean().default(false),
 });
 export type ToolActivity = z.infer<typeof toolActivitySchema>;
+
+/** Entity kinds the AI workspace tools can mutate (for undo bookkeeping). */
+export const aiUndoKindSchema = z.enum([
+  "note",
+  "spec",
+  "task",
+  "standard",
+  "system",
+  "sprint",
+  "doc",
+  "devlog",
+  "memory",
+  "canvas",
+  "folder",
+  "link",
+  "commit",
+]);
+export type AiUndoKind = z.infer<typeof aiUndoKindSchema>;
+
+/**
+ * A reversible AI workspace mutation. Captured around each mutating tool call
+ * so the user can roll back a model-made change (restore, delete, or re-add
+ * the entity) directly from the chat message that caused it.
+ */
+export const aiUndoSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  /** The assistant chat message whose tool call caused the change. */
+  chatMessageId: z.string(),
+  toolName: z.string(),
+  kind: aiUndoKindSchema,
+  /** Dexie table holding the entity (revert works against the raw table). */
+  table: z.string(),
+  /** Entity row id the tool call targeted (or created). */
+  entityId: z.string(),
+  action: z.enum(["create", "update", "delete"]),
+  /** Pre-mutation entity row (null when the entity was created). */
+  before: z.unknown().nullable().default(null),
+  /** Post-mutation entity row (null when the entity was deleted). */
+  after: z.unknown().nullable().default(null),
+  createdAt: z.number(),
+});
+export type AiUndo = z.infer<typeof aiUndoSchema>;
 
 /** An attachment carried on a chat message. */
 export const chatAttachmentSchema = z.object({

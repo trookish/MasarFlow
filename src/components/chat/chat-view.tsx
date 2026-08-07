@@ -25,6 +25,7 @@ import {
   Wrench,
   Check,
   X,
+  Loader2,
   Sparkles,
   Paperclip,
   Mic,
@@ -32,6 +33,7 @@ import {
   Copy,
   RotateCw,
   Pencil,
+  Undo2,
   BrainCircuit,
   FileText,
   Info,
@@ -48,6 +50,7 @@ import {
   chatMessagesRepo,
   notesRepo,
   linkedProjectsRepo,
+  aiUndoRepo,
 } from "@/lib/db/repos";
 import type {
   AiConnection,
@@ -73,7 +76,8 @@ import {
   type WireMessage,
   type WireImage,
 } from "@/lib/ai/chat-client";
-import { WORKSPACE_TOOLS, executeWorkspaceTool } from "@/lib/ai/tools";
+import { WORKSPACE_TOOLS } from "@/lib/ai/tools";
+import { executeWorkspaceToolWithUndo } from "@/lib/ai/undo";
 import {
   FS_TOOLS,
   FS_TOOL_NAMES,
@@ -589,7 +593,7 @@ export function ChatView() {
           ? (call) =>
               FS_TOOL_NAMES.has(call.name)
                 ? executeFsTool({ roots, requestApproval }, call)
-                : executeWorkspaceTool(projectId!, call)
+                : executeWorkspaceToolWithUndo(projectId!, call, assistant.id)
           : undefined,
         reasoning:
           thread.reasoningEnabled && canReason
@@ -607,10 +611,12 @@ export function ChatView() {
               name: e.name,
               summary: summarize(e.arguments),
               ok: true,
+              running: true,
             });
           } else if (e.type === "tool_result") {
             const i = toolIndexById.get(e.id);
-            if (i !== undefined) tools[i] = { ...tools[i], ok: e.ok };
+            if (i !== undefined)
+              tools[i] = { ...tools[i], ok: e.ok, running: false };
           }
           push();
         },
@@ -1538,7 +1544,9 @@ function MessageRow({
                     {t.summary}
                   </span>
                 )}
-                {t.ok ? (
+                {t.running ? (
+                  <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                ) : t.ok ? (
                   <Check className="h-3 w-3 text-node-lore" />
                 ) : (
                   <X className="h-3 w-3" />
@@ -1546,6 +1554,10 @@ function MessageRow({
               </span>
             ))}
           </div>
+        )}
+
+        {!live && (
+          <UndoChips messageId={m.id} busy={busy} />
         )}
 
         {reasoning && (
@@ -1646,6 +1658,66 @@ function MessageRow({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Revert chips for AI-made workspace changes. Lists every recorded undo entry
+ * belonging to the assistant message and offers one-click rollback (restore,
+ * delete, or re-add the entity). The ledger row is consumed on revert, so the
+ * live query clears the chip automatically.
+ */
+function UndoChips({ messageId, busy }: { messageId: string; busy: boolean }) {
+  const [reverted, setReverted] = useState<string | null>(null);
+  const entries = useLiveQuery(
+    () => aiUndoRepo.listByMessage(messageId),
+    [messageId],
+  );
+
+  if (!entries || entries.length === 0) return null;
+
+  async function revert(entryId: string) {
+    const list = entries;
+    if (!list) return;
+    const entry = list.find((e) => e.id === entryId);
+    if (!entry) return;
+    try {
+      const label = await aiUndoRepo.revert(entry);
+      setReverted(`${entry.toolName}: ${label}`);
+      setTimeout(() => setReverted(null), 2500);
+    } catch {
+      setReverted("Revert failed — the entity may have changed since.");
+      setTimeout(() => setReverted(null), 3500);
+    }
+  }
+
+  return (
+    <div className="mb-1.5 flex flex-wrap items-center gap-1">
+      {entries.map((e) => (
+        <span
+          key={e.id}
+          className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-[11px] text-muted-foreground"
+          title={`AI ${e.action} via ${e.toolName} — click to undo`}
+        >
+          <Undo2 className="h-3 w-3 text-primary" />
+          <span className="max-w-40 truncate">{aiUndoRepo.describe(e)}</span>
+          <button
+            type="button"
+            aria-label="Undo this AI change"
+            disabled={busy}
+            onClick={() => void revert(e.id)}
+            className="rounded px-1 font-medium text-primary hover:bg-primary/15 hover:text-primary"
+          >
+            Undo
+          </button>
+        </span>
+      ))}
+      {reverted && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+          <Check className="h-3 w-3 text-node-lore" /> {reverted}
+        </span>
+      )}
     </div>
   );
 }
