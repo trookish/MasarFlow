@@ -14,14 +14,29 @@ interface CreateNoteInput {
   id?: string;
 }
 
+/** Legacy rows can lack defaulted fields — normalize on read. */
+function normalize(n: Note): Note {
+  return {
+    ...n,
+    type: n.type ?? "note",
+    body: n.body ?? "",
+    excerpt: n.excerpt ?? "",
+    tags: n.tags ?? [],
+    folderId: n.folderId ?? null,
+  };
+}
+
 export const notesRepo = {
   async listByProject(projectId?: string | null): Promise<Note[]> {
     if (!projectId) return [];
-    return db.notes.where("projectId").equals(projectId).toArray();
+    return (await db.notes.where("projectId").equals(projectId).toArray()).map(
+      normalize,
+    );
   },
 
-  get(id: string): Promise<Note | undefined> {
-    return db.notes.get(id);
+  async get(id: string): Promise<Note | undefined> {
+    const n = await db.notes.get(id);
+    return n ? normalize(n) : undefined;
   },
 
   /** Case-insensitive title lookup within a project. */
@@ -34,7 +49,10 @@ export const notesRepo = {
       .where("projectId")
       .equals(projectId)
       .toArray();
-    return candidates.find((n) => n.title.trim().toLowerCase() === target);
+    const found = candidates.find(
+      (n) => n.title.trim().toLowerCase() === target,
+    );
+    return found ? normalize(found) : undefined;
   },
 
   async create(input: CreateNoteInput): Promise<Note> {

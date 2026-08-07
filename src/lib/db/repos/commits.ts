@@ -5,17 +5,38 @@ import { uuid, now } from "@/lib/utils/ids";
 type CommitInput = Partial<Commit> &
   Pick<Commit, "projectId" | "sha" | "message" | "date">;
 
+/**
+ * Legacy rows (written before these fields existed) can be missing them —
+ * normalize on read so no consumer ever hits undefined.
+ */
+function normalize(c: Commit): Commit {
+  return {
+    ...c,
+    sha: c.sha ?? "",
+    message: c.message ?? "",
+    author: c.author ?? "",
+    date: c.date ?? 0,
+    files: c.files ?? [],
+    additions: c.additions ?? 0,
+    deletions: c.deletions ?? 0,
+    aiSummary: c.aiSummary ?? "",
+    linkedSpecIds: c.linkedSpecIds ?? [],
+    linkedTaskIds: c.linkedTaskIds ?? [],
+  };
+}
+
 export const commitsRepo = {
   async listByProject(projectId?: string | null): Promise<Commit[]> {
     if (!projectId) return [];
-    return db.commits
+    return (await db.commits
       .where("projectId")
       .equals(projectId)
       .reverse()
-      .sortBy("date");
+      .sortBy("date")).map(normalize);
   },
-  get(id: string): Promise<Commit | undefined> {
-    return db.commits.get(id);
+  async get(id: string): Promise<Commit | undefined> {
+    const c = await db.commits.get(id);
+    return c ? normalize(c) : undefined;
   },
   async update(id: string, patch: Partial<Commit>): Promise<void> {
     await db.commits.update(id, patch);

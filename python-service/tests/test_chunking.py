@@ -1,4 +1,4 @@
-from chunking import chunk_text
+from app.chunking import chunk_text
 
 
 def test_empty_text_returns_no_chunks():

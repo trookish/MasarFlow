@@ -43,8 +43,8 @@ async function ensureVenv() {
   if (existsSync(venvPython)) return;
   console.log("[setup] creating python-service/.venv …");
   await run("python", ["-m", "venv", ".venv"], { cwd: pyDir });
-  console.log("[setup] installing requirements.txt …");
-  await run(venvPython, ["-m", "pip", "install", "-r", "requirements.txt"], {
+  console.log("[setup] installing requirements/base.txt …");
+  await run(venvPython, ["-m", "pip", "install", "-r", "requirements/base.txt"], {
     cwd: pyDir,
   });
   console.log("[setup] python service ready.");
@@ -104,7 +104,7 @@ async function main() {
   const pyArgs = [
     "-m",
     "uvicorn",
-    "main:app",
+    "app.main:app",
     "--app-dir",
     "python-service",
     "--port",

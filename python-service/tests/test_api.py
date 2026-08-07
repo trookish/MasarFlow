@@ -1,9 +1,9 @@
 import asyncio
 
 from fastapi.testclient import TestClient
+from app.main import app
 
-from main import app
-from job_queue import SyncItem, SyncJob, process_job
+from app.job_queue import SyncItem, SyncJob, process_job
 
 PROJECT = "proj-1"
 

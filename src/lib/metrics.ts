@@ -48,14 +48,18 @@ export function computeHealth(tasks: Task[], specs: Spec[]): number | null {
  */
 export function computeArchScore(systems: System[]): number | null {
   if (systems.length === 0) return null;
-  const avg = systems.reduce((acc, s) => acc + s.health, 0) / systems.length;
+  const avg =
+    systems.reduce(
+      (acc, s) => acc + (typeof s.health === "number" ? s.health : 100),
+      0,
+    ) / systems.length;
   const deprecatedIds = new Set(
     systems.filter((s) => s.status === "deprecated").map((s) => s.id),
   );
   const dependedOnDeprecated = systems.filter(
     (s) =>
       s.status !== "deprecated" &&
-      s.dependencies.some((d) => deprecatedIds.has(d)),
+      (s.dependencies ?? []).some((d) => deprecatedIds.has(d)),
   ).length;
   return clamp(avg - Math.min(20, dependedOnDeprecated * 10));
 }

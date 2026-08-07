@@ -84,7 +84,7 @@ you run the service on a different port. The service is loopback-only.
 | `npm run lint` | ESLint (flat config, Next core-web-vitals + TS) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run format` / `format:check` | Prettier write / check |
-| `npm test` | Vitest unit tests (`src/**/*.test.ts`) |
+| `npm test` | Vitest unit tests (`tests/unit/**/*.test.ts`) |
 | `npm run e2e` | Playwright smoke tests (run `npm run build` first) |
 | `pytest` (in `python-service/`) | Python service tests |
 
@@ -102,9 +102,12 @@ src/
     hooks/        React hooks (speech, python health, hotkeys, ...)
     stores/       Zustand stores (persisted UI state)
     utils/        cn, ids, markdown, Fuse search
-python-service/   FastAPI sidecar: embeddings, semantic search, RAG
+tests/
+  unit/           Vitest unit tests (mirrors src/ layout)
+  e2e/            Playwright specs
+  vitest.config.ts / playwright.config.ts
+python-service/   FastAPI sidecar: app/ package, requirements/, tests
 scripts/          start.mjs production launcher
-e2e/              Playwright specs
 ```
 
 ## Architecture notes
@@ -119,7 +122,6 @@ e2e/              Playwright specs
   and `shell_run` require per-action approval in the chat UI; "always allow"
   is session-scoped only.
 - **Python sidecar**: reached only from server-side routes under
-  `api/python/*` (loopback-enforced, graceful degradation). Roadmap for its
-  Phase-2 modules lives in `PYTHON_INTEGRATION_ANALYSIS.md`.
+  `api/python/*` (loopback-enforced, graceful degradation).
 - **Integrations**: GitHub (Octokit, PAT server-side only), Obsidian Local
   REST API, Ollama model listing, filesystem watcher over SSE.

@@ -73,8 +73,10 @@ function Ring({
 }) {
   const r = 34;
   const c = 2 * Math.PI * r;
-  const offset =
-    value === null ? c : c * (1 - Math.max(0, Math.min(100, value)) / 100);
+  const finite = value !== null && Number.isFinite(value);
+  const offset = finite
+    ? c * (1 - Math.max(0, Math.min(100, value as number)) / 100)
+    : c;
   return (
     <div className="flex flex-col items-center gap-2" title={hint}>
       <div className="relative h-24 w-24">
@@ -100,7 +102,7 @@ function Ring({
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center text-lg font-semibold">
-          {value === null ? "—" : Math.round(value)}
+          {finite ? Math.round(value as number) : "—"}
         </div>
       </div>
       <span className="text-xs text-muted-foreground">{label}</span>

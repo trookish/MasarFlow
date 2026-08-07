@@ -12,7 +12,7 @@ cd python-service
 python -m venv .venv
 .venv\Scripts\activate        # Windows
 # source .venv/bin/activate   # macOS/Linux
-pip install -r requirements-dev.txt
+pip install -r requirements/dev.txt
 ```
 
 The first request that needs embeddings downloads the `all-MiniLM-L6-v2`
@@ -21,7 +21,7 @@ sentence-transformers model (~90MB) and caches it locally.
 ## Run
 
 ```
-uvicorn main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8000
 ```
 
 Or, from the repo root, run both Next.js and this service together:
@@ -36,7 +36,7 @@ root) if you run this service on a different port.
 ## Test
 
 ```
-pip install -r requirements-dev.txt
+pip install -r requirements/dev.txt
 pytest
 ```
 

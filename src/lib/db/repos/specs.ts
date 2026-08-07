@@ -4,13 +4,36 @@ import { uuid, now } from "@/lib/utils/ids";
 
 type SpecInput = Partial<Spec> & Pick<Spec, "projectId" | "number" | "title">;
 
+/** Legacy rows can lack defaulted fields — normalize on read. */
+function normalize(s: Spec): Spec {
+  return {
+    ...s,
+    status: s.status ?? "draft",
+    purpose: s.purpose ?? "",
+    goals: s.goals ?? [],
+    features: s.features ?? [],
+    constraints: s.constraints ?? [],
+    dependencies: s.dependencies ?? [],
+    acceptance: s.acceptance ?? [],
+    risks: s.risks ?? [],
+    futureImprovements: s.futureImprovements ?? [],
+    technicalNotes: s.technicalNotes ?? "",
+    implementationProgress: s.implementationProgress ?? 0,
+    linkedNoteIds: s.linkedNoteIds ?? [],
+    linkedTaskIds: s.linkedTaskIds ?? [],
+  };
+}
+
 export const specsRepo = {
   async listByProject(projectId?: string | null): Promise<Spec[]> {
     if (!projectId) return [];
-    return db.specs.where("projectId").equals(projectId).toArray();
+    return (await db.specs.where("projectId").equals(projectId).toArray()).map(
+      normalize,
+    );
   },
-  get(id: string): Promise<Spec | undefined> {
-    return db.specs.get(id);
+  async get(id: string): Promise<Spec | undefined> {
+    const s = await db.specs.get(id);
+    return s ? normalize(s) : undefined;
   },
   async create(input: SpecInput): Promise<Spec> {
     const ts = now();

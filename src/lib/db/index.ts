@@ -139,6 +139,57 @@ export class MasarFlowDB extends Dexie {
     this.version(7).stores({
       linkedProjects: "id, projectId",
     });
+    // v8: backfill fields on rows written before they existed in the schema
+    // (missing `dependencies` crashed the dashboard metrics; missing commit
+    // fields crashed the commits feed).
+    this.version(8).stores({}).upgrade(async (tx) => {
+      await tx
+        .table("systems")
+        .toCollection()
+        .modify(
+          (s: {
+            dependencies?: string[];
+            health?: unknown;
+            description?: unknown;
+            category?: unknown;
+            status?: unknown;
+          }) => {
+            if (s.dependencies === undefined) s.dependencies = [];
+            if (typeof s.health !== "number") s.health = 100;
+            if (typeof s.description !== "string") s.description = "";
+            if (typeof s.category !== "string") s.category = "module";
+            if (typeof s.status !== "string") s.status = "active";
+          },
+        );
+      await tx
+        .table("commits")
+        .toCollection()
+        .modify(
+          (c: {
+            sha?: unknown;
+            message?: unknown;
+            author?: unknown;
+            date?: unknown;
+            files?: unknown;
+            additions?: unknown;
+            deletions?: unknown;
+            aiSummary?: unknown;
+            linkedSpecIds?: unknown;
+            linkedTaskIds?: unknown;
+          }) => {
+            if (typeof c.sha !== "string") c.sha = "";
+            if (typeof c.message !== "string") c.message = "";
+            if (typeof c.author !== "string") c.author = "";
+            if (typeof c.date !== "number") c.date = 0;
+            if (!Array.isArray(c.files)) c.files = [];
+            if (typeof c.additions !== "number") c.additions = 0;
+            if (typeof c.deletions !== "number") c.deletions = 0;
+            if (typeof c.aiSummary !== "string") c.aiSummary = "";
+            if (!Array.isArray(c.linkedSpecIds)) c.linkedSpecIds = [];
+            if (!Array.isArray(c.linkedTaskIds)) c.linkedTaskIds = [];
+          },
+        );
+    });
   }
 }
 

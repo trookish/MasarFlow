@@ -1,7 +1,8 @@
 import pytest
 
-import job_queue
-from job_queue import (
+import app.job_queue as job_queue
+
+from app.job_queue import (
     AnalysisJob,
     GraphJob,
     SyncJob,

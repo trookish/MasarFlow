@@ -8,7 +8,7 @@ const MODALITIES = new Set(["web", "pdf", "office", "image", "audio"]);
  * Proxies a document/file parse request to the local Python AI service. The
  * `modality` field selects the Python sub-path (`/parse/web`, `/parse/pdf`,
  * …). The web reader (trafilatura) lands in Step 1; binary parsers in Step 5;
- * heavy optional ones (image/audio) return 503 until requirements-extra.txt
+ * heavy optional ones (image/audio) return 503 until requirements/extra.txt
  * is installed.
  */
 export async function POST(request: Request) {
