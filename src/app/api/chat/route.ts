@@ -20,9 +20,38 @@
 //   { type: "reasoning", text }                       — reasoning/thinking delta
 //   { type: "tool_call", id, name, arguments }        — a complete tool call
 //   { type: "notice", message }                       — degradation notice
+//   { type: "error", message }                        — mid-stream failure (retryable)
 //   { type: "done", stopReason: "end" | "tool_calls" }
+//
+// Liveness: flaky gateways sometimes accept a request and then go silent —
+// before the first byte, or worse, mid-stream after some thinking deltas
+// (the UI showed a frozen "thinking…" forever). Two watchdogs keep a dead
+// upstream from hanging a turn forever: a first-byte timeout on the upstream
+// fetch (retried like other transient failures) and an idle timeout between
+// stream chunks, which ends the turn with an `error` event so the client can
+// surface a retryable failure instead of an eternal spinner. A total
+// wall-clock budget caps the whole retry/degradation ladder so a sick
+// provider can never hold the client's request open for minutes. All are
+// env-overridable (mostly for tests):
+//   MASARFLOW_CHAT_FIRST_BYTE_TIMEOUT_MS (default 30s)
+//   MASARFLOW_CHAT_IDLE_TIMEOUT_MS       (default 60s)
+//   MASARFLOW_CHAT_TOTAL_TIMEOUT_MS      (default 120s)
 
 export const dynamic = "force-dynamic";
+
+const FIRST_BYTE_TIMEOUT_MS = 30_000;
+const IDLE_TIMEOUT_MS = 60_000;
+const TOTAL_BUDGET_MS = 120_000;
+/** Transient retries (network failure / 429 / 5xx) per whole request. */
+const MAX_TRANSIENT_RETRIES = 1;
+/** Hard cap on attempts (initial + retries + degradation steps). */
+const MAX_ATTEMPTS = 6;
+
+/** Env-overridable timeout (read at call time so tests can shrink it). */
+function timeoutMs(name: string, fallback: number): number {
+  const v = Number(process.env[name]);
+  return Number.isFinite(v) && v > 0 ? v : fallback;
+}
 
 interface WireToolDef {
   name: string;
@@ -64,6 +93,11 @@ interface ChatRequest {
   /** Tool-calling mode when tools are present. Default: "auto". */
   toolChoice?: "auto" | "required" | "none";
   maxTokens?: number;
+  /**
+   * Client-generated id correlating this proxy request with its agent run
+   * (echoed in every server log line). Absent → generated server-side.
+   */
+  requestId?: string;
   /**
    * Reasoning/thinking controls. When `enabled`, Anthropic requests get a
    * `thinking` block with a token budget (extended thinking); OpenAI-compatible
@@ -384,6 +418,19 @@ export async function POST(req: Request): Promise<Response> {
   if (!body.baseUrl)
     return Response.json({ error: "Missing base URL" }, { status: 400 });
 
+  const requestId =
+    body.requestId && /^[A-Za-z0-9_-]{1,64}$/.test(body.requestId)
+      ? body.requestId
+      : `chat_${crypto.randomUUID().slice(0, 8)}`;
+
+  const log = (msg: string, extra: Record<string, unknown> = {}) =>
+    console.log(
+      `[chat:${requestId}] ${msg}`,
+      JSON.stringify({ format: body.format, model: body.model, ...extra }),
+    );
+
+  log("request received");
+
   let flags: CallFlags = {
     withTools: true,
     withThinking: true,
@@ -395,41 +442,79 @@ export async function POST(req: Request): Promise<Response> {
   let lastError = "";
   let lastStatus = 502;
 
-  // Transient retries share the budget with the degradation ladder (drop
-  // tools → thinking → system role → streaming → strip-everything) so even a
-  // flaky and picky provider converges on a usable response.
+  // The whole retry/degradation ladder shares one wall-clock budget so a sick
+  // provider converges on a definitive answer (or a definitive failure)
+  // quickly instead of holding the request open for minutes.
+  const firstByteMs = timeoutMs(
+    "MASARFLOW_CHAT_FIRST_BYTE_TIMEOUT_MS",
+    FIRST_BYTE_TIMEOUT_MS,
+  );
+  const totalMs = timeoutMs("MASARFLOW_CHAT_TOTAL_TIMEOUT_MS", TOTAL_BUDGET_MS);
+  const startedAt = Date.now();
   let transientRetries = 0;
-  for (let attempt = 0; attempt < 8; attempt++) {
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    if (Date.now() - startedAt > totalMs) {
+      lastError = `The provider didn't respond within ${Math.round(totalMs / 1000)}s — it may be overloaded.`;
+      lastStatus = 504;
+      log("giving up", { reason: "total budget exceeded" });
+      break;
+    }
     const { url, headers, payload } = buildPayload(body, flags);
+    log("upstream attempt", {
+      attempt: attempt + 1,
+      url,
+      stream: flags.stream,
+      tools: flags.withTools,
+      thinking: flags.withThinking,
+      foldSystem: flags.foldSystem,
+    });
     let res: Response;
+    // First-byte watchdog: some gateways accept the request and then hold it
+    // open without ever answering (overload queues, dead upstreams). Abort
+    // and treat it as transient so the retry budget applies; the timer is
+    // cleared once headers arrive so the body can stream unbounded (the
+    // stream's own idle watchdog takes over from there).
+    const abort = new AbortController();
+    const firstByteTimer = setTimeout(() => abort.abort(), firstByteMs);
     try {
       res = await fetch(url, {
         method: "POST",
         headers,
         body: JSON.stringify(payload),
+        signal: abort.signal,
       });
     } catch (e) {
-      // Network failure — retry with backoff.
-      lastError = `Could not reach provider: ${(e as Error).message}`;
-      lastStatus = 502;
-      if (transientRetries++ < 2) {
+      if (abort.signal.aborted) {
+        lastError = `The provider didn't respond within ${Math.round(firstByteMs / 1000)}s — it may be overloaded.`;
+        lastStatus = 504;
+      } else {
+        lastError = `Could not reach provider: ${(e as Error).message}`;
+        lastStatus = 502;
+      }
+      log("upstream failed", { status: lastStatus, error: lastError });
+      if (transientRetries++ < MAX_TRANSIENT_RETRIES) {
         await sleep(400 * transientRetries);
         continue;
       }
       break;
+    } finally {
+      clearTimeout(firstByteTimer);
     }
 
     if (res.ok && res.body) {
       upstream = res;
+      log("upstream ready", { status: res.status });
       break;
     }
 
     lastStatus = res.status || 502;
     lastError = (await extractError(res)) || `Provider error ${res.status}`;
+    log("upstream rejected", { status: lastStatus, error: lastError });
 
     // Transient: rate limit / overload / server error → backoff and retry.
     if (res.status === 429 || res.status >= 500) {
-      if (transientRetries++ < 2) {
+      if (transientRetries++ < MAX_TRANSIENT_RETRIES) {
         const retryAfter = Number(res.headers.get("retry-after"));
         await sleep(
           Number.isFinite(retryAfter) && retryAfter > 0
@@ -447,6 +532,7 @@ export async function POST(req: Request): Promise<Response> {
       if (next) {
         flags = next.flags;
         notices.push(next.notice);
+        log("degraded", { notice: next.notice });
         continue;
       }
     }
@@ -454,6 +540,7 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   if (!upstream?.body) {
+    log("request failed", { status: lastStatus, error: lastError });
     return Response.json(
       { error: lastError || "Provider request failed" },
       { status: lastStatus },
@@ -479,6 +566,7 @@ export async function POST(req: Request): Promise<Response> {
       ]
         .map((e) => JSON.stringify(e))
         .join("\n");
+      log("response completed", { stopReason: "end", nonStream: true });
       return new Response(`${lines}\n`, { headers: ndjsonHeaders });
     }
     // Not a JSON document after all (SSE with an odd content-type) — feed the
@@ -490,12 +578,12 @@ export async function POST(req: Request): Promise<Response> {
         controller.close();
       },
     });
-    return new Response(transformSSE(replay, body.format, notices), {
+    return new Response(transformSSE(replay, body.format, notices, log), {
       headers: ndjsonHeaders,
     });
   }
 
-  return new Response(transformSSE(upstream.body, body.format, notices), {
+  return new Response(transformSSE(upstream.body, body.format, notices, log), {
     headers: ndjsonHeaders,
   });
 }
@@ -619,6 +707,7 @@ function transformSSE(
   body: ReadableStream<Uint8Array>,
   format: "openai" | "anthropic",
   notices: string[] = [],
+  log?: (msg: string, extra?: Record<string, unknown>) => void,
 ): ReadableStream<Uint8Array> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
@@ -628,16 +717,50 @@ function transformSSE(
   /** Set to true when we detect the stream is logically complete. */
   let streamDone = false;
   let sentNotices = false;
+  let sentFirstChunk = false;
+  /**
+   * Incomplete JSON payload from a split SSE event (see the data: handling
+   * below). Empty when no fragment is being held.
+   */
+  let fragment = "";
 
   // Anthropic: tool_use blocks keyed by content-block index.
   const anthropicBlocks = new Map<number, PendingToolCall>();
-  // OpenAI: tool calls keyed by delta index.
+  // OpenAI: tool calls keyed by delta index (or a synthetic slot when the
+  // gateway omits `index` — see openaiKeyFor below).
   const openaiCalls = new Map<number, PendingToolCall>();
+
+  /**
+   * Map a tool-call delta chunk to its accumulating call. The reliable key is
+   * the per-call `index`; some gateways omit it and send the call id on the
+   * first chunk only. Fall back to matching by id, then to appending onto the
+   * most recent call — so parallel calls never corrupt each other's arguments.
+   */
+  const openaiKeyFor = (td: Json): number => {
+    if (typeof td.index === "number") return td.index;
+    const id = td.id ? String(td.id) : "";
+    if (id) {
+      for (const [k, call] of openaiCalls) if (call.id === id) return k;
+      // A new call identified by id: open a fresh slot (the id may only
+      // appear on this first chunk, so the slot must be findable later).
+      return openaiCalls.size;
+    }
+    // No index and no id: continuation of the most recent call.
+    return openaiCalls.size > 0 ? openaiCalls.size - 1 : 0;
+  };
 
   const emit = (
     controller: ReadableStreamDefaultController<Uint8Array>,
     event: Json,
   ) => {
+    if (
+      !sentFirstChunk &&
+      (event.type === "text" || event.type === "reasoning") &&
+      String(event.text ?? "").length > 0
+    ) {
+      sentFirstChunk = true;
+      log?.("first response chunk");
+    }
     controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
   };
 
@@ -681,6 +804,9 @@ function transformSSE(
     controller.close();
     // Cancel the upstream reader so the fetch doesn't linger.
     void reader.cancel();
+    log?.("response completed", {
+      stopReason: sawToolCalls ? "tool_calls" : "end",
+    });
   };
 
   const handleLine = (
@@ -738,6 +864,16 @@ function transformSSE(
             arguments: parseArgs(pending.argsJson),
           });
         }
+      } else if (type === "message_delta") {
+        // Anthropic reports truncation here (message_stop follows) — mirror
+        // the OpenAI "length" notice so a cut-off answer is visible.
+        const delta = json.delta as Json | undefined;
+        if (delta?.stop_reason === "max_tokens") {
+          emit(controller, {
+            type: "notice",
+            message: "The reply hit the model's output limit and was cut off.",
+          });
+        }
       }
       return;
     }
@@ -776,11 +912,11 @@ function transformSSE(
     const toolDeltas = delta?.tool_calls as Json[] | undefined;
     if (Array.isArray(toolDeltas)) {
       for (const td of toolDeltas) {
-        const index = (td.index as number) ?? 0;
-        let call = openaiCalls.get(index);
+        const key = openaiKeyFor(td);
+        let call = openaiCalls.get(key);
         if (!call) {
           call = { id: "", name: "", argsJson: "" };
-          openaiCalls.set(index, call);
+          openaiCalls.set(key, call);
         }
         if (td.id) call.id = String(td.id);
         const fn = td.function as Json | undefined;
@@ -806,6 +942,8 @@ function transformSSE(
     }
   };
 
+  const idleMs = timeoutMs("MASARFLOW_CHAT_IDLE_TIMEOUT_MS", IDLE_TIMEOUT_MS);
+
   return new ReadableStream<Uint8Array>({
     async pull(controller) {
       if (!sentNotices) {
@@ -818,7 +956,44 @@ function transformSSE(
         return;
       }
 
-      const { done, value } = await reader.read();
+      // Idle watchdog: a provider that goes silent mid-stream (or never
+      // starts) must not hang the turn forever. Any received bytes — even
+      // keepalive comments — reset the timer, so only true silence trips it.
+      let readResult: ReadableStreamReadResult<Uint8Array>;
+      let idleTimer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        readResult = await Promise.race([
+          reader.read(),
+          new Promise<never>((_, reject) => {
+            idleTimer = setTimeout(
+              () => reject(new Error("stream-idle-timeout")),
+              idleMs,
+            );
+          }),
+        ]);
+      } catch (e) {
+        // Idle timeout or upstream socket failure mid-stream. Do NOT flush
+        // pending tool calls (their arguments are incomplete — executing
+        // them would corrupt the workspace); end the turn with a retryable
+        // error instead of an eternal spinner.
+        void reader.cancel().catch(() => {});
+        const stalled = (e as Error).message === "stream-idle-timeout";
+        const message = stalled
+          ? `The provider stopped responding mid-stream (${Math.round(idleMs / 1000)}s of silence) — Retry to continue.`
+          : `The provider connection failed mid-stream: ${(e as Error).message}`;
+        log?.("response failed", {
+          reason: stalled ? "idle-timeout" : "mid-stream-error",
+          message,
+        });
+        emit(controller, { type: "error", message });
+        emit(controller, { type: "done", stopReason: "end" });
+        controller.close();
+        return;
+      } finally {
+        if (idleTimer) clearTimeout(idleTimer);
+      }
+
+      const { done, value } = readResult;
       if (done) {
         finishStream(controller);
         return;
@@ -828,7 +1003,12 @@ function transformSSE(
       buffer = lines.pop() ?? "";
       for (const line of lines) {
         const trimmed = line.trim();
-        if (!trimmed) continue;
+        // Blank line = SSE event boundary. Any held fragment that still
+        // doesn't parse was a keepalive/garbage — drop it.
+        if (!trimmed) {
+          fragment = "";
+          continue;
+        }
 
         let data: string | null = null;
 
@@ -840,14 +1020,37 @@ function transformSSE(
           data = trimmed;
         }
 
-        if (!data || data === "[DONE]") {
-          if (data === "[DONE]") streamDone = true;
-          continue;
+        if (!data) continue;
+        if (data === "[DONE]") {
+          streamDone = true;
+          break;
         }
-        try {
-          handleLine(controller, data);
-        } catch {
-          /* partial or non-JSON keepalive — ignore */
+        // Some gateways split one event's JSON payload across several data:
+        // lines (spec-conformant producers mean "\n"-joined data, but JSON
+        // only survives byte-joining). Try each line immediately (common
+        // case: one complete JSON per line, no added latency); on parse
+        // failure hold it as a fragment and retry as more lines arrive.
+        if (fragment) {
+          const joined = fragment + data;
+          try {
+            handleLine(controller, joined);
+            fragment = "";
+          } catch {
+            // Maybe the new line is a fresh event and the held fragment was
+            // junk — parse it alone before accumulating further.
+            try {
+              handleLine(controller, data);
+              fragment = "";
+            } catch {
+              fragment = joined;
+            }
+          }
+        } else {
+          try {
+            handleLine(controller, data);
+          } catch {
+            fragment = data;
+          }
         }
         if (streamDone) break;
       }

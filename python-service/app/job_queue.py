@@ -190,7 +190,9 @@ async def worker_loop() -> None:
                     type(job).__name__,
                 )
             else:
+                logger.info("job started: %s", type(job).__name__)
                 await handler(job)
+                logger.info("job finished: %s", type(job).__name__)
         except Exception:  # noqa: BLE001 — log and keep the worker alive
             logger.exception("job failed: %s", type(job).__name__)
         finally:

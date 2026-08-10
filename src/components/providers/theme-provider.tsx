@@ -2,7 +2,11 @@
 
 import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
 import { useEffect } from "react";
-import { useThemeStore, readableForeground } from "@/lib/stores/theme";
+import {
+  useThemeStore,
+  readableForeground,
+  gradientCss,
+} from "@/lib/stores/theme";
 
 /**
  * Reads the appearance store and projects it onto the document:
@@ -16,7 +20,7 @@ function AppearanceApplier() {
     mode,
     accentMode,
     accentColor,
-    accentColor2,
+    gradientStops,
     gradientAngle,
     radius,
     fontScale,
@@ -38,12 +42,19 @@ function AppearanceApplier() {
     root.style.setProperty("--ring", accentColor);
     root.style.setProperty(
       "--accent-gradient",
-      `linear-gradient(${gradientAngle}deg, ${accentColor}, ${accentColor2})`,
+      gradientCss(gradientStops, gradientAngle),
     );
     root.dataset.accentMode = accentMode;
     root.style.setProperty("--radius", `${radius}rem`);
     root.style.fontSize = `${fontScale * 100}%`;
-  }, [accentMode, accentColor, accentColor2, gradientAngle, radius, fontScale]);
+  }, [
+    accentMode,
+    accentColor,
+    gradientStops,
+    gradientAngle,
+    radius,
+    fontScale,
+  ]);
 
   return null;
 }

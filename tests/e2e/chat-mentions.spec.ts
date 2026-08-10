@@ -9,6 +9,50 @@ import { test, expect } from "@playwright/test";
 const MENU_HINT = /↵ insert/;
 
 test("opens / commands, @ pages, and # records menus", async ({ page }) => {
+  // The chat now runs on OpenCode — stub the backend so the composer renders
+  // in its healthy state (the menus themselves are what this spec covers).
+  await page.route("**/api/opencode/health", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, version: "1.18.15" }),
+    }),
+  );
+  await page.route("**/api/opencode/models", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        providers: [
+          {
+            providerId: "fake",
+            providerName: "Fake Provider",
+            models: [
+              {
+                id: "fake-model",
+                name: "Fake Model",
+                capabilities: { reasoning: true, attachment: false, toolcall: true },
+              },
+            ],
+          },
+        ],
+        cached: false,
+      }),
+    }),
+  );
+  await page.route("**/api/opencode/session*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        threadId: "t",
+        opencodeSessionId: "ses_e2e_mentions",
+        directory: "C:\\workspace",
+        created: true,
+      }),
+    }),
+  );
+
   // Seed the demo project (provides a chat connection + searchable records).
   await page.goto("/settings", { waitUntil: "networkidle" });
   await page.getByRole("button", { name: "Data", exact: true }).click();
@@ -18,8 +62,8 @@ test("opens / commands, @ pages, and # records menus", async ({ page }) => {
   await page.goto("/chat", { waitUntil: "networkidle" });
   await page.getByRole("button", { name: "New chat" }).first().click();
 
-  // Composer textarea (demo connection has no API key → key-prompt placeholder).
-  const textarea = page.getByPlaceholder(/Add an API key|Ask about/i);
+  // Composer textarea in its healthy state.
+  const textarea = page.getByPlaceholder(/Ask about|Message the model/i);
   await expect(textarea).toBeVisible();
 
   // `/` → commands menu

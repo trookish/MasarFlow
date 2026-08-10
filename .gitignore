@@ -53,3 +53,10 @@ python-service/store/
 python-service/__pycache__/
 python-service/**/__pycache__/
 python-service/*.egg-info/
+
+# desktop launcher
+desktop/node_modules/
+desktop/dist/
+desktop/out/
+desktop/release/
+/release/

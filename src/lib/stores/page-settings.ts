@@ -48,6 +48,8 @@ export interface ChatSettings {
   showTimestamps: boolean;
   codeHighlighting: boolean;
   density: "compact" | "comfortable";
+  /** Backend new chat threads start on (OpenCode / API / Ollama). */
+  defaultBackend: "opencode" | "api" | "ollama";
 }
 
 export interface AgentsSettings {
@@ -131,11 +133,20 @@ export const PAGE_SETTINGS_DEFAULTS: AllPageSettings = {
   brain: { defaultView: "notes", showWordCount: false, lineWrap: true },
   specs: { defaultSort: "updatedAt", showCompleted: true },
   standards: { autoValidate: true, showLineNumbers: true },
-  architecture: { layout: "force", showNodeLabels: true, showEdgeLabels: false },
+  architecture: {
+    layout: "force",
+    showNodeLabels: true,
+    showEdgeLabels: false,
+  },
   knowledge: { layout: "force", showOrphans: true, showEdgeLabels: true },
   tasks: { showCompleted: false, defaultGroup: "status" },
   sprints: { showCompleted: false, velocityDisplay: "tasks" },
-  chat: { showTimestamps: false, codeHighlighting: true, density: "comfortable" },
+  chat: {
+    showTimestamps: false,
+    codeHighlighting: true,
+    density: "comfortable",
+    defaultBackend: "opencode",
+  },
   agents: { showDisabled: false },
   workflow: { autoAdvance: false },
   docs: { defaultMode: "preview", showLineNumbers: true },
@@ -161,7 +172,10 @@ export const PAGE_SETTINGS_DEFAULTS: AllPageSettings = {
 };
 
 interface PageSettingsStore extends AllPageSettings {
-  update: <K extends PageKey>(page: K, patch: Partial<AllPageSettings[K]>) => void;
+  update: <K extends PageKey>(
+    page: K,
+    patch: Partial<AllPageSettings[K]>,
+  ) => void;
   reset: (page: PageKey) => void;
 }
 

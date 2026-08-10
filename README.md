@@ -21,6 +21,7 @@
 - [Configuration](#configuration)
 - [Testing](#testing)
 - [Scripts](#scripts)
+- [Desktop launcher](#desktop-launcher)
 - [Project structure](#project-structure)
 - [Security](#security)
 
@@ -43,10 +44,12 @@
 
 ### AI assistant
 
-- **Chat** — multi-provider streaming chat (OpenAI, Anthropic, OpenRouter, Groq, Ollama, ...) with `@`/`/`/`#` mentions, tool-calling over your workspace, image attachments, and voice input. Two modes:
-  - **Agentic** — grounded in the live workspace, acts via tools.
-  - **Chat** — direct conversation, no context injection.
-- **Linked projects (agentic coding)** — attach an external folder (e.g., a game engine project) and the AI gets sandboxed filesystem/shell tools on it, opencode-style: `fs_list`, `fs_read`, `fs_search` run freely; `fs_write` and `shell_run` require per-action approval.
+- **Chat** — three interchangeable backends, switchable per-chat from the header (or set a default in Settings → Chat):
+  - **OpenCode** — the full agentic experience: the chat runs on a headless OpenCode server (`opencode serve`) with fs/shell/bash tools, per-action approvals, and persistent sessions (undo, resume after refresh).
+  - **API** — a saved AI connection (OpenAI, Anthropic, OpenRouter, Groq, …); keys live in your browser and are proxied same-origin. Workspace + linked-folder tools run through the in-browser Agent Loop.
+  - **Local (Ollama)** — your local Ollama server, no API key.
+  Every backend has two modes: **Agentic** — grounded in the live workspace, acts via tools (max iterations/runtime/tool time/shell commands/file writes, all configurable in Settings → Agent Loop); **Chat** — direct conversation, no context injection. `@`/`/`/`#` mentions, tool-calling, image attachments, and voice input work on all backends.
+- **Linked projects (agentic coding)** — attach an external folder (e.g., a web app, a Unity game, or a desktop tool) and the AI gets sandboxed filesystem/shell tools on it, opencode-style: `fs_list`, `fs_read`, `fs_search` run freely; `fs_write` and `shell_run` require per-action approval.
 - **Semantic search** — global Fuse fuzzy search plus vector similarity search through the Python service.
 
 ### Integrations
@@ -86,7 +89,7 @@
 └─────────────────┘
 ```
 
-The AI layer is a hand-rolled NDJSON streaming proxy at `api/chat` (OpenAI + Anthropic wire formats, explicit `tool_choice`, degradation ladder) driving an agentic tool loop over the workspace repos and linked external projects.
+The AI layer is agentic: an **AgentController** runs the model↔tool loop (context assembly → LLM → tool call → tool result → LLM → final answer) with configurable safety limits, cancellation, and lifecycle streaming, over a hand-rolled NDJSON streaming proxy at `api/chat` (OpenAI + Anthropic wire formats, explicit `tool_choice`, degradation ladder, first-byte/idle/total watchdogs). Workspace tools execute in the browser against the repos; linked external projects get sandboxed fs/shell tools with per-action approval.
 
 ## Tech stack
 
@@ -98,6 +101,7 @@ The AI layer is a hand-rolled NDJSON streaming proxy at `api/chat` (OpenAI + Ant
 | Editor & viz | CodeMirror 6 · @xyflow/react (canvas) · d3-force (graph) · mermaid |
 | AI | Streaming proxy with multi-provider support (OpenAI, Anthropic, OpenRouter, Groq, Ollama) |
 | Python sidecar | FastAPI · sentence-transformers · Chroma DB · uvicorn |
+| Desktop launcher | Electron · electron-vite · React 19 · Tailwind CSS v4 · xterm.js + node-pty |
 | Testing | Vitest · Playwright · pytest |
 
 ## Getting started
@@ -123,27 +127,36 @@ cp .env.local.example .env.local
 ### Development
 
 ```bash
-npm run dev:full   # Next.js dev server + Python service side by side
+npm run dev:full   # Next.js dev server + Python service + OpenCode server side by side
 ```
 
-Open http://localhost:3000. The workspace shell waits until the Python service is healthy before loading; `dev:full` starts it automatically (the first embedding request downloads the ~90 MB `all-MiniLM-L6-v2` model).
+Open http://localhost:3000. The workspace shell waits until the Python service is healthy before loading; `dev:full` starts it automatically (the first embedding request downloads the ~90 MB `all-MiniLM-L6-v2` model). The chat system runs on a headless OpenCode server (`opencode serve`), which `dev:full` also starts for you on `http://127.0.0.1:4096` (falling forward to the next free port if 4096 is occupied, e.g. by Kilo Code) — or you can run `opencode serve` yourself and set `OPENCODE_AUTO_START=false`.
 
 ### Production
 
 ```bash
 npm run build
-npm start   # launches `next start` + uvicorn
+npm start   # launches `next start` + uvicorn (+ opencode serve)
 ```
 
 ## Configuration
 
-The only environment variable is `PYTHON_SERVICE_URL`, copied from `.env.local.example`:
+Environment variables live in `.env.local` (see `.env.local.example`):
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PYTHON_SERVICE_URL` | `http://127.0.0.1:8000` | Base URL of the local Python AI service. Change only if you run it on a different port. |
+| `OPENCODE_BASE_URL` | `http://127.0.0.1:4096` | Base URL of the OpenCode server (chat agent backend). Overridden by `start.mjs` with the port actually bound. |
+| `OPENCODE_USERNAME` / `OPENCODE_PASSWORD` | *(empty)* | HTTP basic-auth credentials the backend uses to talk to the OpenCode server. |
+| `OPENCODE_SERVER_USERNAME` / `OPENCODE_SERVER_PASSWORD` | *(empty)* | Auth applied to the server spawned by `start.mjs` (falls back to `OPENCODE_PASSWORD`). |
+| `OPENCODE_AUTO_START` | `true` | Spawn `opencode serve` from `start.mjs` when nothing is reachable at `OPENCODE_BASE_URL`. |
+| `OPENCODE_PORT` | `4096` | Preferred port for the spawned server (falls forward when occupied). |
+| `OPENCODE_WORKSPACE_DIR` | project root | Default working directory for OpenCode sessions. Linked projects (chat → linked folder) use their own root instead. |
+| `OPENCODE_PERMISSION_EDIT/BASH/WEBFETCH` | `ask` | Per-session tool permission rules (`ask` shows approvals in the chat UI; `allow`/`deny` bypass them). |
+| `MASARFLOW_OPENCODE_FIRST_EVENT_TIMEOUT_MS` / `IDLE_TIMEOUT_MS` / `TOTAL_TIMEOUT_MS` | 30 s / 60 s / 300 s | Turn watchdogs for the OpenCode event stream. |
+| `OPENCODE_MODEL_CACHE_TTL_MS` | 60 s | Cache TTL for the provider/model catalog fetched from OpenCode. |
 
-The service binds to loopback only.
+The services bind to loopback only. Provider API keys are managed by OpenCode itself (`opencode auth` / its config) and never leave the machine.
 
 ## Testing
 
@@ -160,7 +173,7 @@ cd python-service && .venv/Scripts/python -m pytest   # Python service tests
 | Script | Purpose |
 | --- | --- |
 | `npm run dev` | Next.js dev server (webpack) |
-| `npm run dev:full` | Dev server + Python service, side by side |
+| `npm run dev:full` | Dev server + Python service + OpenCode server, side by side |
 | `npm run build` / `npm start` | Production build / launcher (Next + Python) |
 | `npm run setup:python` | Create the Python venv and install requirements |
 | `npm run lint` | ESLint (flat config, Next core-web-vitals + TS) |
@@ -169,6 +182,41 @@ cd python-service && .venv/Scripts/python -m pytest   # Python service tests
 | `npm test` | Vitest unit tests (`tests/unit/**/*.test.ts`) |
 | `npm run e2e` | Playwright smoke tests |
 | `pytest` (in `python-service/`) | Python service tests |
+| `npm run desktop:dev` | Desktop launcher in development (electron-vite, hot reload) |
+| `npm run desktop:build` / `desktop:start` | Build / run the desktop launcher |
+| `npm run desktop:dist` | Package the launcher (NSIS installer + portable exe) |
+| `npm run desktop:typecheck` | Launcher typecheck (`tsc --noEmit`) |
+
+## Desktop launcher
+
+A local-first companion app (`desktop/`) that wraps the whole project — no
+terminal window needed:
+
+- **Setup** — checks Node.js, npm, Python, `node_modules`, `.env.local`, and
+  the Python venv, and installs whatever is missing (with live output in a
+  built-in terminal). Runs automatically on first launch.
+- **Run** — Development (`dev:full`) and Production (`build` → `start`)
+  mode switch, live status chip, port health indicators, open-in-browser,
+  and Stop (kills the whole process tree).
+- **Configuration** — a form for every `.env.local` variable plus launcher
+  settings (target directory, dark / light / AMOLED theme, accent color,
+  auto-open browser, terminal font size).
+- **Testing** — one-click `lint`, `typecheck`, `test`, `e2e`, and Python
+  `pytest` runs, each streaming to its own terminal tab with pass/fail badges.
+- **Terminal** — collapsible panel with a tab per session and an interactive
+  shell (real PTY: ANSI colors, Ctrl-C, resize-aware).
+
+The interface mirrors the MasarFlow web UI — same dark theme, violet accent,
+components, and fonts.
+
+```bash
+npm run desktop:dev        # launcher in development (hot reload)
+npm run desktop:dist       # package NSIS installer + portable exe into desktop/dist/
+```
+
+Copy the portable exe anywhere inside the repo tree (e.g.
+`release/MasarFlow.exe`) and it finds the workspace automatically — a plain
+desktop shortcut just works. See `desktop/README.md` for details.
 
 ## Project structure
 
@@ -177,8 +225,9 @@ src/
   app/            App Router: (workspace) routes + /api proxy routes
   components/     Feature components per module + ui/ primitives
   lib/
-    ai/           Chat client (NDJSON stream), tools (workspace + fs/shell),
-                  context, catalog, connection probe
+    ai/           Agent Loop (agent/): controller, provider abstraction,
+                  tool registry, lifecycle events; chat wire client (NDJSON
+                  stream), workspace tools, fs/shell tools, context, catalog
     chat/         Mention engine + resolvers
     db/           Dexie schema, Zod models, 28 repos, demo seed
     hooks/        React hooks (speech, python health, hotkeys, ...)
@@ -190,6 +239,9 @@ tests/
   vitest.config.ts / playwright.config.ts
 python-service/   FastAPI sidecar: app/ package, requirements/, tests
 scripts/          start.mjs production launcher
+desktop/          Electron launcher app: main/ (PTY sessions, setup engine,
+                  .env.local config), preload/ bridge, renderer/ React UI
+                  with a built-in terminal (see desktop/README.md)
 ```
 
 ## Security

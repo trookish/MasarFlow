@@ -1,0 +1,22 @@
+appId: com.masarflow.launcher
+productName: MasarFlow Launcher
+directories:
+  buildResources: resources
+  output: dist
+files:
+  - out/**
+  - resources/**
+# node-pty ships N-API prebuilds (ABI-stable) — no native rebuild needed
+npmRebuild: false
+asarUnpack:
+  - "**/node_modules/node-pty/**"
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  icon: resources/icon.png
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

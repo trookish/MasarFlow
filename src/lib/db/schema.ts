@@ -43,6 +43,11 @@ export const standardCategorySchema = z.enum([
   "events",
   "di",
   "files",
+  "ui",
+  "web",
+  "database",
+  "security",
+  "testing",
   "unity",
   "networking",
   "other",
@@ -479,8 +484,16 @@ export const chatThreadSchema = z.object({
   id: z.string(),
   projectId: z.string(),
   title: z.string().default("New chat"),
-  connectionId: z.string(),
-  modelId: z.string(),
+  connectionId: z.string().default(""),
+  modelId: z.string().default(""),
+  /**
+   * Which backend powers this thread's turns:
+   *   opencode — the OpenCode server (default; fs/shell tools with approvals);
+   *   api      — a saved AI connection through /api/chat (browser Agent Loop);
+   *   ollama   — the local Ollama server (browser Agent Loop, no API key).
+   * Not indexed — added without a Dexie version bump.
+   */
+  backend: z.enum(["opencode", "api", "ollama"]).default("opencode"),
   /**
    * agentic — grounded in the workspace briefing and able to act via tools;
    * chat — a direct conversation with the model, no workspace injection.
@@ -489,11 +502,22 @@ export const chatThreadSchema = z.object({
   mode: z.enum(["agentic", "chat"]).default("agentic"),
   /** Extended thinking/reasoning, for models that support it. Not indexed. */
   reasoningEnabled: z.boolean().default(false),
+  /**
+   * OpenCode-backed chat: the persistent OpenCode session this thread maps
+   * to (1:1). Blank until the first ensure — recreated automatically if the
+   * server lost it. Not indexed — added without a Dexie version bump.
+   */
+  opencodeSessionId: z.string().default(""),
+  /** The session's working directory (linked project root or workspace). */
+  opencodeDirectory: z.string().default(""),
+  /** OpenCode provider id (e.g. "anthropic", "opencode-go"). Not indexed. */
+  providerId: z.string().default(""),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
 export type ChatThread = z.infer<typeof chatThreadSchema>;
 export type ChatMode = ChatThread["mode"];
+export type ChatBackend = ChatThread["backend"];
 
 /** One tool invocation recorded on an assistant chat message. */
 export const toolActivitySchema = z.object({
@@ -566,6 +590,13 @@ export const chatMessageSchema = z.object({
   role: z.enum(["system", "user", "assistant"]),
   content: z.string().default(""),
   /**
+   * Turn lifecycle for assistant messages. User/system messages are always
+   * "done". A message left in "streaming" means the session died mid-turn —
+   * the UI renders it as "Interrupted — Retry" instead of a blank bubble.
+   * Not indexed — added without a Dexie version bump.
+   */
+  status: z.enum(["streaming", "done", "error", "cancelled"]).default("done"),
+  /**
    * The model's reasoning/thinking trace for this message (extended thinking,
    * reasoning_content, etc.). Empty string when the model produced none.
    * Not indexed — added without a Dexie version bump.
@@ -581,15 +612,26 @@ export const chatMessageSchema = z.object({
   attachments: z.array(chatAttachmentSchema).default([]),
   /** Degradation notices from the proxy (e.g. "tools disabled"). Not indexed. */
   notices: z.array(z.string()).default([]),
+  /**
+   * Files the assistant edited while producing this message (OpenCode agent
+   * turns). Not indexed — added without a Dexie version bump.
+   */
+  files: z.array(z.string()).default([]),
+  /**
+   * The OpenCode message id backing this assistant message — used for the
+   * file-change Undo (revert) action. Not indexed.
+   */
+  opencodeMessageId: z.string().default(""),
   createdAt: z.number(),
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
 
 /**
  * An external project folder on the user's machine linked to a workspace
- * project — e.g. a Unity game project. In agentic chat mode the AI gets
- * filesystem/shell tools scoped to linked roots (reads auto-allowed, writes
- * and shell commands need explicit per-action user approval).
+ * project — e.g. a web app, a Unity game, or a desktop tool. In agentic chat
+ * mode the AI gets filesystem/shell tools scoped to linked roots (reads
+ * auto-allowed, writes and shell commands need explicit per-action user
+ * approval).
  */
 export const linkedProjectSchema = z.object({
   id: z.string(),

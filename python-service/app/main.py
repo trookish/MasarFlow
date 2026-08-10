@@ -15,8 +15,9 @@ from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from app.embeddings import embed, get_collection
+from app.embeddings import MODEL_NAME, embed, get_collection
 
 from app.job_queue import SyncItem, SyncJob, enqueue, pending_count, worker_loop
 
@@ -28,11 +29,13 @@ OLLAMA_URL = "http://localhost:11434"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info("worker loop started (pid %s)", __import__("os").getpid())
     task = asyncio.create_task(worker_loop())
     try:
         yield
     finally:
         task.cancel()
+        logger.info("service shutting down")
 
 
 app = FastAPI(title="MasarFlow Local AI Service", lifespan=lifespan)
@@ -42,12 +45,34 @@ app = FastAPI(title="MasarFlow Local AI Service", lifespan=lifespan)
 async def health():
     ollama_available = False
     try:
-        async with httpx.AsyncClient(timeout=1.5) as client:
+        # Fast connect-timeout so a dead Ollama never slows the health check
+        # the web shell polls on every page load (it must answer in ms).
+        timeout = httpx.Timeout(connect=0.5, read=1.0, write=1.0, pool=1.0)
+        async with httpx.AsyncClient(timeout=timeout) as client:
             res = await client.get(f"{OLLAMA_URL}/api/tags")
             ollama_available = res.status_code == 200
     except Exception:
         ollama_available = False
     return {"status": "ok", "ollama": {"available": ollama_available}}
+
+
+def _warm_embeddings() -> None:
+    # Loading the sentence-transformer model on first use can take 10-60s
+    # (download on first run), and Chroma opens lazily too — so the readiness
+    # check warms both and verifies the full embed pipeline. Runs in a worker
+    # thread so the event loop never blocks; a client that abandons the probe
+    # still gets a warm service for the next one.
+    embed(["masarflow readiness check"])
+
+
+@app.get("/ready")
+async def ready():
+    try:
+        await asyncio.to_thread(_warm_embeddings)
+    except Exception as e:
+        logger.error("readiness check failed: %s", e)
+        return JSONResponse(status_code=503, content={"ready": False, "error": str(e)})
+    return {"ready": True, "model": MODEL_NAME}
 
 
 class SyncItemIn(BaseModel):

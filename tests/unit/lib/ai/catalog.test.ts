@@ -31,10 +31,13 @@ describe("providerBaseUrl", () => {
     );
   });
   it("falls back by provider id when api is missing", () => {
-    expect(
-      providerBaseUrl({ id: "anthropic", name: "A", models: {} }),
-    ).toBe("https://api.anthropic.com");
-    expect(providerBaseUrl({ id: "whatever", name: "W", models: {} })).toBe(
+    expect(providerBaseUrl({ id: "anthropic" })).toBe(
+      "https://api.anthropic.com",
+    );
+    expect(providerBaseUrl({ id: "openrouter" })).toBe(
+      "https://openrouter.ai/api/v1",
+    );
+    expect(providerBaseUrl({ id: "whatever" })).toBe(
       "https://api.openai.com/v1",
     );
   });
@@ -63,9 +66,9 @@ describe("catalog helpers", () => {
 
 describe("providerBaseUrl — Google quirk", () => {
   it("routes Google to its OpenAI-compatible surface", () => {
-    expect(
-      providerBaseUrl({ id: "google", name: "Google", models: {} }),
-    ).toBe("https://generativelanguage.googleapis.com/v1beta/openai");
+    expect(providerBaseUrl({ id: "google" })).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/openai",
+    );
   });
 });
 

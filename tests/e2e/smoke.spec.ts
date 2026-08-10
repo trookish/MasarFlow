@@ -9,15 +9,25 @@ test("redirects root to the dashboard and renders the shell", async ({
   await expect(page.getByText("MasarFlow")).toBeVisible();
 });
 
+/** The shell only renders once the Python sidecar is healthy; uvicorn can
+ * take ~10s+ to import its ML stack on a cold start. */
+async function waitForShell(page: import("@playwright/test").Page) {
+  await expect(
+    page.getByRole("button", { name: /command palette/i }),
+  ).toBeVisible({ timeout: 60_000 });
+}
+
 test("navigates the sidebar without 404s", async ({ page }) => {
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
+  await waitForShell(page);
   for (const path of ["/brain", "/specs", "/tasks", "/settings"]) {
     await page.goto(path, { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(new RegExp(path));
-    // The app shell topbar search button is always rendered.
+    // Full page loads restart the health hook, so give the boot gate (which
+    // flashes until the Python sidecar answers) room to clear.
     await expect(
       page.getByRole("button", { name: /command palette/i }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 30_000 });
   }
 });
 
@@ -90,13 +100,13 @@ test("scans the workspace into the Sync Panel", async ({ page }) => {
   await expect(page.getByText(/notes\/.*\.md/)).toBeVisible();
 });
 
-test("simulates a change in the Project Watcher", async ({ page }) => {
+test("renders the Project Watcher configuration", async ({ page }) => {
   await page.goto("/watcher", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "Simulate change" }).first().click();
-  // A file-change event row appears in the feed.
+  // The watcher's directory config UI renders (Watch/Pause + Clear actions).
   await expect(
-    page.getByText(/src\/|assets\/|scenes\/|shaders\/|config\/|docs\//).first(),
+    page.getByRole("button", { name: "Watch", exact: true }),
   ).toBeVisible();
+  await expect(page.getByPlaceholder(/path.*project/i).first()).toBeVisible();
 });
 
 test("searches across the workspace in Semantic Search", async ({ page }) => {
@@ -130,14 +140,14 @@ test("installs a plugin from the marketplace", async ({ page }) => {
 test("opens the Chat module", async ({ page }) => {
   await page.goto("/chat", { waitUntil: "domcontentloaded" });
   // The sidebar's New chat button always renders.
-  await expect(page.getByRole("button", { name: "New chat" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "New chat" }).first()).toBeVisible();
 });
 
 test("shows the AI Agents roster", async ({ page }) => {
   await page.goto("/agents", { waitUntil: "domcontentloaded" });
   // The roster seeds specialized agents on first load.
-  await expect(page.getByText("Architect")).toBeVisible();
-  await expect(page.getByText("Reviewer")).toBeVisible();
+  await expect(page.getByText("Architect").first()).toBeVisible();
+  await expect(page.getByText("Reviewer").first()).toBeVisible();
 });
 
 test("opens the AI Workflow pipeline", async ({ page }) => {

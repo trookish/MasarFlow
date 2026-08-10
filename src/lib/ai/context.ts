@@ -76,6 +76,12 @@ export interface ContextOptions {
    * pure formatter.
    */
   ragChunks?: RagChunk[];
+  /**
+   * Caller's cancellation signal — honored while retrieving RAG chunks so a
+   * user hitting Stop mid-context-assembly aborts promptly instead of waiting
+   * out the RAG timeout.
+   */
+  signal?: AbortSignal;
 }
 
 const DEFAULT_BUDGET = 28_000;
@@ -409,9 +415,14 @@ async function fetchRagChunks(
   projectId: string,
   query: string,
   topK: number,
+  signal?: AbortSignal,
 ): Promise<RagChunk[] | undefined> {
   if (typeof window === "undefined") return undefined;
   try {
+    // The caller's cancellation wins over the 4s backstop when both exist.
+    const abort = signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(4000)])
+      : AbortSignal.timeout(4000);
     const res = await fetch("/api/python/rag", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -421,7 +432,7 @@ async function fetchRagChunks(
         topK,
         budgetChars: RAG_BUDGET_CHARS,
       }),
-      signal: AbortSignal.timeout(4000),
+      signal: abort,
     });
     if (!res.ok) return undefined;
     const data = (await res.json()) as { ok?: boolean; chunks?: RagChunk[] };
@@ -444,6 +455,7 @@ export async function assembleWorkspaceContext(
         projectId,
         query,
         opts.fullBodies ?? DEFAULT_FULL_BODIES,
+        opts.signal,
       )
     : undefined;
   return formatWorkspaceContext(snapshot, { ...opts, ragChunks });
@@ -453,21 +465,44 @@ export async function assembleWorkspaceContext(
  * The system prompt for the workspace-aware assistant. Grounds the model in
  * the briefing and (when tools are enabled) tells it how to act on the
  * workspace rather than merely advise.
+ *
+ * `toolbelt` decides which tools actually exist for the model:
+ *   - "workspace" — MasarFlow's browser workspace tools (notes, tasks, specs,
+ *     docs, …) executed against the local database. Used by the in-browser
+ *     Agent Loop (AI Agents, Workflow, chat over API/Ollama backends).
+ *   - "filesystem" — opencode-style fs/shell/web tools executed by the
+ *     OpenCode server against the session's working directory. Used by
+ *     OpenCode-backed chat. The workspace briefing is real but read-only:
+ *     there are NO workspace-DB tools in this session, so the prompt never
+ *     offers tools the model cannot actually call.
+ *   - undefined + withTools=false — chat mode: answer from the briefing only.
  */
 export function buildAssistantSystemPrompt(
   contextText: string,
   opts: {
     withTools?: boolean;
     role?: string;
+    toolbelt?: "workspace" | "filesystem";
     /** External projects linked to this workspace project (fs/shell tools). */
     linkedRoots?: { name: string; rootPath: string }[];
+    /**
+     * Free-form note appended to the filesystem toolbelt telling the model
+     * where its tools are rooted (e.g. the session's working directory).
+     */
+    filesystemNote?: string;
+    /**
+     * The tools actually registered on the OpenCode server (id + description).
+     * When provided the filesystem toolbelt lists these real tools instead of
+     * the generic fs_* names — the model can then call tools that exist.
+     */
+    filesystemTools?: { id: string; description: string }[];
   } = {},
 ): string {
   const identity =
     opts.role ??
     "You are the MasarFlow workspace assistant — the intelligence layer of this software project. You have the user's entire local workspace in front of you: brain notes, specifications, tasks, sprints, architecture systems, coding standards, documentation, memories, dev logs, and commits.";
-  const toolGuidance = opts.withTools
-    ? `
+
+  const workspaceToolGuidance = `
 You can ACT on the workspace through tools, not just advise. Your tool belt covers the whole project page-to-page:
 - Brain: create/update/read notes, list/read note templates, create/read/update canvases, and manage folders.
 - Planning: create/update/read specs, and create/read/update coding standards.
@@ -477,12 +512,62 @@ You can ACT on the workspace through tools, not just advise. Your tool belt cove
 - Read-only insight into config/pipeline: files & attachments, agents, agent runs, workflow state, plugins, sync index, and watcher events.
 Always:
 - When the user asks you to create, update, or look up something, CALL the matching tool right away — do not merely describe what you would do. Emit the tool call, then act on its result.
+- Tools remain available in every round of the conversation with the machine: you may think first, call tools while drafting, or call them after writing text — whenever you need more information, use them. After a tool returns, examine its result and continue working until the task is done; never stop after a single tool call unless the task is complete.
 - Use the search or list/read tools before claiming something does not exist.
 - After mutating the workspace, briefly tell the user what you changed.
 - Reference entities precisely (spec numbers like RFC-001, task titles, note titles, system names).
-- Never invent workspace content: if it is not in the briefing or a tool result, say so.`
+- Never invent workspace content: if it is not in the briefing or a tool result, say so.`;
+
+  const filesystemToolGuidance = opts.filesystemTools?.length
+    ? `
+You can ACT on the machine through filesystem/shell tools, not just advise. The tools you actually have in this session are:
+${opts.filesystemTools
+  .map((t) => {
+    if (t.id === "question") {
+      return "- question — ask the user something by opening a question dialog in the chat UI. Use it when you need a decision, preference, or clarification before continuing; the user answers in the dialog and the turn resumes with their reply.";
+    }
+    const approval =
+      t.id === "bash" ||
+      t.id === "edit" ||
+      t.id === "write" ||
+      t.id === "apply_patch" ||
+      t.id === "webfetch" ||
+      t.id === "shell"
+        ? " REQUIRES user approval — the user sees and reviews each command/file before it executes; propose edits and commands confidently but expect review."
+        : " Runs freely — no approval needed.";
+    const desc = t.description.slice(0, 220);
+    return `- ${t.id} — ${desc}${approval}`;
+  })
+  .join("\n")}
+${opts.filesystemNote ? `Working directory note: ${opts.filesystemNote}\n` : ""}The workspace briefing below is real data from the user's MasarFlow project, but you have NO tools to mutate it in this session — it is read-only context only. Your tools work on the real files on disk.
+Rules of engagement:
+- Orient yourself with a read/list tool before reading or writing; read a file before overwriting it.
+- Prefer search tools over guessing paths; prefer small, reviewable edits over full-file rewrites when possible.
+- Use the shell tool for builds/tests/package commands; report failures honestly and propose fixes.
+- When you change code, suggest (or ask the user to add) matching notes/specs/docs updates in the workspace — you cannot write those yourself in this session.
+- Never invent files or content: if something is not on disk, say so.`
     : `
-Answer strictly from the workspace briefing below. If something is not in it, say you don't see it in the workspace rather than inventing it.`;
+You can ACT on the machine through filesystem/shell tools, not just advise. The tools you actually have in this session are:
+- fs_list — list a directory tree (read-only, runs freely).
+- fs_read — read a text file (read-only, runs freely).
+- fs_search — search files for names or content (read-only, runs freely).
+- fs_write — create or overwrite a file (REQUIRES user approval — the user reviews the path and content first; propose edits confidently but expect review).
+- shell_run — run a shell command, e.g. builds, tests, git, package managers, engine CLIs (REQUIRES user approval per command).
+- webfetch — fetch a URL and return its contents.
+${opts.filesystemNote ? `Working directory note: ${opts.filesystemNote}\n` : ""}The workspace briefing below is real data from the user's MasarFlow project, but you have NO tools to mutate it in this session — it is read-only context only. Your tools work on the real files on disk.
+Rules of engagement:
+- Orient with fs_list before reading or writing; read a file before overwriting it.
+- Prefer fs_search over guessing paths; prefer small, reviewable edits over full-file rewrites when possible.
+- Use shell_run for builds/tests/package commands; report failures honestly and propose fixes.
+- When you change code, suggest (or ask the user to add) matching notes/specs/docs updates in the workspace — you cannot write those yourself in this session.
+- Never invent files or content: if something is not on disk, say so.`;
+
+  const toolGuidance = !opts.withTools
+    ? `
+Answer strictly from the workspace briefing below. If something is not in it, say you don't see it in the workspace rather than inventing it.`
+    : opts.toolbelt === "filesystem"
+      ? filesystemToolGuidance
+      : workspaceToolGuidance;
 
   const linked = opts.linkedRoots?.length
     ? `

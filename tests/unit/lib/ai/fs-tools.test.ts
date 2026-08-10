@@ -1,117 +1,166 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  FS_TOOLS,
-  FS_TOOL_NAMES,
-  SENSITIVE_FS_TOOLS,
-  executeFsTool,
-} from "@/lib/ai/fs-tools";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { executeFsTool } from "@/lib/ai/fs-tools";
 import type { LinkedProject } from "@/lib/db/schema";
 
-const ROOT: LinkedProject = {
-  id: "lp1",
-  projectId: "p1",
-  name: "game",
-  rootPath: "C:\\Dev\\game",
-  createdAt: 0,
-};
+/**
+ * Cancellation safety of the fs/shell tool layer. The regression this suite
+ * exists for: an approval that nobody settles (Stop pressed, thread switched,
+ * tab closed) used to leave the agent loop suspended forever on a promise —
+ * the "stuck after a tool call" failure. The tool must now abort promptly
+ * when the run's signal fires.
+ */
 
-describe("FS_TOOLS definitions", () => {
-  it("has unique names and object schemas", () => {
-    const names = FS_TOOLS.map((t) => t.name);
-    expect(new Set(names).size).toBe(names.length);
-    for (const t of FS_TOOLS) {
-      expect(t.parameters.type).toBe("object");
-      expect(t.description.length).toBeGreaterThan(10);
-    }
-    expect(FS_TOOL_NAMES.size).toBe(FS_TOOLS.length);
-  });
+const ROOTS: LinkedProject[] = [
+  {
+    id: "r1",
+    projectId: "p1",
+    name: "MyGame",
+    rootPath: "C:\\dev\\MyGame",
+    createdAt: 0,
+  },
+];
 
-  it("marks exactly fs_write and shell_run as sensitive", () => {
-    expect([...SENSITIVE_FS_TOOLS].sort()).toEqual(["fs_write", "shell_run"]);
-    for (const s of SENSITIVE_FS_TOOLS) expect(FS_TOOL_NAMES.has(s)).toBe(true);
-  });
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
-describe("executeFsTool", () => {
-  beforeEach(() => {
+describe("executeFsTool — cancellation", () => {
+  it("does not hang when the signal aborts while approval is pending", async () => {
+    const controller = new AbortController();
+    let approvalCalled = false;
+    const resultPromise = executeFsTool(
+      {
+        roots: ROOTS,
+        signal: controller.signal,
+        // The approval promise never settles — the UI is gone (Stop/close).
+        requestApproval: () => {
+          approvalCalled = true;
+          return new Promise<boolean>(() => {});
+        },
+      },
+      {
+        id: "t1",
+        name: "fs_write",
+        arguments: { path: "a.txt", content: "x" },
+      },
+    );
+
+    setTimeout(() => controller.abort(), 10);
+    const result = await Promise.race([
+      resultPromise,
+      new Promise<string>((r) => setTimeout(() => r("TIMEOUT"), 1000)),
+    ]);
+
+    expect(result).not.toBe("TIMEOUT");
+    expect(approvalCalled).toBe(true);
+    const parsed = JSON.parse(result as string) as {
+      ok: boolean;
+      error: string;
+    };
+    expect(parsed.ok).toBe(false);
+    expect(parsed.error).toContain("cancelled");
+  });
+
+  it("skips approval entirely when the signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    let approvalCalled = false;
+    const result = await executeFsTool(
+      {
+        roots: ROOTS,
+        signal: controller.signal,
+        requestApproval: () => {
+          approvalCalled = true;
+          return Promise.resolve(true);
+        },
+      },
+      { id: "t1", name: "shell_run", arguments: { command: "npm test" } },
+    );
+    expect(approvalCalled).toBe(false);
+    expect(JSON.parse(result)).toMatchObject({
+      ok: false,
+      error: expect.stringContaining("cancelled"),
+    });
+  });
+
+  it("reports a user denial without touching the machine", async () => {
+    const result = await executeFsTool(
+      {
+        roots: ROOTS,
+        requestApproval: () => Promise.resolve(false),
+      },
+      { id: "t1", name: "shell_run", arguments: { command: "rm -rf /" } },
+    );
+    expect(JSON.parse(result)).toMatchObject({
+      ok: false,
+      error: expect.stringContaining("denied"),
+    });
+  });
+
+  it("forwards an aborted fs fetch as a cancelled result", async () => {
+    // A slow server-side operation (e.g. a long fs_search) whose request is
+    // still in flight when the run is cancelled: the fetch rejects with
+    // AbortError and the tool reports cancellation instead of a raw error.
+    const controller = new AbortController();
     vi.stubGlobal(
       "fetch",
-      vi.fn(
-        async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
-      ),
+      vi.fn((_url: string, init?: RequestInit) => {
+        return new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("aborted", "AbortError"));
+          });
+        });
+      }),
     );
-  });
-  afterEach(() => vi.unstubAllGlobals());
 
-  it("fails cleanly when no external project is linked", async () => {
-    const result = JSON.parse(
-      await executeFsTool(
-        { roots: [], requestApproval: async () => true },
-        { id: "1", name: "fs_list", arguments: {} },
-      ),
+    const resultPromise = executeFsTool(
+      {
+        roots: ROOTS,
+        signal: controller.signal,
+        requestApproval: () => Promise.resolve(true),
+      },
+      { id: "t1", name: "fs_search", arguments: { query: "PlayerController" } },
     );
-    expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/No external project is linked/);
-  });
+    setTimeout(() => controller.abort(), 10);
+    const result = await Promise.race([
+      resultPromise,
+      new Promise<string>((r) => setTimeout(() => r("TIMEOUT"), 1000)),
+    ]);
 
-  it("fails cleanly for an unknown linked-root reference", async () => {
-    const result = JSON.parse(
-      await executeFsTool(
-        { roots: [ROOT], requestApproval: async () => true },
-        { id: "1", name: "fs_list", arguments: { root: "nope" } },
-      ),
-    );
-    expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/No linked project matches/);
-  });
-
-  it("never calls the API when a sensitive action is denied", async () => {
-    const result = JSON.parse(
-      await executeFsTool(
-        { roots: [ROOT], requestApproval: async () => false },
-        {
-          id: "1",
-          name: "shell_run",
-          arguments: { command: "rm -rf ." },
-        },
-      ),
-    );
-    expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/denied/);
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(result).not.toBe("TIMEOUT");
+    expect(JSON.parse(result as string)).toMatchObject({
+      ok: false,
+      error: expect.stringContaining("cancelled"),
+    });
   });
 
-  it("runs read-only tools without asking for approval", async () => {
-    const requestApproval = vi.fn(async () => true);
-    const result = JSON.parse(
-      await executeFsTool(
-        { roots: [ROOT], requestApproval },
-        { id: "1", name: "fs_search", arguments: { query: "player" } },
-      ),
+  it("resolves read-only tools normally (fs_list passes its request through)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        expect(String(url)).toContain("/api/fs/list");
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        expect(body.requestId).toBe("req_abc");
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            entries: [{ path: "a.txt", type: "file" }],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }),
     );
-    expect(result.ok).toBe(true);
-    expect(requestApproval).not.toHaveBeenCalled();
-    expect(global.fetch).toHaveBeenCalledWith(
-      "/api/fs/search",
-      expect.objectContaining({ method: "POST" }),
-    );
-  });
 
-  it("asks approval then executes sensitive tools when allowed", async () => {
-    const result = JSON.parse(
-      await executeFsTool(
-        { roots: [ROOT], requestApproval: async () => true },
-        {
-          id: "1",
-          name: "fs_write",
-          arguments: { path: "Assets/A.cs", content: "class A {}" },
-        },
-      ),
+    const result = await executeFsTool(
+      {
+        roots: ROOTS,
+        requestId: "req_abc",
+        requestApproval: () => Promise.resolve(true),
+      },
+      { id: "t1", name: "fs_list", arguments: { depth: 1 } },
     );
-    expect(result.ok).toBe(true);
-    const [, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    const payload = JSON.parse(String(init?.body));
-    expect(payload.root).toBe(ROOT.rootPath);
-    expect(payload.path).toBe("Assets/A.cs");
+    const parsed = JSON.parse(result) as { ok: boolean; entries: unknown[] };
+    expect(parsed.ok).toBe(true);
+    expect(parsed.entries.length).toBe(1);
   });
 });

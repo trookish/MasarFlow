@@ -95,3 +95,42 @@ export function fail(e: unknown): Response {
 export function displayPath(root: string, abs: string): string {
   return path.relative(root, abs).split(path.sep).join("/");
 }
+
+/* ── Request correlation & logging ────────────────────────────────────── */
+
+/**
+ * A short id that correlates an agent's tool call with its server-side
+ * execution. The agent client sends its request id in the body; fs routes
+ * echo it in every log line. Never derived from anything sensitive.
+ */
+export function fsRequestId(body: Record<string, unknown>): string {
+  const incoming = String(body.requestId ?? "");
+  if (incoming && /^[A-Za-z0-9_-]{1,64}$/.test(incoming)) return incoming;
+  return `fs_${crypto.randomUUID().slice(0, 8)}`;
+}
+
+/** One structured [fs] log line: op, root label, duration, outcome. */
+export function logFs(
+  op: string,
+  requestId: string,
+  body: Record<string, unknown>,
+  startedAt: number,
+  outcome: { ok: boolean; error?: string; status?: number },
+): void {
+  const root = String(body.root ?? "");
+  const label =
+    root
+      .replace(/[/\\]+$/, "")
+      .split(/[/\\]/)
+      .pop() ?? root;
+  console.log(
+    `[fs:${requestId}] ${op} completed`,
+    JSON.stringify({
+      root: label,
+      durationMs: Date.now() - startedAt,
+      ok: outcome.ok,
+      error: outcome.error ?? null,
+      status: outcome.status ?? 200,
+    }),
+  );
+}

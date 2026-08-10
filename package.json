@@ -14,7 +14,12 @@
     "format:check": "prettier --check .",
     "test": "vitest run --config tests/vitest.config.ts",
     "test:watch": "vitest --config tests/vitest.config.ts",
-    "e2e": "playwright test --config tests/playwright.config.ts"
+    "e2e": "playwright test --config tests/playwright.config.ts",
+    "desktop:dev": "npm --prefix desktop run dev",
+    "desktop:build": "npm --prefix desktop run build",
+    "desktop:start": "npm --prefix desktop run start",
+    "desktop:dist": "npm --prefix desktop run dist",
+    "desktop:typecheck": "npm --prefix desktop run typecheck"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

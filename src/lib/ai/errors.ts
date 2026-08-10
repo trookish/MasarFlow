@@ -24,6 +24,12 @@ export function friendlyChatError(raw: string): string {
   if (/402|insufficient|balance|credits|payment/.test(msg)) {
     return `The provider says you're out of credit — top up the account. (${raw})`;
   }
+  if (/stopped responding|didn't respond|did not respond|mid-stream/.test(msg)) {
+    return `The provider stopped responding — it may be overloaded; Retry usually fixes it. (${raw})`;
+  }
+  if (/took longer than/.test(msg)) {
+    return `The request timed out — the provider or the local proxy was too slow. Retry usually fixes it. (${raw})`;
+  }
   if (
     /could not reach|fetch failed|network|econnrefused|enotfound|socket|timeout|timed out/.test(
       msg,

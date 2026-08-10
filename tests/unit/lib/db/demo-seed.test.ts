@@ -33,42 +33,58 @@ beforeEach(async () => {
 });
 
 describe("seedDemoProject", () => {
-  it("seeds every surface with interlinked content", async () => {
+  it("seeds three demo projects — web app, game, desktop — with interlinked content", async () => {
     const id = await seedDemoProject();
 
-    // Project itself.
+    // The primary project is the web app demo (Pulse).
     expect(id).toBeTruthy();
     const project = await db.projects.get(id);
-    expect(project?.slug).toBe("lumen-echoes-of-the-last-forge");
-    expect(await db.projects.count()).toBe(1);
+    expect(project?.slug).toBe("pulse-realtime-team-dashboard");
+    expect(await db.projects.count()).toBe(3);
+    const slugs = (await db.projects.toArray()).map((p) => p.slug).sort();
+    expect(slugs).toEqual([
+      "draftdeck-markdown-desktop-editor",
+      "lumen-echoes-of-the-last-forge",
+      "pulse-realtime-team-dashboard",
+    ]);
 
-    // Counts across every module.
-    expect(await count(notesRepo.listByProject(id))).toBe(8);
-    expect(await count(specsRepo.listByProject(id))).toBe(5);
-    expect(await count(tasksRepo.listByProject(id))).toBeGreaterThanOrEqual(12);
-    expect(await count(sprintsRepo.listByProject(id))).toBe(3);
-    expect(await count(systemsRepo.listByProject(id))).toBe(10);
-    expect(await count(standardsRepo.listByProject(id))).toBe(4);
-    expect(await count(docsRepo.listByProject(id))).toBe(3);
-    expect(await count(devLogsRepo.listByProject(id))).toBe(6);
-    expect(await count(memoriesRepo.listByProject(id))).toBe(5);
-    expect(await count(commitsRepo.listByProject(id))).toBe(3);
-    expect(await count(watchEventsRepo.listByProject(id))).toBe(6);
-    expect(await count(syncRepo.listByProject(id))).toBe(8);
+    // Counts across every module for the primary (web) project.
+    expect(await count(notesRepo.listByProject(id))).toBe(4);
+    expect(await count(specsRepo.listByProject(id))).toBe(2);
+    expect(await count(tasksRepo.listByProject(id))).toBe(6);
+    expect(await count(sprintsRepo.listByProject(id))).toBe(1);
+    expect(await count(systemsRepo.listByProject(id))).toBe(4);
+    expect(await count(standardsRepo.listByProject(id))).toBe(2);
+    expect(await count(docsRepo.listByProject(id))).toBe(2);
+    expect(await count(devLogsRepo.listByProject(id))).toBe(3);
+    expect(await count(memoriesRepo.listByProject(id))).toBe(2);
+    expect(await count(commitsRepo.listByProject(id))).toBe(2);
+    expect(await count(watchEventsRepo.listByProject(id))).toBe(3);
+    expect(await count(syncRepo.listByProject(id))).toBe(4);
     expect(await count(canvasRepo.listByProject(id))).toBe(1);
-    expect(await db.canvasNodes.count()).toBeGreaterThanOrEqual(4);
-    expect(await db.canvasEdges.count()).toBeGreaterThanOrEqual(3);
-
-    // AI surfaces.
-    expect(await aiConnectionsRepo.list()).toHaveLength(1);
     expect(await count(chatThreadsRepo.listByProject(id))).toBe(1);
-    expect(await db.chatMessages.count()).toBe(2);
     expect(await count(workflowRepo.listRuns(id))).toBe(1);
-    expect(await db.workflowSteps.count()).toBe(16); // the 16-step pipeline
+    expect(await db.workflowSteps.count()).toBe(48); // 16-step pipeline × 3 projects
+
+    // Game (Lumen) and desktop (DraftDeck) demos are populated too.
+    const game = await db.projects.where("slug").equals("lumen-echoes-of-the-last-forge").first();
+    const desktop = await db.projects.where("slug").equals("draftdeck-markdown-desktop-editor").first();
+    expect(game).toBeTruthy();
+    expect(desktop).toBeTruthy();
+    expect(await count(systemsRepo.listByProject(game!.id))).toBe(10);
+    expect(await count(systemsRepo.listByProject(desktop!.id))).toBe(3);
+    expect(await count(notesRepo.listByProject(game!.id))).toBe(8);
+    expect(await count(notesRepo.listByProject(desktop!.id))).toBe(3);
+    expect(await count(specsRepo.listByProject(game!.id))).toBe(5);
+    expect(await count(specsRepo.listByProject(desktop!.id))).toBe(2);
+    expect(await count(chatThreadsRepo.listByProject(desktop!.id))).toBe(1);
+
+    // One shared demo AI connection across all projects.
+    expect(await aiConnectionsRepo.list()).toHaveLength(1);
 
     // Architecture positions were saved for the systems.
     const positions = await archRepo.positions(id);
-    expect(Object.keys(positions).length).toBe(9);
+    expect(Object.keys(positions).length).toBe(4);
 
     // Wikilinks resolved into real edges in the knowledge graph.
     expect((await linksRepo.listByProject(id)).length).toBeGreaterThan(0);
@@ -79,25 +95,31 @@ describe("seedDemoProject", () => {
 
     // Spec progress was recomputed from linked tasks.
     const specs = await specsRepo.listByProject(id);
-    const movement = specs.find((s) => s.number === "SPEC-001");
-    expect(movement?.implementationProgress).toBe(100);
+    const realtime = specs.find((s) => s.number === "SPEC-001");
+    expect(realtime?.implementationProgress).toBeGreaterThan(0);
   });
 
-  it("is idempotent — a second run returns the same project without duplicating", async () => {
+  it("is idempotent — a second run returns the same projects without duplicating", async () => {
     const first = await seedDemoProject();
     const second = await seedDemoProject();
     expect(second).toBe(first);
-    expect(await db.projects.count()).toBe(1);
-    expect(await db.notes.count()).toBe(8);
-    expect(await db.specs.count()).toBe(5);
+    expect(await db.projects.count()).toBe(3);
+    expect(await db.notes.count()).toBe(15); // 4 web + 8 game + 3 desktop
+    expect(await db.specs.count()).toBe(9); // 2 web + 5 game + 2 desktop
+    expect(await aiConnectionsRepo.list()).toHaveLength(1);
   });
 
   it("deletes cleanly via projectsRepo.remove (cascade)", async () => {
-    const id = await seedDemoProject();
-    await projectsRepo.remove(id);
+    await seedDemoProject();
+    const projects = await db.projects.toArray();
+    for (const p of projects) {
+      await projectsRepo.remove(p.id);
+    }
     expect(await db.projects.count()).toBe(0);
     expect(await db.notes.count()).toBe(0);
     expect(await db.specs.count()).toBe(0);
     expect(await db.tasks.count()).toBe(0);
+    // The shared demo connection survives (it is not project-scoped).
+    expect(await aiConnectionsRepo.list()).toHaveLength(1);
   });
 });

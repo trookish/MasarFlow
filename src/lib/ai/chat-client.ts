@@ -1,4 +1,9 @@
-import { providerFormat, providerBaseUrl, type AiProvider } from "./catalog";
+import {
+  providerFormat,
+  providerBaseUrl,
+  type AiProvider,
+  type ProviderConnection,
+} from "./catalog";
 import type { WorkspaceToolDef, ToolCallRequest } from "./tools";
 
 /**
@@ -41,11 +46,32 @@ export type StreamEvent =
       content: string;
     }
   | { type: "notice"; message: string }
+  /** Mid-stream failure reported by the proxy (e.g. upstream went silent). */
+  | { type: "error"; message: string }
   | { type: "round"; round: number }
   | { type: "done"; stopReason: "end" | "tool_calls" };
 
+/** The turn was cancelled by the caller's signal (user pressed Stop). */
+export class ChatAbortError extends Error {
+  override name = "ChatAbortError";
+}
+
+/** The turn hit the overall deadline (no response, or a wedged connection). */
+export class ChatTimeoutError extends Error {
+  override name = "ChatTimeoutError";
+}
+
+/**
+ * Turn-level lifecycle — always on, a handful of lines per turn so a frozen
+ * turn is diagnosable from the browser console alone (request started →
+ * first chunk → rounds/tools → completed/failed/cancelled).
+ */
+function turnLog(message: string, extra: Record<string, unknown> = {}) {
+  console.info(`[chat] ${message}`, JSON.stringify(extra));
+}
+
 export interface StreamTurnOptions {
-  provider: AiProvider;
+  provider: ProviderConnection;
   apiKey: string;
   baseUrl?: string;
   model: string;
@@ -56,8 +82,27 @@ export interface StreamTurnOptions {
   toolChoice?: "auto" | "required" | "none";
   /** Reasoning/thinking controls forwarded to /api/chat. */
   reasoning?: { enabled: boolean; budget?: number };
+  /**
+   * Client-generated id correlating this proxy request with its agent run —
+   * echoed in the server logs as [chat:…].
+   */
+  requestId?: string;
   onEvent?: (event: StreamEvent) => void;
   signal?: AbortSignal;
+  /**
+   * Max milliseconds of silence from the server before the turn is failed
+   * (default 90s — deliberately above the proxy's own 60s watchdog so the
+   * proxy's clearer error event normally arrives first). Backstop for a
+   * dead/buffered connection between this client and the proxy.
+   */
+  idleTimeoutMs?: number;
+  /**
+   * Overall deadline for the whole turn, including the time before response
+   * headers arrive (default 180s). Unlike `idleTimeoutMs` this also covers a
+   * proxy that is stuck retrying upstream — the fetch itself has no native
+   * timeout, so without this a dead turn would spin forever.
+   */
+  timeoutMs?: number;
 }
 
 export interface TurnResult {
@@ -69,188 +114,169 @@ export interface TurnResult {
 
 /** Stream one model turn through /api/chat, resolving with the full result. */
 export async function streamTurn(opts: StreamTurnOptions): Promise<TurnResult> {
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      format: providerFormat(opts.provider),
-      baseUrl: opts.baseUrl?.trim() || providerBaseUrl(opts.provider),
-      apiKey: opts.apiKey,
-      noAuth: opts.provider.noAuth,
-      model: opts.model,
-      system: opts.system,
-      messages: opts.messages,
-      tools: opts.tools,
-      toolChoice: opts.toolChoice,
-      reasoning: opts.reasoning,
-    }),
-    signal: opts.signal,
+  const deadlineMs = opts.timeoutMs ?? 180_000;
+  // Internal controller drives the actual fetch: the total-deadline timeout
+  // aborts it, and the caller's signal is forwarded into it. The caller's
+  // own signal is never aborted by us, so it can tell a real user
+  // cancellation (ChatAbortError) apart from a timeout (ChatTimeoutError).
+  const internal = new AbortController();
+  const deadlineTimer = setTimeout(
+    () => internal.abort(new Error("chat-timeout")),
+    deadlineMs,
+  );
+  const onCallerAbort = () => internal.abort();
+  if (opts.signal) {
+    if (opts.signal.aborted) internal.abort();
+    else opts.signal.addEventListener("abort", onCallerAbort, { once: true });
+  }
+
+  const abortError = (): Error =>
+    opts.signal?.aborted
+      ? new ChatAbortError("Aborted")
+      : new ChatTimeoutError(
+          `The request took longer than ${Math.round(deadlineMs / 1000)}s and was stopped — Retry, or try a shorter prompt.`,
+        );
+
+  turnLog("turn started", {
+    model: opts.model,
+    format: providerFormat(opts.provider),
   });
 
-  if (!res.ok || !res.body) {
-    let message = `Request failed (${res.status})`;
-    try {
-      const j = await res.json();
-      message = j.error ?? message;
-    } catch {
-      /* keep default */
-    }
-    throw new Error(message);
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let text = "";
-  let reasoning = "";
-  const toolCalls: ToolCallRequest[] = [];
-  let stopReason: "end" | "tool_calls" = "end";
-
-  const handle = (line: string) => {
-    if (!line.trim()) return;
-    let event: StreamEvent;
-    try {
-      event = JSON.parse(line) as StreamEvent;
-    } catch {
-      return;
-    }
-    if (event.type === "text") text += event.text;
-    else if (event.type === "reasoning") reasoning += event.text;
-    else if (event.type === "tool_call") {
-      toolCalls.push({
-        id: event.id,
-        name: event.name,
-        arguments: event.arguments,
-      });
-    } else if (event.type === "done") stopReason = event.stopReason;
-    opts.onEvent?.(event);
-  };
-
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-    for (const line of lines) handle(line);
-  }
-  if (buffer) handle(buffer);
-
-  return { text, reasoning, toolCalls, stopReason };
-}
-
-export interface WorkspaceChatOptions extends Omit<
-  StreamTurnOptions,
-  "messages"
-> {
-  messages: WireMessage[];
-  /** Executes one tool call and resolves with its JSON result string. */
-  executeTool?: (call: ToolCallRequest) => Promise<string>;
-  /** Safety cap on model↔tool round-trips per user turn. */
-  maxRounds?: number;
-}
-
-export interface WorkspaceChatResult {
-  /** Concatenated assistant text across every round. */
-  text: string;
-  /** Concatenated reasoning/thinking across every round (may be empty). */
-  reasoning: string;
-  /** Every tool call executed, in order. */
-  executed: { call: ToolCallRequest; result: string }[];
-  /** The full message list after the loop (for persistence/inspection). */
-  messages: WireMessage[];
-}
-
-/**
- * Run the agentic loop: stream a turn; while the model requests tools,
- * execute them against the workspace, append the results, and continue.
- */
-export async function runWorkspaceChat(
-  opts: WorkspaceChatOptions,
-): Promise<WorkspaceChatResult> {
-  const messages: WireMessage[] = [...opts.messages];
-  const executed: WorkspaceChatResult["executed"] = [];
-  const maxRounds = opts.maxRounds ?? 8;
-  let fullText = "";
-  let fullReasoning = "";
-  // Empty-turn recovery ladder. The single most common cause of a blank reply
-  // is a thinking-capable model that "thinks" about acting but emits no
-  // structured tool_call (it spends its turn on reasoning and stops). To
-  // recover we retry in stages rather than nuking tools:
-  //   stage 1 — drop extended thinking, KEEP tools (round > 0 already drops
-  //             thinking) so the model gets a clean shot at calling the tool;
-  //   stage 2 — still empty: strip tools too and coax out a plain text answer.
-  let retriedEmpty = false;
-  let strippedTools = false;
-
-  for (let round = 0; round < maxRounds; round++) {
-    opts.onEvent?.({ type: "round", round });
-    // Extended thinking only applies to the first round: Anthropic requires
-    // thinking blocks to be replayed verbatim alongside tool_use blocks, and
-    // the wire history doesn't carry them — continuation rounds therefore run
-    // with thinking off (the model already did its reasoning up front).
-    const useTools = !strippedTools && opts.executeTool;
-    const turn = await streamTurn({
-      ...opts,
-      messages,
-      tools: useTools ? opts.tools : undefined,
-      reasoning: round === 0 ? opts.reasoning : undefined,
-    });
-    if (turn.text) fullText += (fullText ? "\n\n" : "") + turn.text;
-    if (turn.reasoning)
-      fullReasoning += (fullReasoning ? "\n\n" : "") + turn.reasoning;
-
-    if (!turn.toolCalls.length || !useTools) {
-      // Empty turn (no text, no tool calls): recover with the ladder above.
-      if (!fullText.trim() && !executed.length) {
-        if (opts.reasoning?.enabled && round === 0 && !retriedEmpty) {
-          retriedEmpty = true;
-          continue;
-        }
-        if (!strippedTools) {
-          retriedEmpty = true;
-          strippedTools = true;
-          continue;
-        }
-      }
-      return { text: fullText, reasoning: fullReasoning, executed, messages };
-    }
-
-    messages.push({
-      role: "assistant",
-      content: turn.text,
-      toolCalls: turn.toolCalls,
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        format: providerFormat(opts.provider),
+        baseUrl: opts.baseUrl?.trim() || providerBaseUrl(opts.provider),
+        apiKey: opts.apiKey,
+        noAuth: opts.provider.noAuth,
+        model: opts.model,
+        system: opts.system,
+        messages: opts.messages,
+        tools: opts.tools,
+        toolChoice: opts.toolChoice,
+        reasoning: opts.reasoning,
+        requestId: opts.requestId,
+      }),
+      signal: internal.signal,
+    }).catch((e: unknown) => {
+      if (e instanceof DOMException && e.name === "AbortError")
+        throw abortError();
+      throw e;
     });
 
-    const executeTool = opts.executeTool!;
-    for (const call of turn.toolCalls) {
-      if (opts.signal?.aborted) throw new DOMException("Aborted", "AbortError");
-      const result = await executeTool(call);
-      executed.push({ call, result });
-      let ok = true;
+    if (!res.ok || !res.body) {
+      let message = `Request failed (${res.status})`;
       try {
-        ok = (JSON.parse(result) as { ok?: boolean }).ok !== false;
+        const j = await res.json();
+        message = j.error ?? message;
       } catch {
-        /* non-JSON results count as ok */
+        /* keep default */
       }
-      opts.onEvent?.({
-        type: "tool_result",
-        id: call.id,
-        name: call.name,
-        ok,
-        content: result,
-      });
-      messages.push({
-        role: "tool",
-        toolCallId: call.id,
-        name: call.name,
-        content: result,
-      });
+      throw new Error(message);
     }
-  }
 
-  return { text: fullText, reasoning: fullReasoning, executed, messages };
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    const idleMs = opts.idleTimeoutMs ?? 90_000;
+    let buffer = "";
+    let text = "";
+    let reasoning = "";
+    const toolCalls: ToolCallRequest[] = [];
+    let stopReason: "end" | "tool_calls" = "end";
+    let sentFirst = false;
+
+    const handle = (line: string) => {
+      if (!line.trim()) return;
+      let event: StreamEvent;
+      try {
+        event = JSON.parse(line) as StreamEvent;
+      } catch {
+        return;
+      }
+      // The proxy reports mid-stream failures as events — turn them into
+      // thrown errors so callers land in their normal error handling (and
+      // partial tool calls never execute).
+      if (event.type === "error") throw new Error(event.message);
+      if (event.type === "text") {
+        text += event.text;
+        if (!sentFirst) {
+          sentFirst = true;
+          turnLog("first chunk received");
+        }
+      } else if (event.type === "reasoning") reasoning += event.text;
+      else if (event.type === "tool_call") {
+        toolCalls.push({
+          id: event.id,
+          name: event.name,
+          arguments: event.arguments,
+        });
+      } else if (event.type === "done") stopReason = event.stopReason;
+      opts.onEvent?.(event);
+    };
+
+    try {
+      for (;;) {
+        // Silence watchdog: any received bytes reset the timer. Fires only
+        // when the connection is truly dead or wedged — the proxy's own
+        // watchdogs normally end a stalled turn cleanly before this trips.
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        let readResult: ReadableStreamReadResult<Uint8Array>;
+        try {
+          readResult = await Promise.race([
+            reader.read(),
+            new Promise<never>((_, reject) => {
+              timer = setTimeout(
+                () =>
+                  reject(
+                    new Error(
+                      `The provider stopped responding (no data for ${Math.round(idleMs / 1000)}s) — Retry to continue.`,
+                    ),
+                  ),
+                idleMs,
+              );
+            }),
+          ]);
+        } finally {
+          if (timer) clearTimeout(timer);
+        }
+        if (readResult.done) break;
+        buffer += decoder.decode(readResult.value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) handle(line);
+      }
+      if (buffer) handle(buffer);
+    } catch (e) {
+      // Free the connection on errors (error events, stalls, aborts).
+      void reader.cancel().catch(() => {});
+      turnLog("turn failed", { error: (e as Error).message });
+      if (e instanceof DOMException && e.name === "AbortError") {
+        throw abortError();
+      }
+      throw e;
+    }
+
+    turnLog("turn completed", { stopReason, textLength: text.length });
+    return { text, reasoning, toolCalls, stopReason };
+  } finally {
+    clearTimeout(deadlineTimer);
+    opts.signal?.removeEventListener("abort", onCallerAbort);
+  }
 }
+
+/* ── Agentic loop ─────────────────────────────────────────────────────── */
+
+// The agentic tool loop moved to the AgentController (src/lib/ai/agent).
+// `runWorkspaceChat` is kept as a backwards-compatible wrapper so the
+// Workflow and Agents pages keep working unchanged.
+
+export {
+  runWorkspaceChat,
+  type WorkspaceChatOptions,
+  type WorkspaceChatResult,
+} from "./agent/compat";
 
 /* ── Back-compat text-only helper ───────────────────────────────────── */
 

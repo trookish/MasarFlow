@@ -7,6 +7,8 @@ import {
   displayPath,
   isIgnoredSegment,
   isDeniedName,
+  fsRequestId,
+  logFs,
 } from "../_shared";
 
 // Search inside a linked project root: filename matches plus case-insensitive
@@ -26,8 +28,10 @@ interface SearchHit {
 }
 
 export async function POST(req: Request): Promise<Response> {
+  const startedAt = Date.now();
   try {
     const body = await readJsonBody(req);
+    const requestId = fsRequestId(body);
     const root = String(body.root ?? "");
     const query = String(body.query ?? "").trim();
     const maxResults = Math.min(Number(body.maxResults ?? 40), 200);
@@ -82,12 +86,19 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     await walk(normRoot);
+    logFs("search", requestId, body, startedAt, { ok: true });
     return Response.json({
       ok: true,
       hits,
       truncated: hits.length >= maxResults || scanned >= SCAN_CAP,
     });
   } catch (e) {
+    const err = e as { status?: number; message?: string };
+    logFs("search", "unknown", {}, startedAt, {
+      ok: false,
+      error: err?.message ?? "failed",
+      status: err?.status ?? 500,
+    });
     return fail(e);
   }
 }

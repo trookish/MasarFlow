@@ -6,7 +6,7 @@ import { persist } from "zustand/middleware";
 /** Color-scheme mode. `amoled` is dark with pure-black surfaces; `system` follows the OS. */
 export type ThemeMode = "light" | "dark" | "amoled" | "system";
 
-/** How the primary accent is painted: a flat color, or a two-stop gradient. */
+/** How the primary accent is painted: a flat color, or a multi-stop gradient. */
 export type AccentMode = "solid" | "gradient";
 
 /** How the brand logo is tinted. `original` shows the source PNG untouched. */
@@ -14,6 +14,12 @@ export type LogoColorMode = "original" | "accent" | "custom";
 
 /** Background fill behind the brand logo. */
 export type LogoBgMode = "none" | "white" | "accent" | "custom";
+
+/** One color stop in a custom gradient (position 0–100). */
+export interface GradientStop {
+  color: string;
+  position: number;
+}
 
 export interface AccentPreset {
   name: string;
@@ -25,6 +31,42 @@ export interface GradientPreset {
   from: string;
   to: string;
   angle: number;
+}
+
+/** Clamp a gradient stop position into 0–100. */
+export function clampPosition(pos: number): number {
+  return Math.min(100, Math.max(0, Math.round(pos)));
+}
+
+/** Sort stops by position, clamp positions, dedupe overlapping stops. */
+export function normalizeStops(stops: GradientStop[]): GradientStop[] {
+  const sorted = [...stops]
+    .map((s) => ({
+      color: /^#[0-9a-fA-F]{6}$/.test(s.color)
+        ? s.color.toLowerCase()
+        : "#7c5cfc",
+      position: clampPosition(s.position),
+    }))
+    .sort((a, b) => a.position - b.position);
+  // When two stops share a position, keep the later one (it wins visually).
+  const deduped: GradientStop[] = [];
+  for (const s of sorted) {
+    const last = deduped[deduped.length - 1];
+    if (last && last.position === s.position) deduped[deduped.length - 1] = s;
+    else deduped.push(s);
+  }
+  return deduped.length >= 2
+    ? deduped
+    : [
+        { color: "#7c5cfc", position: 0 },
+        { color: "#22d3ee", position: 100 },
+      ];
+}
+
+/** The CSS value for `background-image` built from stops + angle. */
+export function gradientCss(stops: GradientStop[], angle: number): string {
+  const parts = normalizeStops(stops).map((s) => `${s.color} ${s.position}%`);
+  return `linear-gradient(${angle}deg, ${parts.join(", ")})`;
 }
 
 // ─── Presets ────────────────────────────────────────────────────────────────
@@ -64,6 +106,11 @@ export const APPEARANCE_DEFAULTS = {
   accentMode: "solid" as AccentMode,
   accentColor: "#7c5cfc",
   accentColor2: "#22d3ee",
+  /** The gradient's color stops (source of truth for gradient mode). */
+  gradientStops: [
+    { color: "#7c5cfc", position: 0 },
+    { color: "#22d3ee", position: 100 },
+  ] as GradientStop[],
   gradientAngle: 135,
   /** Corner radius in rem. */
   radius: 0.625,
@@ -84,6 +131,7 @@ interface ThemeState {
   accentMode: AccentMode;
   accentColor: string;
   accentColor2: string;
+  gradientStops: GradientStop[];
   gradientAngle: number;
   radius: number;
   fontScale: number;
@@ -95,6 +143,7 @@ interface ThemeState {
   setAccentMode: (m: AccentMode) => void;
   setAccentColor: (hex: string) => void;
   setAccentColor2: (hex: string) => void;
+  setGradientStops: (stops: GradientStop[]) => void;
   setGradientAngle: (deg: number) => void;
   setRadius: (rem: number) => void;
   setFontScale: (scale: number) => void;
@@ -112,8 +161,37 @@ export const useThemeStore = create<ThemeState>()(
       ...APPEARANCE_DEFAULTS,
       setMode: (mode) => set({ mode }),
       setAccentMode: (accentMode) => set({ accentMode }),
-      setAccentColor: (accentColor) => set({ accentColor }),
-      setAccentColor2: (accentColor2) => set({ accentColor2 }),
+      setAccentColor: (accentColor) =>
+        set((s) => ({
+          accentColor,
+          // Gradient mode: keep the first stop in sync with the solid color.
+          gradientStops:
+            s.accentMode === "gradient"
+              ? s.gradientStops.map((st, i) =>
+                  i === 0 ? { ...st, color: accentColor } : st,
+                )
+              : s.gradientStops,
+        })),
+      setAccentColor2: (accentColor2) =>
+        set((s) => ({
+          accentColor2,
+          gradientStops:
+            s.accentMode === "gradient"
+              ? s.gradientStops.map((st, i, arr) =>
+                  i === arr.length - 1 ? { ...st, color: accentColor2 } : st,
+                )
+              : s.gradientStops,
+        })),
+      setGradientStops: (gradientStops) =>
+        set((s) => {
+          const stops = normalizeStops(gradientStops);
+          return {
+            gradientStops: stops,
+            accentColor: stops[0].color,
+            accentColor2: stops[stops.length - 1].color,
+            accentMode: s.accentMode === "gradient" ? s.accentMode : "gradient",
+          };
+        }),
       setGradientAngle: (gradientAngle) => set({ gradientAngle }),
       setRadius: (radius) => set({ radius }),
       setFontScale: (fontScale) => set({ fontScale }),
@@ -126,11 +204,36 @@ export const useThemeStore = create<ThemeState>()(
           accentMode: "gradient",
           accentColor: p.from,
           accentColor2: p.to,
+          gradientStops: [
+            { color: p.from, position: 0 },
+            { color: p.to, position: 100 },
+          ],
           gradientAngle: p.angle,
         }),
       reset: () => set({ ...APPEARANCE_DEFAULTS }),
     }),
-    { name: "masarflow-theme", version: 2 },
+    {
+      name: "masarflow-theme",
+      version: 2,
+      // Older persisted state predates gradientStops — derive it from the
+      // two legacy color fields instead of leaving the gradient broken.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<ThemeState>;
+        if (!p.gradientStops) {
+          const from = p.accentColor ?? current.accentColor;
+          const to = p.accentColor2 ?? current.accentColor2;
+          return {
+            ...current,
+            ...p,
+            gradientStops: normalizeStops([
+              { color: from, position: 0 },
+              { color: to, position: 100 },
+            ]),
+          };
+        }
+        return { ...current, ...p };
+      },
+    },
   ),
 );
 
@@ -139,7 +242,11 @@ export const useThemeStore = create<ThemeState>()(
 /** Parse a #rgb/#rrggbb string into [r,g,b] (0-255), or null if invalid. */
 export function parseHex(hex: string): [number, number, number] | null {
   let h = hex.trim().replace(/^#/, "");
-  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  if (h.length === 3)
+    h = h
+      .split("")
+      .map((c) => c + c)
+      .join("");
   if (!/^[0-9a-fA-F]{6}$/.test(h)) return null;
   return [
     parseInt(h.slice(0, 2), 16),

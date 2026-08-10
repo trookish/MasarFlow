@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -35,12 +36,20 @@ interface MarkdownPreviewProps {
   className?: string;
 }
 
-export function MarkdownPreview({
-  content,
-  onWikilink,
-  onSaveCodeAsNote,
-  className,
-}: MarkdownPreviewProps) {
+/**
+ * Memoized so that while a chat reply streams (new `content` every chunk),
+ * only the streaming row re-parses — every other message in the thread keeps
+ * its rendered output instead of re-running markdown + syntax highlighting.
+ * Callbacks are ignored by the comparator: their behavior is stable across
+ * renders, only their identity changes.
+ */
+export const MarkdownPreview = memo(
+  function MarkdownPreview({
+    content,
+    onWikilink,
+    onSaveCodeAsNote,
+    className,
+  }: MarkdownPreviewProps) {
   const processed = preprocessWikilinks(content);
   const obsidian = useObsidianStore();
   const mermaid = usePlugin("mermaid-diagrams");
@@ -193,4 +202,7 @@ export function MarkdownPreview({
       </ReactMarkdown>
     </div>
   );
-}
+  },
+  (prev, next) =>
+    prev.content === next.content && prev.className === next.className,
+);

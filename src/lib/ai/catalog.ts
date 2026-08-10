@@ -28,6 +28,16 @@ export interface AiProvider {
 
 export type Catalog = Record<string, AiProvider>;
 
+/**
+ * The minimal provider shape needed to talk to a provider's API. Carries the
+ * `api` base URL — losing it makes requests fall back to OpenAI's endpoint
+ * (a legit OpenRouter key then 401s against api.openai.com).
+ */
+export type ProviderConnection = Pick<
+  AiProvider,
+  "id" | "name" | "api" | "npm" | "noAuth"
+>;
+
 /** How to talk to a provider's API. */
 export type ProviderFormat = "openai" | "anthropic";
 
@@ -45,13 +55,16 @@ export function providerFormat(provider: Pick<AiProvider, "id" | "npm">): Provid
 }
 
 /** Default base URL for a provider's API (models.dev `api`, with fallbacks). */
-export function providerBaseUrl(provider: AiProvider): string {
+export function providerBaseUrl(provider: Pick<AiProvider, "id" | "api">): string {
   // Google's OpenAI-compatible surface lives under /openai — the raw
   // generativelanguage base from models.dev would 404 on /chat/completions.
   if (provider.id === "google") {
     return "https://generativelanguage.googleapis.com/v1beta/openai";
   }
   if (provider.api) return provider.api;
+  // Well-known ids whose models.dev entries occasionally omit `api`.
+  if (provider.id === "openrouter") return "https://openrouter.ai/api/v1";
+  if (provider.id === "groq") return "https://api.groq.com/openai/v1";
   if (provider.id === "anthropic") return "https://api.anthropic.com";
   return "https://api.openai.com/v1";
 }
@@ -241,6 +254,58 @@ export const FALLBACK_CATALOG: Catalog = {
       },
     },
   },
+  google: {
+    id: "google",
+    name: "Google",
+    doc: "https://ai.google.dev/gemini-api/docs/models",
+    npm: "@ai-sdk/google",
+    env: ["GOOGLE_API_KEY", "GEMINI_API_KEY"],
+    // providerBaseUrl() resolves Google's OpenAI-compatible surface.
+    models: {
+      "gemini-2.5-pro": {
+        id: "gemini-2.5-pro",
+        name: "Gemini 2.5 Pro",
+        tool_call: true,
+        reasoning: true,
+        attachment: true,
+        limit: { context: 1048576, output: 65536 },
+      },
+      "gemini-2.5-flash": {
+        id: "gemini-2.5-flash",
+        name: "Gemini 2.5 Flash",
+        tool_call: true,
+        reasoning: true,
+        attachment: true,
+        limit: { context: 1048576, output: 65536 },
+      },
+    },
+  },
+  opencode: {
+    id: "opencode",
+    name: "OpenCode Zen",
+    api: "https://opencode.ai/zen/v1",
+    doc: "https://opencode.ai/docs/zen",
+    npm: "@ai-sdk/openai-compatible",
+    env: ["OPENCODE_API_KEY"],
+    models: {
+      "claude-sonnet-4-6": {
+        id: "claude-sonnet-4-6",
+        name: "Claude Sonnet 4.6 (via OpenCode)",
+        tool_call: true,
+        reasoning: true,
+        attachment: true,
+        limit: { context: 1000000, output: 64000 },
+      },
+      "gpt-5.1-codex-mini": {
+        id: "gpt-5.1-codex-mini",
+        name: "GPT-5.1 Codex Mini (via OpenCode)",
+        tool_call: true,
+        reasoning: true,
+        attachment: true,
+        limit: { context: 400000, output: 128000 },
+      },
+    },
+  },
   ollama: {
     id: "ollama",
     name: "Local (Ollama)",
@@ -295,11 +360,27 @@ export async function fetchCatalog(): Promise<Catalog> {
   inflight = (async () => {
     let base: Catalog;
     try {
-      const res = await fetch(CATALOG_URL, { cache: "force-cache" });
+      // models.dev is a multi-MB JSON — a slow first fetch must never block
+      // chat behind it. On timeout (or any failure) we fall back to the
+      // baked-in catalog, which covers the well-known providers.
+      const res = await fetch(CATALOG_URL, {
+        cache: "force-cache",
+        signal: AbortSignal.timeout(10_000),
+      });
       if (!res.ok) throw new Error(`models.dev ${res.status}`);
       const data = (await res.json()) as Catalog;
-      // Merge so the well-known providers always have a sane base URL/format.
-      base = { ...FALLBACK_CATALOG, ...data };
+      // Per-provider merge so the baked-in entries always keep a sane base
+      // URL / docs / format even when a models.dev entry omits those fields
+      // (a missing `api` would otherwise silently route every request to
+      // OpenAI's endpoint).
+      const ids = new Set([
+        ...Object.keys(FALLBACK_CATALOG),
+        ...Object.keys(data),
+      ]);
+      base = {};
+      for (const id of ids) {
+        base[id] = { ...FALLBACK_CATALOG[id], ...data[id] };
+      }
     } catch {
       base = FALLBACK_CATALOG;
     }

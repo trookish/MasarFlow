@@ -18,6 +18,8 @@ const eslintConfig = defineConfig([
     // Python local AI service — not JS/TS, and its .venv bundles vendored
     // JS from ML packages (torch, sklearn) that ESLint should never touch.
     "python-service/**",
+    // Desktop launcher — separate Vite app with its own toolchain.
+    "desktop/**",
   ]),
   {
     // Local-first app: these components render blob:/data: URLs (IndexedDB

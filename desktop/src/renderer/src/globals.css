@@ -1,0 +1,170 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Fonts (Geist, self-hosted) ────────────────────────────────────────── */
+@font-face {
+  font-family: "Geist";
+  src: url("@/assets/fonts/Geist-Variable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("@/assets/fonts/GeistMono-Variable.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Light theme (dark is default via the `dark` class on <html>) */
+  --background: #ffffff;
+  --foreground: #18181b;
+  --card: #ffffff;
+  --card-foreground: #18181b;
+  --popover: #ffffff;
+  --popover-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #6b7280;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --accent: #f1f1f4;
+  --accent-foreground: #18181b;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --destructive: #dc2626;
+  --destructive-foreground: #fafafa;
+  --success: #16a34a;
+  --warning: #d97706;
+  --sidebar: #fafafa;
+  --sidebar-foreground: #18181b;
+  --sidebar-border: #e4e4e7;
+  --radius: 0.625rem;
+
+  --primary: #7c5cfc;
+  --primary-foreground: #ffffff;
+  --ring: #7c5cfc;
+}
+
+.dark {
+  --background: #0a0a0c;
+  --foreground: #e8e8ec;
+  --card: #121216;
+  --card-foreground: #e8e8ec;
+  --popover: #151519;
+  --popover-foreground: #e8e8ec;
+  --muted: #1b1b20;
+  --muted-foreground: #9a9aa4;
+  --secondary: #1b1b20;
+  --secondary-foreground: #e8e8ec;
+  --accent: #232329;
+  --accent-foreground: #f4f4f6;
+  --border: #27272d;
+  --input: #2c2c33;
+  --destructive: #ef4444;
+  --destructive-foreground: #fafafa;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --sidebar: #0c0c10;
+  --sidebar-foreground: #cfcfd6;
+  --sidebar-border: #1e1e23;
+}
+
+.dark[data-surface="amoled"] {
+  --background: #000000;
+  --card: #050507;
+  --popover: #060608;
+  --muted: #0d0d10;
+  --secondary: #0d0d10;
+  --accent: #141418;
+  --border: #1a1a1f;
+  --input: #1d1d22;
+  --sidebar: #000000;
+  --sidebar-border: #141418;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    user-select: none;
+  }
+  input,
+  textarea {
+    user-select: text;
+  }
+}
+
+/* Thin, theme-aware scrollbars */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* Custom titlebar drag regions */
+.app-drag {
+  -webkit-app-region: drag;
+}
+.app-no-drag {
+  -webkit-app-region: no-drag;
+}

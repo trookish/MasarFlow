@@ -134,7 +134,7 @@ export function LinkedProjectsDialog({
               "Absolute folder path, e.g. " +
               (typeof navigator !== "undefined" &&
               navigator.userAgent.includes("Windows")
-                ? "C:\\Dev\\MyUnityGame"
+                ? "C:\\Dev\\MyProject"
                 : "/home/you/my-project")
             }
             className="h-9 font-mono text-sm"

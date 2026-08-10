@@ -10,7 +10,17 @@ const nextConfig: NextConfig = {
     if (dev) {
       config.watchOptions = {
         ...config.watchOptions,
-        ignored: ['**/.vs/**', '**/.obsidian/**', '**/node_modules/**'],
+        ignored: [
+          '**/.vs/**',
+          '**/.obsidian/**',
+          '**/node_modules/**',
+          // Runtime data + venv: the Python service writes Chroma files into
+          // python-service/store on every embedding sync — recompiling on
+          // those writes adds churn and can interrupt in-flight requests.
+          '**/python-service/store/**',
+          '**/python-service/.venv/**',
+          '**/__pycache__/**',
+        ],
       };
     }
     return config;

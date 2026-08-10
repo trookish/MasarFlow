@@ -21,8 +21,15 @@ sentence-transformers model (~90MB) and caches it locally.
 ## Run
 
 ```
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --reload-dir app --port 8000
 ```
+
+`--reload-dir app` is important: it limits auto-reload to the Python source
+code. Chroma's persistent store (`store/chroma/`) lives inside this directory
+tree and is written on every embedding sync — a plain `--reload` restarts the
+worker mid-job on those writes, killing queued embeddings and stalling the
+app. Use a plain `--reload` (or none) only if you move `STORE_DIR` outside
+`python-service/`.
 
 Or, from the repo root, run both Next.js and this service together:
 

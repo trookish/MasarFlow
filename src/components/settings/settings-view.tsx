@@ -31,12 +31,16 @@ import {
   Sparkles,
   LayoutTemplate,
   Cpu,
+  Gauge,
+  Minus,
+  Plus,
   type LucideIcon,
 } from "lucide-react";
 import {
   ACCENT_PRESETS,
   GRADIENT_PRESETS,
   useThemeStore,
+  gradientCss,
   type ThemeMode,
   type AccentMode,
   type LogoColorMode,
@@ -52,10 +56,16 @@ import {
   type PageKey,
   type AllPageSettings,
 } from "@/lib/stores/page-settings";
+import {
+  useAgentSettings,
+  type AgentSettingsState,
+} from "@/lib/stores/agent-settings";
+import { DEFAULT_AGENT_CONFIG } from "@/lib/ai/agent";
 import { projectsRepo } from "@/lib/db/repos";
 import type { Project } from "@/lib/db/schema";
 import { resetData } from "@/lib/db/data";
 import { seedDemoProject } from "@/lib/db/demo-seed";
+import { GradientEditorDialog } from "@/components/settings/gradient-editor-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,7 +81,7 @@ import { cn } from "@/lib/utils/cn";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type GlobalSection = "appearance" | "project" | "data" | "ai-service";
+type GlobalSection = "appearance" | "project" | "data" | "ai-service" | "agent";
 type Section = GlobalSection | PageKey;
 
 interface NavEntry {
@@ -96,37 +106,59 @@ const NAV: NavGroup[] = [
       { id: "data", label: "Data", icon: Database },
     ],
   },
+  // ── Capture: where information is recorded and stored ────────────────────
   {
-    label: "Workspace",
+    label: "Capture",
     items: [
-      { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { id: "brain", label: "Brain", icon: BrainCircuit },
+      { id: "docs", label: "Documentation", icon: BookOpen },
+      { id: "canvas", label: "Canvas", icon: LayoutTemplate },
+    ],
+  },
+  // ── Planning: what to build and the rules it must follow ──────────────────
+  {
+    label: "Planning",
+    items: [
       { id: "specs", label: "Specifications", icon: FileText },
       { id: "standards", label: "Standards", icon: ShieldCheck },
     ],
   },
+  // ── Work: tracking execution and its history ─────────────────────────────
   {
-    label: "Intelligence",
+    label: "Work",
+    items: [
+      { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { id: "tasks", label: "Task Boards", icon: KanbanSquare },
+      { id: "sprints", label: "Sprints", icon: Flag },
+      { id: "devlogs", label: "Dev Logs", icon: ScrollText },
+    ],
+  },
+  // ── Structure: structural and relational maps of the project ─────────────
+  {
+    label: "Structure",
     items: [
       { id: "architecture", label: "Architecture", icon: Boxes },
       { id: "knowledge", label: "Knowledge Graph", icon: Share2 },
-      { id: "tasks", label: "Task Boards", icon: KanbanSquare },
-      { id: "sprints", label: "Sprints", icon: Flag },
+    ],
+  },
+  // ── AI: assisted thinking — conversation, agents, pipeline ───────────────
+  {
+    label: "AI",
+    items: [
       { id: "chat", label: "Chat", icon: MessageSquare },
+      { id: "agent", label: "Agent Loop", icon: Gauge },
       { id: "agents", label: "AI Agents", icon: Bot },
       { id: "workflow", label: "AI Workflow", icon: Workflow },
       { id: "ai-service", label: "Local AI Service", icon: Cpu },
     ],
   },
+  // ── System: integrations, tools, and configuration ───────────────────────
   {
     label: "System",
     items: [
-      { id: "docs", label: "Documentation", icon: BookOpen },
-      { id: "devlogs", label: "Dev Logs", icon: ScrollText },
       { id: "sync", label: "Sync Panel", icon: RefreshCw },
       { id: "watcher", label: "Project Watcher", icon: Eye },
       { id: "search", label: "Semantic Search", icon: Search },
-      { id: "canvas", label: "Canvas", icon: LayoutTemplate },
       { id: "plugins", label: "Plugins", icon: Plug },
     ],
   },
@@ -225,7 +257,9 @@ function SectionPanel({
         <div>
           <h2 className="text-base font-semibold">{title}</h2>
           {description && (
-            <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {description}
+            </p>
           )}
         </div>
         {onReset && (
@@ -258,6 +292,7 @@ const MODE_OPTIONS: { value: ThemeMode; label: string; icon: LucideIcon }[] = [
 function AppearanceSection() {
   const mounted = useMounted();
   const s = useThemeStore();
+  const [gradientDialog, setGradientDialog] = useState(false);
 
   if (!mounted) {
     return (
@@ -296,7 +331,10 @@ function AppearanceSection() {
       </SettingRow>
 
       {/* Accent style */}
-      <SettingRow label="Accent style" description="A single solid color or a two-stop gradient.">
+      <SettingRow
+        label="Accent style"
+        description="A single solid color or a multi-stop gradient."
+      >
         <SegmentedControl<AccentMode>
           value={s.accentMode}
           options={[
@@ -310,7 +348,10 @@ function AppearanceSection() {
       {/* Solid controls */}
       {s.accentMode === "solid" && (
         <>
-          <SettingRow label="Accent color" description="Pick a preset or enter any custom color.">
+          <SettingRow
+            label="Accent color"
+            description="Pick a preset or enter any custom color."
+          >
             <div className="flex max-w-[15rem] flex-wrap justify-end gap-2">
               {ACCENT_PRESETS.map((p) => (
                 <button
@@ -333,7 +374,10 @@ function AppearanceSection() {
               ))}
             </div>
           </SettingRow>
-          <SettingRow label="Custom color" description="Exact hex value for the accent.">
+          <SettingRow
+            label="Custom color"
+            description="Exact hex value for the accent."
+          >
             <ColorField value={s.accentColor} onChange={s.setAccentColor} />
           </SettingRow>
         </>
@@ -342,35 +386,71 @@ function AppearanceSection() {
       {/* Gradient controls */}
       {s.accentMode === "gradient" && (
         <>
-          <SettingRow label="Gradient presets" description="Quick-start gradients; tweak the stops below.">
+          <SettingRow
+            label="Gradient presets"
+            description="Quick-start gradients; open the editor for a custom one."
+          >
             <div className="flex max-w-[15rem] flex-wrap justify-end gap-2">
-              {GRADIENT_PRESETS.map((g) => (
-                <button
-                  key={g.name}
-                  type="button"
-                  onClick={() => s.applyGradientPreset(g)}
-                  aria-label={g.name}
-                  title={g.name}
-                  style={{
-                    backgroundImage: `linear-gradient(${g.angle}deg, ${g.from}, ${g.to})`,
-                  }}
-                  className={cn(
-                    "h-7 w-10 rounded-md transition-transform hover:scale-110",
-                    s.accentColor.toLowerCase() === g.from.toLowerCase() &&
-                      s.accentColor2.toLowerCase() === g.to.toLowerCase() &&
-                      "ring-2 ring-ring ring-offset-2 ring-offset-card",
-                  )}
-                />
-              ))}
+              {GRADIENT_PRESETS.map((g) => {
+                const active =
+                  s.gradientStops.length === 2 &&
+                  s.gradientStops[0].color.toLowerCase() ===
+                    g.from.toLowerCase() &&
+                  s.gradientStops[1].color.toLowerCase() === g.to.toLowerCase();
+                return (
+                  <button
+                    key={g.name}
+                    type="button"
+                    onClick={() => s.applyGradientPreset(g)}
+                    aria-label={g.name}
+                    title={g.name}
+                    style={{
+                      backgroundImage: `linear-gradient(${g.angle}deg, ${g.from}, ${g.to})`,
+                    }}
+                    className={cn(
+                      "h-7 w-10 rounded-md transition-transform hover:scale-110",
+                      active &&
+                        "ring-2 ring-ring ring-offset-2 ring-offset-card",
+                    )}
+                  />
+                );
+              })}
             </div>
           </SettingRow>
-          <SettingRow label="Start color" description="Gradient's first stop.">
-            <ColorField value={s.accentColor} onChange={s.setAccentColor} />
+          <SettingRow
+            label="Custom gradient"
+            description={
+              s.gradientStops.length > 2 ||
+              s.gradientStops[0]?.position !== 0 ||
+              s.gradientStops[s.gradientStops.length - 1]?.position !== 100
+                ? `${s.gradientStops.length} stops — edit or reset from a preset.`
+                : "Add as many color stops as you like, drag them, and remove them — just like a game-engine gradient editor."
+            }
+          >
+            <div className="flex items-center gap-2">
+              <span
+                className="h-7 w-16 rounded-md border border-border shadow-inner"
+                style={{
+                  backgroundImage: gradientCss(
+                    s.gradientStops,
+                    s.gradientAngle,
+                  ),
+                }}
+                aria-hidden
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setGradientDialog(true)}
+              >
+                <Plus className="h-3.5 w-3.5" /> Custom…
+              </Button>
+            </div>
           </SettingRow>
-          <SettingRow label="End color" description="Gradient's second stop.">
-            <ColorField value={s.accentColor2} onChange={s.setAccentColor2} />
-          </SettingRow>
-          <SettingRow label="Angle" description={`Direction of the gradient (${s.gradientAngle}°).`}>
+          <SettingRow
+            label="Angle"
+            description={`Direction of the gradient (${s.gradientAngle}°).`}
+          >
             <RangeField
               min={0}
               max={360}
@@ -383,13 +463,47 @@ function AppearanceSection() {
       )}
 
       {/* Corner radius */}
-      <SettingRow label="Corner radius" description={`Roundness of cards, buttons, and inputs (${s.radius.toFixed(2)} rem).`}>
-        <RangeField min={0} max={1.5} step={0.0625} value={s.radius} onChange={s.setRadius} />
+      <SettingRow
+        label="Corner radius"
+        description={`Roundness of cards, buttons, and inputs (${s.radius.toFixed(2)} rem).`}
+      >
+        <RangeField
+          min={0}
+          max={1.5}
+          step={0.0625}
+          value={s.radius}
+          onChange={s.setRadius}
+        />
       </SettingRow>
 
       {/* UI scale */}
-      <SettingRow label="UI scale" description={`Overall interface size (${Math.round(s.fontScale * 100)}%).`}>
-        <RangeField min={0.85} max={1.25} step={0.05} value={s.fontScale} onChange={s.setFontScale} />
+      <SettingRow
+        label="UI scale"
+        description={`Overall interface size (${Math.round(s.fontScale * 100)}%).`}
+      >
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="Decrease UI scale"
+            onClick={() => s.setFontScale(Math.max(0.85, s.fontScale - 0.05))}
+            disabled={s.fontScale <= 0.85}
+          >
+            <Minus className="h-3.5 w-3.5" />
+          </Button>
+          <span className="w-14 text-center text-sm font-medium tabular-nums">
+            {Math.round(s.fontScale * 100)}%
+          </span>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="Increase UI scale"
+            onClick={() => s.setFontScale(Math.min(1.25, s.fontScale + 0.05))}
+            disabled={s.fontScale >= 1.25}
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </SettingRow>
 
       {/* Logo color */}
@@ -411,7 +525,10 @@ function AppearanceSection() {
         </div>
       </SettingRow>
       {s.logoColorMode === "custom" && (
-        <SettingRow label="Logo custom color" description="Exact color for the logo mark.">
+        <SettingRow
+          label="Logo custom color"
+          description="Exact color for the logo mark."
+        >
           <ColorField value={s.logoColor} onChange={s.setLogoColor} />
         </SettingRow>
       )}
@@ -433,13 +550,19 @@ function AppearanceSection() {
         />
       </SettingRow>
       {s.logoBgMode === "custom" && (
-        <SettingRow label="Logo background color" description="Exact fill behind the logo.">
+        <SettingRow
+          label="Logo background color"
+          description="Exact fill behind the logo."
+        >
           <ColorField value={s.logoBgColor} onChange={s.setLogoBgColor} />
         </SettingRow>
       )}
 
       {/* Live preview */}
-      <SettingRow label="Preview" description="A live sample of the current accent.">
+      <SettingRow
+        label="Preview"
+        description="A live sample of the current accent."
+      >
         <div className="flex items-center gap-2">
           <Button size="sm" className="bg-primary text-primary-foreground">
             Primary
@@ -447,7 +570,9 @@ function AppearanceSection() {
           <span
             className={cn(
               "rounded-md border border-border px-2 py-1 text-xs font-medium",
-              s.accentMode === "gradient" ? "accent-gradient-text" : "text-primary",
+              s.accentMode === "gradient"
+                ? "accent-gradient-text"
+                : "text-primary",
             )}
           >
             Accent text
@@ -455,6 +580,9 @@ function AppearanceSection() {
           <span className="accent-gradient-bg h-7 w-7 rounded-full" />
         </div>
       </SettingRow>
+      {gradientDialog && (
+        <GradientEditorDialog open onClose={() => setGradientDialog(false)} />
+      )}
     </SectionPanel>
   );
 }
@@ -570,8 +698,8 @@ function DataSection() {
         description="Everything lives in your browser (IndexedDB). Load a demo project to see every feature in action, or reset to start clean."
       >
         <SettingRow
-          label="Load demo project"
-          description="Seeds a sample game project — Lumen: Echoes of the Last Forge — with notes, specs, tasks, sprints, systems, docs, commits, a canvas, and an AI chat, all interlinked. Safe to run; never duplicates."
+          label="Load demo projects"
+          description="Seeds three sample projects — Pulse (a web app), Lumen (a Unity game), and DraftDeck (a desktop app) — each with notes, specs, tasks, sprints, systems, docs, commits, a canvas, and an AI chat, all interlinked. Safe to run; never duplicates."
         >
           <Button
             variant="outline"
@@ -579,10 +707,14 @@ function DataSection() {
             onClick={() => void loadDemo()}
             disabled={seeding}
           >
-            <Sparkles className="h-3.5 w-3.5" /> {seeding ? "Loading…" : "Load demo"}
+            <Sparkles className="h-3.5 w-3.5" />{" "}
+            {seeding ? "Loading…" : "Load demo projects"}
           </Button>
         </SettingRow>
-        <SettingRow label="Reset" description="Permanently delete every project, note, spec, and task in this browser.">
+        <SettingRow
+          label="Reset"
+          description="Permanently delete every project, note, spec, and task in this browser."
+        >
           <Button
             variant="destructive"
             size="sm"
@@ -641,11 +773,23 @@ function DashboardSection() {
       description="What to display on the main dashboard."
       onReset={() => reset("dashboard")}
     >
-      <SettingRow label="Metrics cards" description="Show health score, arch score, and tech-debt cards.">
-        <Toggle value={dashboard.showMetrics} onChange={(v) => set("showMetrics", v)} />
+      <SettingRow
+        label="Metrics cards"
+        description="Show health score, arch score, and tech-debt cards."
+      >
+        <Toggle
+          value={dashboard.showMetrics}
+          onChange={(v) => set("showMetrics", v)}
+        />
       </SettingRow>
-      <SettingRow label="Recent activity" description="Show the recent-activity feed.">
-        <Toggle value={dashboard.showActivity} onChange={(v) => set("showActivity", v)} />
+      <SettingRow
+        label="Recent activity"
+        description="Show the recent-activity feed."
+      >
+        <Toggle
+          value={dashboard.showActivity}
+          onChange={(v) => set("showActivity", v)}
+        />
       </SettingRow>
     </SectionPanel>
   );
@@ -664,7 +808,10 @@ function BrainSection() {
       description="Defaults for the notes editor and sub-views."
       onReset={() => reset("brain")}
     >
-      <SettingRow label="Default view" description="Which sub-view opens when you navigate to Brain.">
+      <SettingRow
+        label="Default view"
+        description="Which sub-view opens when you navigate to Brain."
+      >
         <SegmentedControl
           value={brain.defaultView}
           options={[
@@ -675,10 +822,19 @@ function BrainSection() {
           onChange={(v) => set("defaultView", v)}
         />
       </SettingRow>
-      <SettingRow label="Word count" description="Show word count in the note editor toolbar.">
-        <Toggle value={brain.showWordCount} onChange={(v) => set("showWordCount", v)} />
+      <SettingRow
+        label="Word count"
+        description="Show word count in the note editor toolbar."
+      >
+        <Toggle
+          value={brain.showWordCount}
+          onChange={(v) => set("showWordCount", v)}
+        />
       </SettingRow>
-      <SettingRow label="Line wrap" description="Wrap long lines in the editor instead of scrolling.">
+      <SettingRow
+        label="Line wrap"
+        description="Wrap long lines in the editor instead of scrolling."
+      >
         <Toggle value={brain.lineWrap} onChange={(v) => set("lineWrap", v)} />
       </SettingRow>
     </SectionPanel>
@@ -698,7 +854,10 @@ function SpecsSection() {
       description="List view defaults for the specs page."
       onReset={() => reset("specs")}
     >
-      <SettingRow label="Default sort" description="How specs are ordered when you open the page.">
+      <SettingRow
+        label="Default sort"
+        description="How specs are ordered when you open the page."
+      >
         <SegmentedControl
           value={specs.defaultSort}
           options={[
@@ -710,8 +869,14 @@ function SpecsSection() {
           onChange={(v) => set("defaultSort", v)}
         />
       </SettingRow>
-      <SettingRow label="Show completed" description="Include specs with status 'done' in the list.">
-        <Toggle value={specs.showCompleted} onChange={(v) => set("showCompleted", v)} />
+      <SettingRow
+        label="Show completed"
+        description="Include specs with status 'done' in the list."
+      >
+        <Toggle
+          value={specs.showCompleted}
+          onChange={(v) => set("showCompleted", v)}
+        />
       </SettingRow>
     </SectionPanel>
   );
@@ -730,11 +895,23 @@ function StandardsSection() {
       description="Code and design standards editor settings."
       onReset={() => reset("standards")}
     >
-      <SettingRow label="Auto-validate" description="Run the deterministic enforcer automatically on save.">
-        <Toggle value={standards.autoValidate} onChange={(v) => set("autoValidate", v)} />
+      <SettingRow
+        label="Auto-validate"
+        description="Run the deterministic enforcer automatically on save."
+      >
+        <Toggle
+          value={standards.autoValidate}
+          onChange={(v) => set("autoValidate", v)}
+        />
       </SettingRow>
-      <SettingRow label="Line numbers" description="Show line numbers in the standards editor.">
-        <Toggle value={standards.showLineNumbers} onChange={(v) => set("showLineNumbers", v)} />
+      <SettingRow
+        label="Line numbers"
+        description="Show line numbers in the standards editor."
+      >
+        <Toggle
+          value={standards.showLineNumbers}
+          onChange={(v) => set("showLineNumbers", v)}
+        />
       </SettingRow>
     </SectionPanel>
   );
@@ -745,7 +922,10 @@ function ArchitectureSection() {
   const set = <K extends keyof AllPageSettings["architecture"]>(
     k: K,
     v: AllPageSettings["architecture"][K],
-  ) => update("architecture", { [k]: v } as Partial<AllPageSettings["architecture"]>);
+  ) =>
+    update("architecture", { [k]: v } as Partial<
+      AllPageSettings["architecture"]
+    >);
 
   return (
     <SectionPanel
@@ -753,7 +933,10 @@ function ArchitectureSection() {
       description="Diagram visualization defaults."
       onReset={() => reset("architecture")}
     >
-      <SettingRow label="Layout algorithm" description="How nodes are arranged on the diagram.">
+      <SettingRow
+        label="Layout algorithm"
+        description="How nodes are arranged on the diagram."
+      >
         <SegmentedControl
           value={architecture.layout}
           options={[
@@ -763,11 +946,23 @@ function ArchitectureSection() {
           onChange={(v) => set("layout", v)}
         />
       </SettingRow>
-      <SettingRow label="Node labels" description="Show label text inside each node.">
-        <Toggle value={architecture.showNodeLabels} onChange={(v) => set("showNodeLabels", v)} />
+      <SettingRow
+        label="Node labels"
+        description="Show label text inside each node."
+      >
+        <Toggle
+          value={architecture.showNodeLabels}
+          onChange={(v) => set("showNodeLabels", v)}
+        />
       </SettingRow>
-      <SettingRow label="Edge labels" description="Show label text on diagram edges.">
-        <Toggle value={architecture.showEdgeLabels} onChange={(v) => set("showEdgeLabels", v)} />
+      <SettingRow
+        label="Edge labels"
+        description="Show label text on diagram edges."
+      >
+        <Toggle
+          value={architecture.showEdgeLabels}
+          onChange={(v) => set("showEdgeLabels", v)}
+        />
       </SettingRow>
     </SectionPanel>
   );
@@ -786,7 +981,10 @@ function KnowledgeSection() {
       description="Graph visualization defaults."
       onReset={() => reset("knowledge")}
     >
-      <SettingRow label="Layout algorithm" description="How nodes are positioned in the graph.">
+      <SettingRow
+        label="Layout algorithm"
+        description="How nodes are positioned in the graph."
+      >
         <SegmentedControl
           value={knowledge.layout}
           options={[
@@ -796,11 +994,23 @@ function KnowledgeSection() {
           onChange={(v) => set("layout", v)}
         />
       </SettingRow>
-      <SettingRow label="Orphan nodes" description="Show nodes with no connections.">
-        <Toggle value={knowledge.showOrphans} onChange={(v) => set("showOrphans", v)} />
+      <SettingRow
+        label="Orphan nodes"
+        description="Show nodes with no connections."
+      >
+        <Toggle
+          value={knowledge.showOrphans}
+          onChange={(v) => set("showOrphans", v)}
+        />
       </SettingRow>
-      <SettingRow label="Edge labels" description="Show relation type labels on edges.">
-        <Toggle value={knowledge.showEdgeLabels} onChange={(v) => set("showEdgeLabels", v)} />
+      <SettingRow
+        label="Edge labels"
+        description="Show relation type labels on edges."
+      >
+        <Toggle
+          value={knowledge.showEdgeLabels}
+          onChange={(v) => set("showEdgeLabels", v)}
+        />
       </SettingRow>
     </SectionPanel>
   );
@@ -819,10 +1029,19 @@ function TasksSection() {
       description="Kanban board defaults."
       onReset={() => reset("tasks")}
     >
-      <SettingRow label="Show completed" description="Keep 'Done' tasks visible on the board.">
-        <Toggle value={tasks.showCompleted} onChange={(v) => set("showCompleted", v)} />
+      <SettingRow
+        label="Show completed"
+        description="Keep 'Done' tasks visible on the board."
+      >
+        <Toggle
+          value={tasks.showCompleted}
+          onChange={(v) => set("showCompleted", v)}
+        />
       </SettingRow>
-      <SettingRow label="Default grouping" description="How tasks are grouped when the board first loads.">
+      <SettingRow
+        label="Default grouping"
+        description="How tasks are grouped when the board first loads."
+      >
         <SegmentedControl
           value={tasks.defaultGroup}
           options={[
@@ -850,10 +1069,19 @@ function SprintsSection() {
       description="Sprint view and velocity defaults."
       onReset={() => reset("sprints")}
     >
-      <SettingRow label="Show completed" description="Include finished sprints in the list.">
-        <Toggle value={sprints.showCompleted} onChange={(v) => set("showCompleted", v)} />
+      <SettingRow
+        label="Show completed"
+        description="Include finished sprints in the list."
+      >
+        <Toggle
+          value={sprints.showCompleted}
+          onChange={(v) => set("showCompleted", v)}
+        />
       </SettingRow>
-      <SettingRow label="Velocity display" description="Unit used when showing sprint velocity.">
+      <SettingRow
+        label="Velocity display"
+        description="Unit used when showing sprint velocity."
+      >
         <SegmentedControl
           value={sprints.velocityDisplay}
           options={[
@@ -881,13 +1109,42 @@ function ChatSection() {
       description="AI chat interface preferences."
       onReset={() => reset("chat")}
     >
-      <SettingRow label="Timestamps" description="Show the time each message was sent.">
-        <Toggle value={chat.showTimestamps} onChange={(v) => set("showTimestamps", v)} />
+      <SettingRow
+        label="Timestamps"
+        description="Show the time each message was sent."
+      >
+        <Toggle
+          value={chat.showTimestamps}
+          onChange={(v) => set("showTimestamps", v)}
+        />
       </SettingRow>
-      <SettingRow label="Code highlighting" description="Syntax-highlight code blocks in responses.">
-        <Toggle value={chat.codeHighlighting} onChange={(v) => set("codeHighlighting", v)} />
+      <SettingRow
+        label="Code highlighting"
+        description="Syntax-highlight code blocks in responses."
+      >
+        <Toggle
+          value={chat.codeHighlighting}
+          onChange={(v) => set("codeHighlighting", v)}
+        />
       </SettingRow>
-      <SettingRow label="Message density" description="Spacing between messages in the conversation.">
+      <SettingRow
+        label="Default AI backend"
+        description="Which backend new chats start on: the OpenCode server, a saved API connection, or local Ollama. Switchable per-chat from the chat header."
+      >
+        <SegmentedControl
+          value={chat.defaultBackend}
+          options={[
+            { value: "opencode", label: "OpenCode" },
+            { value: "api", label: "API" },
+            { value: "ollama", label: "Ollama" },
+          ]}
+          onChange={(v) => set("defaultBackend", v)}
+        />
+      </SettingRow>
+      <SettingRow
+        label="Message density"
+        description="Spacing between messages in the conversation."
+      >
         <SegmentedControl
           value={chat.density}
           options={[
@@ -895,6 +1152,105 @@ function ChatSection() {
             { value: "comfortable", label: "Comfortable" },
           ]}
           onChange={(v) => set("density", v)}
+        />
+      </SettingRow>
+    </SectionPanel>
+  );
+}
+
+/** Number field bound to one agent-settings value (display units in/out). */
+function NumberSetting({
+  value,
+  onChange,
+  min,
+  max,
+  step = 1,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+  step?: number;
+}) {
+  return (
+    <Input
+      type="number"
+      min={min}
+      max={max}
+      step={step}
+      value={Number.isFinite(value) ? value : min}
+      onChange={(e) => {
+        const v = Number(e.target.value);
+        if (Number.isFinite(v)) onChange(Math.min(max, Math.max(min, v)));
+      }}
+      className="h-8 w-24 text-right text-sm"
+    />
+  );
+}
+
+function AgentSection() {
+  const s = useAgentSettings();
+  const set = (patch: Partial<Omit<AgentSettingsState, "set">>) => s.set(patch);
+
+  return (
+    <SectionPanel
+      title="Agent Loop"
+      description="Safety limits for every AI agent run (chat, agents, workflow). The model decides what to do; these bounds decide when it must stop — the agent stops cleanly and explains when one trips."
+      onReset={() => s.set(DEFAULT_AGENT_CONFIG)}
+    >
+      <SettingRow
+        label="Max iterations"
+        description={`Model ↔ tool round-trips per turn (${s.maxIterations}). Prevents a tool-looping model from running forever.`}
+      >
+        <NumberSetting
+          value={s.maxIterations}
+          min={1}
+          max={100}
+          onChange={(v) => set({ maxIterations: v })}
+        />
+      </SettingRow>
+      <SettingRow
+        label="Max runtime"
+        description={`Overall wall-clock budget per run, in minutes (${Math.round(s.maxRunMs / 60000)}m).`}
+      >
+        <NumberSetting
+          value={Math.round(s.maxRunMs / 60000)}
+          min={1}
+          max={60}
+          onChange={(v) => set({ maxRunMs: v * 60000 })}
+        />
+      </SettingRow>
+      <SettingRow
+        label="Max tool time"
+        description={`Per-tool execution budget, in seconds (${Math.round(s.maxToolMs / 1000)}s). Slower tools fail back to the model with a timeout error.`}
+      >
+        <NumberSetting
+          value={Math.round(s.maxToolMs / 1000)}
+          min={1}
+          max={300}
+          onChange={(v) => set({ maxToolMs: v * 1000 })}
+        />
+      </SettingRow>
+      <SettingRow
+        label="Max shell commands"
+        description={`Shell command executions per run (${s.maxShellCommands}). Stops the agent at the limit so a command-happy model can't bury the machine.`}
+      >
+        <NumberSetting
+          value={s.maxShellCommands}
+          min={0}
+          max={200}
+          onChange={(v) => set({ maxShellCommands: v })}
+        />
+      </SettingRow>
+      <SettingRow
+        label="Max file modifications"
+        description={`File writes per run (${s.maxFileModifications}). Stops the agent at the limit before it rewrites half the project.`}
+      >
+        <NumberSetting
+          value={s.maxFileModifications}
+          min={0}
+          max={200}
+          onChange={(v) => set({ maxFileModifications: v })}
         />
       </SettingRow>
     </SectionPanel>
@@ -914,8 +1270,14 @@ function AgentsSection() {
       description="Agents list and management preferences."
       onReset={() => reset("agents")}
     >
-      <SettingRow label="Show disabled agents" description="Include disabled agents in the agents list.">
-        <Toggle value={agents.showDisabled} onChange={(v) => set("showDisabled", v)} />
+      <SettingRow
+        label="Show disabled agents"
+        description="Include disabled agents in the agents list."
+      >
+        <Toggle
+          value={agents.showDisabled}
+          onChange={(v) => set("showDisabled", v)}
+        />
       </SettingRow>
     </SectionPanel>
   );
@@ -938,7 +1300,10 @@ function WorkflowSection() {
         label="Auto-advance"
         description="Automatically proceed to the next step when the current one completes."
       >
-        <Toggle value={workflow.autoAdvance} onChange={(v) => set("autoAdvance", v)} />
+        <Toggle
+          value={workflow.autoAdvance}
+          onChange={(v) => set("autoAdvance", v)}
+        />
       </SettingRow>
     </SectionPanel>
   );
@@ -947,7 +1312,8 @@ function WorkflowSection() {
 function AiServiceSection() {
   const projectId = useActiveProjectId();
   const [health, setHealth] = useState<
-    { checked: false } | { checked: true; ok: boolean; ollamaAvailable: boolean }
+    | { checked: false }
+    | { checked: true; ok: boolean; ollamaAvailable: boolean }
   >({ checked: false });
   const [reindexing, setReindexing] = useState(false);
   const [lastReindexed, setLastReindexed] = useState<number | null>(null);
@@ -959,7 +1325,11 @@ function AiServiceSection() {
         ok?: boolean;
         ollama?: { available?: boolean };
       };
-      setHealth({ checked: true, ok: data.ok === true, ollamaAvailable: data.ollama?.available === true });
+      setHealth({
+        checked: true,
+        ok: data.ok === true,
+        ollamaAvailable: data.ollama?.available === true,
+      });
     } catch {
       setHealth({ checked: true, ok: false, ollamaAvailable: false });
     }
@@ -997,12 +1367,14 @@ function AiServiceSection() {
             <span className="text-muted-foreground">Checking…</span>
           ) : health.ok ? (
             <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Connected
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{" "}
+              Connected
               {health.ollamaAvailable ? " · Ollama detected" : ""}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" /> Not running
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />{" "}
+              Not running
             </span>
           )}
           <Button variant="ghost" size="sm" onClick={() => void checkHealth()}>
@@ -1024,7 +1396,8 @@ function AiServiceSection() {
           disabled={!projectId || !health.checked || !health.ok || reindexing}
           onClick={() => void runReindex()}
         >
-          <Cpu className="h-3.5 w-3.5" /> {reindexing ? "Reindexing…" : "Reindex now"}
+          <Cpu className="h-3.5 w-3.5" />{" "}
+          {reindexing ? "Reindexing…" : "Reindex now"}
         </Button>
       </SettingRow>
     </SectionPanel>
@@ -1044,7 +1417,10 @@ function DocsSection() {
       description="Documentation hub editor and viewer defaults."
       onReset={() => reset("docs")}
     >
-      <SettingRow label="Default mode" description="Whether docs open in preview or edit mode.">
+      <SettingRow
+        label="Default mode"
+        description="Whether docs open in preview or edit mode."
+      >
         <SegmentedControl
           value={docs.defaultMode}
           options={[
@@ -1054,8 +1430,14 @@ function DocsSection() {
           onChange={(v) => set("defaultMode", v)}
         />
       </SettingRow>
-      <SettingRow label="Line numbers" description="Show line numbers in the documentation editor.">
-        <Toggle value={docs.showLineNumbers} onChange={(v) => set("showLineNumbers", v)} />
+      <SettingRow
+        label="Line numbers"
+        description="Show line numbers in the documentation editor."
+      >
+        <Toggle
+          value={docs.showLineNumbers}
+          onChange={(v) => set("showLineNumbers", v)}
+        />
       </SettingRow>
     </SectionPanel>
   );
@@ -1074,10 +1456,16 @@ function DevlogsSection() {
       description="Development timeline display preferences."
       onReset={() => reset("devlogs")}
     >
-      <SettingRow label="Show time" description="Display the time alongside each log entry's date.">
+      <SettingRow
+        label="Show time"
+        description="Display the time alongside each log entry's date."
+      >
         <Toggle value={devlogs.showTime} onChange={(v) => set("showTime", v)} />
       </SettingRow>
-      <SettingRow label="Group by" description="Bucket log entries into time groups.">
+      <SettingRow
+        label="Group by"
+        description="Bucket log entries into time groups."
+      >
         <SegmentedControl
           value={devlogs.groupBy}
           options={[
@@ -1105,7 +1493,10 @@ function SyncSection() {
       description="Local (in-browser) or Obsidian vault sync behavior."
       onReset={() => reset("sync")}
     >
-      <SettingRow label="Sync target" description="Keep the vault index in the browser, or push to a real Obsidian vault.">
+      <SettingRow
+        label="Sync target"
+        description="Keep the vault index in the browser, or push to a real Obsidian vault."
+      >
         <SegmentedControl
           value={sync.mode}
           options={[
@@ -1115,7 +1506,10 @@ function SyncSection() {
           onChange={(v) => set("mode", v)}
         />
       </SettingRow>
-      <SettingRow label="Auto-sync interval" description="How often to sync automatically in the background.">
+      <SettingRow
+        label="Auto-sync interval"
+        description="How often to sync automatically in the background."
+      >
         <SegmentedControl
           value={sync.autoSyncInterval}
           options={[
@@ -1127,7 +1521,10 @@ function SyncSection() {
           onChange={(v) => set("autoSyncInterval", v)}
         />
       </SettingRow>
-      <SettingRow label="Conflict resolution" description="What to do when local and remote versions differ.">
+      <SettingRow
+        label="Conflict resolution"
+        description="What to do when local and remote versions differ."
+      >
         <SegmentedControl
           value={sync.conflictResolution}
           options={[
@@ -1155,10 +1552,19 @@ function WatcherSection() {
       description="File system watcher defaults."
       onReset={() => reset("watcher")}
     >
-      <SettingRow label="Hidden files" description="Include dot-files and hidden directories in the watch tree.">
-        <Toggle value={watcher.showHiddenFiles} onChange={(v) => set("showHiddenFiles", v)} />
+      <SettingRow
+        label="Hidden files"
+        description="Include dot-files and hidden directories in the watch tree."
+      >
+        <Toggle
+          value={watcher.showHiddenFiles}
+          onChange={(v) => set("showHiddenFiles", v)}
+        />
       </SettingRow>
-      <SettingRow label="Watch depth" description="How many directory levels deep to recurse.">
+      <SettingRow
+        label="Watch depth"
+        description="How many directory levels deep to recurse."
+      >
         <SegmentedControl
           value={watcher.watchDepth}
           options={[
@@ -1186,7 +1592,10 @@ function SearchSection() {
       description="Search mode and results defaults."
       onReset={() => reset("search")}
     >
-      <SettingRow label="Default mode" description="How queries are matched against your content.">
+      <SettingRow
+        label="Default mode"
+        description="How queries are matched against your content."
+      >
         <SegmentedControl
           value={search.defaultMode}
           options={[
@@ -1197,7 +1606,10 @@ function SearchSection() {
           onChange={(v) => set("defaultMode", v)}
         />
       </SettingRow>
-      <SettingRow label="Results per page" description="How many results to show per page.">
+      <SettingRow
+        label="Results per page"
+        description="How many results to show per page."
+      >
         <SegmentedControl
           value={search.resultsPerPage}
           options={[
@@ -1225,8 +1637,14 @@ function PluginsSection() {
       description="Plugin marketplace display preferences."
       onReset={() => reset("plugins")}
     >
-      <SettingRow label="Show disabled plugins" description="Include disabled plugins in the marketplace list.">
-        <Toggle value={plugins.showDisabled} onChange={(v) => set("showDisabled", v)} />
+      <SettingRow
+        label="Show disabled plugins"
+        description="Include disabled plugins in the marketplace list."
+      >
+        <Toggle
+          value={plugins.showDisabled}
+          onChange={(v) => set("showDisabled", v)}
+        />
       </SettingRow>
     </SectionPanel>
   );
@@ -1245,10 +1663,16 @@ function CanvasSection() {
       description="Visual canvas display, snapping, and performance defaults."
       onReset={() => reset("canvas")}
     >
-      <SettingRow label="Background grid" description="Show a dot grid on the canvas background.">
+      <SettingRow
+        label="Background grid"
+        description="Show a dot grid on the canvas background."
+      >
         <Toggle value={canvas.showGrid} onChange={(v) => set("showGrid", v)} />
       </SettingRow>
-      <SettingRow label="Grid size" description="Spacing between grid dots, in pixels.">
+      <SettingRow
+        label="Grid size"
+        description="Spacing between grid dots, in pixels."
+      >
         <SegmentedControl
           value={String(canvas.gridSize) as "16" | "20" | "24" | "32"}
           options={[
@@ -1260,20 +1684,44 @@ function CanvasSection() {
           onChange={(v) => set("gridSize", Number(v))}
         />
       </SettingRow>
-      <SettingRow label="Snap to grid" description="Align nodes to the grid when dragging.">
-        <Toggle value={canvas.snapToGrid} onChange={(v) => set("snapToGrid", v)} />
+      <SettingRow
+        label="Snap to grid"
+        description="Align nodes to the grid when dragging."
+      >
+        <Toggle
+          value={canvas.snapToGrid}
+          onChange={(v) => set("snapToGrid", v)}
+        />
       </SettingRow>
-      <SettingRow label="Snap to objects" description="Show alignment guides near other nodes.">
-        <Toggle value={canvas.snapToObjects} onChange={(v) => set("snapToObjects", v)} />
+      <SettingRow
+        label="Snap to objects"
+        description="Show alignment guides near other nodes."
+      >
+        <Toggle
+          value={canvas.snapToObjects}
+          onChange={(v) => set("snapToObjects", v)}
+        />
       </SettingRow>
-      <SettingRow label="Card shadows" description="Render subtle shadows under canvas cards.">
-        <Toggle value={canvas.cardShadows} onChange={(v) => set("cardShadows", v)} />
+      <SettingRow
+        label="Card shadows"
+        description="Render subtle shadows under canvas cards."
+      >
+        <Toggle
+          value={canvas.cardShadows}
+          onChange={(v) => set("cardShadows", v)}
+        />
       </SettingRow>
       <SettingRow
         label="LOD threshold"
         description={`Below this zoom level, cards render simplified previews (${Math.round(canvas.lodThreshold * 100)}%).`}
       >
-        <RangeField min={0.1} max={1} step={0.1} value={canvas.lodThreshold} onChange={(v) => set("lodThreshold", v)} />
+        <RangeField
+          min={0.1}
+          max={1}
+          step={0.1}
+          value={canvas.lodThreshold}
+          onChange={(v) => set("lodThreshold", v)}
+        />
       </SettingRow>
     </SectionPanel>
   );
@@ -1294,6 +1742,7 @@ const SECTION_COMPONENTS: Record<Section, () => React.ReactElement> = {
   tasks: TasksSection,
   sprints: SprintsSection,
   chat: ChatSection,
+  agent: AgentSection,
   agents: AgentsSection,
   workflow: WorkflowSection,
   "ai-service": AiServiceSection,

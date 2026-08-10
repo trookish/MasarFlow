@@ -7,6 +7,8 @@ import {
   displayPath,
   isIgnoredSegment,
   isDeniedName,
+  fsRequestId,
+  logFs,
 } from "../_shared";
 
 // List a directory tree inside a linked project root. Depth-capped and
@@ -23,13 +25,16 @@ interface Entry {
 }
 
 export async function POST(req: Request): Promise<Response> {
+  const startedAt = Date.now();
   try {
     const body = await readJsonBody(req);
+    const requestId = fsRequestId(body);
     const root = String(body.root ?? "");
     const rel = String(body.path ?? "");
     const depth = Math.min(Math.max(Number(body.depth ?? 2), 0), 6);
     const maxEntries = Math.min(Number(body.maxEntries ?? 400), 2000);
 
+    const resolveRoot = path.resolve(root);
     const abs = resolveInsideRoot(root, rel);
     const stat = await fs.promises.stat(abs).catch(() => null);
     if (!stat?.isDirectory()) {
@@ -75,10 +80,16 @@ export async function POST(req: Request): Promise<Response> {
       }
     }
 
-    const resolveRoot = path.resolve(root);
     await walk(abs, rel ? 0 : 0);
+    logFs("list", requestId, body, startedAt, { ok: true });
     return Response.json({ ok: true, entries, truncated });
   } catch (e) {
+    const err = e as { status?: number; message?: string };
+    logFs("list", "unknown", {}, startedAt, {
+      ok: false,
+      error: err?.message ?? "failed",
+      status: err?.status ?? 500,
+    });
     return fail(e);
   }
 }

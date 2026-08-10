@@ -79,6 +79,9 @@ export const chatMessagesRepo = {
     if (!threadId) return [];
     return db.chatMessages.where("threadId").equals(threadId).sortBy("createdAt");
   },
+  get(id: string): Promise<ChatMessage | undefined> {
+    return db.chatMessages.get(id);
+  },
   async create(
     input: Partial<ChatMessage> & Pick<ChatMessage, "threadId" | "role">,
   ): Promise<ChatMessage> {
@@ -92,6 +95,21 @@ export const chatMessagesRepo = {
   },
   async update(id: string, patch: Partial<ChatMessage>): Promise<void> {
     await db.chatMessages.update(id, patch);
+  },
+  /**
+   * Flip a message that is still mid-stream (from a dead session, e.g. after
+   * a refresh or thread switch) into a visible "interrupted" error so it
+   * never renders as a silent blank bubble. No-op for finished messages.
+   */
+  async markInterruptedIfStreaming(
+    id: string,
+    message = "The response was interrupted before it finished — Retry to get the answer.",
+  ): Promise<void> {
+    const m = await db.chatMessages.get(id);
+    if (!m || m.role !== "assistant") return;
+    if (m.status === "streaming" || m.status === undefined) {
+      await db.chatMessages.update(id, { status: "error", error: message });
+    }
   },
   async remove(id: string): Promise<void> {
     await db.chatMessages.delete(id);

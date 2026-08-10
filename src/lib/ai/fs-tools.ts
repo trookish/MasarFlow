@@ -5,7 +5,8 @@ import type { WorkspaceToolDef, ToolCallRequest } from "./tools";
 /**
  * Filesystem & shell tools for the agentic chat — opencode-style agency over
  * external project folders the user explicitly linked to the workspace
- * project (e.g. a Unity game project next to its notes/specs/docs).
+ * project (e.g. a web app, a Unity game, or a desktop tool sitting next to
+ * its notes/specs/docs).
  *
  * Execution calls the sandboxed /api/fs/* routes (every path re-validated
  * server-side against the linked root). Reads are free; `fs_write` and
@@ -82,7 +83,7 @@ export const FS_TOOLS: WorkspaceToolDef[] = [
   {
     name: "shell_run",
     description:
-      "Run a shell command in a linked external project (builds, tests, git, package managers, Unity CLI, etc.). REQUIRES USER APPROVAL per command. Output is captured and returned (stdout/stderr, capped).",
+      "Run a shell command in a linked external project (builds, tests, git, package managers, engine or build CLIs — npm, cargo, gradle, Unity, etc.). REQUIRES USER APPROVAL per command. Output is captured and returned (stdout/stderr, capped).",
     parameters: {
       type: "object",
       properties: {
@@ -111,6 +112,14 @@ export interface FsToolContext {
   roots: LinkedProject[];
   /** Pause for the user's decision. Must resolve true (allow) / false (deny). */
   requestApproval: (req: ApprovalRequest) => Promise<boolean>;
+  /**
+   * Cancellation signal for the enclosing agent run. While set, an in-flight
+   * approval (or fs/shell fetch) aborts promptly instead of leaving the agent
+   * loop suspended — a Stop press must never hang the turn.
+   */
+  signal?: AbortSignal;
+  /** Correlates this tool's server-side execution with the agent run. */
+  requestId?: string;
 }
 
 /** Cap tool-result size so a big file/command can't flood the context. */
@@ -148,11 +157,16 @@ function resolveRoot(
   );
 }
 
-async function postFs(op: string, payload: Record<string, unknown>) {
+async function postFs(
+  op: string,
+  payload: Record<string, unknown>,
+  signal?: AbortSignal,
+) {
   const res = await fetch(`/api/fs/${op}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
+    signal,
   });
   const json = (await res.json().catch(() => null)) as Record<
     string,
@@ -181,16 +195,35 @@ export async function executeFsTool(
   delete args.root;
 
   if (SENSITIVE_FS_TOOLS.has(call.name)) {
-    const allowed = await ctx.requestApproval({
-      name: call.name,
-      arguments: args,
-      rootLabel: `${root.name} (${root.rootPath})`,
-    });
+    // Wait for the user's decision, but never hang the agent on it: an
+    // aborted run (Stop, thread switch, unmount) settles the approval as a
+    // denial so the loop can wind down immediately.
+    let allowed = false;
+    if (ctx.signal?.aborted) return cancelledResult();
+    try {
+      allowed = await Promise.race([
+        ctx.requestApproval({
+          name: call.name,
+          arguments: args,
+          rootLabel: `${root.name} (${root.rootPath})`,
+        }),
+        ctx.signal
+          ? new Promise<boolean>((resolve) =>
+              ctx.signal!.addEventListener("abort", () => resolve(false), {
+                once: true,
+              }),
+            )
+          : never(),
+      ]);
+    } catch {
+      return cancelledResult();
+    }
     if (!allowed) {
       return JSON.stringify({
         ok: false,
-        error:
-          "The user denied this action. Do not retry it — ask how to proceed.",
+        error: ctx.signal?.aborted
+          ? "The action was cancelled."
+          : "The user denied this action. Do not retry it — ask how to proceed.",
       });
     }
   }
@@ -211,7 +244,11 @@ export async function executeFsTool(
     return JSON.stringify({ ok: false, error: `Unknown tool: ${call.name}` });
 
   try {
-    const result = await postFs(op, { root: root.rootPath, ...args });
+    const result = await postFs(
+      op,
+      { root: root.rootPath, ...args, requestId: ctx.requestId },
+      ctx.signal,
+    );
     // Log machine-touching actions so the trail is visible in Dev Logs.
     if (SENSITIVE_FS_TOOLS.has(call.name) && result.ok !== false) {
       const detail =
@@ -233,6 +270,13 @@ export async function executeFsTool(
       typeof v === "string" && v.length > RESULT_CAP ? cap(v) : v,
     );
   } catch (e) {
+    if (ctx.signal?.aborted) return cancelledResult();
     return JSON.stringify({ ok: false, error: (e as Error).message });
   }
+}
+
+const never = () => new Promise<boolean>(() => {});
+
+function cancelledResult(): string {
+  return JSON.stringify({ ok: false, error: "The action was cancelled." });
 }
