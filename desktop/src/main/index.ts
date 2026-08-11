@@ -1,10 +1,11 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell, Tray } from "electron";
 import { existsSync } from "node:fs";
 import { join, join as pathJoin } from "node:path";
 import type {
   AppSettings,
   EnvField,
   ServerStatus,
+  SessionInfo,
   SetupState,
   StartSessionRequest,
 } from "@shared/types";
@@ -17,11 +18,123 @@ import { maybeRunSelfTest } from "./selftest";
 import { startGuiTest } from "./guitest";
 
 let mainWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
+let quitting = false;
 
 function send(channel: string, payload: unknown): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send(channel, payload);
   }
+}
+
+// ── run actions (shared by IPC and tray menu) ──────────────────────────────
+
+function startDev(autoOpen: boolean): SessionInfo | null {
+  const dir = currentTargetDir();
+  ptyManager.killKind("run");
+  const session = ptyManager.start({
+    label: "npm run dev:full",
+    kind: "run",
+    command: "npm run dev:full",
+    file: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
+    args: process.platform === "win32" ? ["/c", "npm run dev:full"] : ["-lc", "npm run dev:full"],
+    cwd: dir,
+  });
+  if (autoOpen) {
+    setTimeout(() => maybeOpenApp(), 8000);
+  }
+  return session;
+}
+
+function startProd(autoOpen: boolean): SessionInfo | null {
+  const dir = currentTargetDir();
+  ptyManager.killKind("run");
+  const session = ptyManager.start({
+    label: "npm start",
+    kind: "run",
+    command: "npm start",
+    file: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
+    args: process.platform === "win32" ? ["/c", "npm start"] : ["-lc", "npm start"],
+    cwd: dir,
+  });
+  if (autoOpen) {
+    setTimeout(() => maybeOpenApp(), 8000);
+  }
+  return session;
+}
+
+function buildProject(): SessionInfo | null {
+  ptyManager.killKind("build");
+  return ptyManager.start({
+    label: "npm run build",
+    kind: "build",
+    command: "npm run build",
+    file: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
+    args: process.platform === "win32" ? ["/c", "npm run build"] : ["-lc", "npm run build"],
+    cwd: currentTargetDir(),
+  });
+}
+
+function stopRun(): void {
+  ptyManager.killKind("run");
+}
+
+function maybeOpenApp(): void {
+  const { appPort } = servicePorts(currentTargetDir());
+  void shell.openExternal(`http://127.0.0.1:${appPort}`);
+}
+
+function openBrowserIfUp(): void {
+  if (lastStatus.app) {
+    void shell.openExternal(`http://127.0.0.1:${lastStatus.appPort}`);
+  }
+}
+
+function showLauncherWindow(): void {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+/** "Open …" tray items navigate the renderer to a launcher page. */
+function navigateToPage(page: "run" | "setup" | "config" | "testing"): void {
+  showLauncherWindow();
+  send("ui:navigate", page);
+}
+
+function createTray(): void {
+  const iconPath = pathJoin(__dirname, "../../resources/icon.png");
+  const icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
+  tray = new Tray(icon);
+  tray.setToolTip("MasarFlow Launcher");
+  tray.on("click", showLauncherWindow);
+  rebuildTrayMenu();
+}
+
+function rebuildTrayMenu(): void {
+  if (!tray) return;
+  const appRunning = lastStatus.app;
+  const menu = Menu.buildFromTemplate([
+    { label: "Show launcher", click: showLauncherWindow },
+    { type: "separator" },
+    { label: "Run app (dev)", click: () => startDev(false) },
+    { label: "Run app (prod)", click: () => startProd(false) },
+    { label: "Stop app", click: stopRun },
+    { label: "Build", click: buildProject },
+    {
+      label: appRunning ? "Open app in browser" : "Open app in browser (not running)",
+      enabled: appRunning,
+      click: openBrowserIfUp,
+    },
+    { type: "separator" },
+    { label: "Open Setup", click: () => navigateToPage("setup") },
+    { label: "Open Configuration", click: () => navigateToPage("config") },
+    { label: "Open Testing", click: () => navigateToPage("testing") },
+    { type: "separator" },
+    { label: "Exit", click: () => app.quit() },
+  ]);
+  tray.setContextMenu(menu);
 }
 
 function createWindow(): void {
@@ -46,6 +159,14 @@ function createWindow(): void {
   mainWindow.on("ready-to-show", () => mainWindow?.show());
   mainWindow.on("maximize", () => send("window:maximized", true));
   mainWindow.on("unmaximize", () => send("window:maximized", false));
+
+  // Close hides to the system tray instead of quitting — Exit lives in the
+  // tray menu (right-click the icon).
+  mainWindow.on("close", (e) => {
+    if (quitting) return;
+    e.preventDefault();
+    mainWindow?.hide();
+  });
 
   if (process.env.ELECTRON_RENDERER_URL) {
     void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
@@ -74,50 +195,14 @@ function registerIpc(): void {
   ptyManager.on("changed", (info) => send("session:changed", info));
 
   // ── run (dev/prod) ──────────────────────────────────────────────────────
-  ipcMain.handle("run:start-dev", (_e, opts: { autoOpen?: boolean }) => {
-    const dir = currentTargetDir();
-    ptyManager.killKind("run");
-    const session = ptyManager.start({
-      label: "npm run dev:full",
-      kind: "run",
-      command: "npm run dev:full",
-      file: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
-      args: process.platform === "win32" ? ["/c", "npm run dev:full"] : ["-lc", "npm run dev:full"],
-      cwd: dir,
-    });
-    if (opts?.autoOpen) {
-      setTimeout(() => maybeOpenApp(), 8000);
-    }
-    return session;
-  });
-  ipcMain.handle("run:start-prod", (_e, opts: { autoOpen?: boolean }) => {
-    const dir = currentTargetDir();
-    ptyManager.killKind("run");
-    const session = ptyManager.start({
-      label: "npm start",
-      kind: "run",
-      command: "npm start",
-      file: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
-      args: process.platform === "win32" ? ["/c", "npm start"] : ["-lc", "npm start"],
-      cwd: dir,
-    });
-    if (opts?.autoOpen) {
-      setTimeout(() => maybeOpenApp(), 8000);
-    }
-    return session;
-  });
-  ipcMain.handle("run:build", () => {
-    ptyManager.killKind("build");
-    return ptyManager.start({
-      label: "npm run build",
-      kind: "build",
-      command: "npm run build",
-      file: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
-      args: process.platform === "win32" ? ["/c", "npm run build"] : ["-lc", "npm run build"],
-      cwd: currentTargetDir(),
-    });
-  });
-  ipcMain.handle("run:stop", () => ptyManager.killKind("run"));
+  ipcMain.handle("run:start-dev", (_e, opts: { autoOpen?: boolean }) =>
+    startDev(opts?.autoOpen ?? false),
+  );
+  ipcMain.handle("run:start-prod", (_e, opts: { autoOpen?: boolean }) =>
+    startProd(opts?.autoOpen ?? false),
+  );
+  ipcMain.handle("run:build", () => buildProject());
+  ipcMain.handle("run:stop", () => stopRun());
 
   // ── setup / initialization ──────────────────────────────────────────────
   ipcMain.handle("setup:check", () => setupEngine.check(currentTargetDir()));
@@ -172,11 +257,6 @@ function registerIpc(): void {
   });
 }
 
-function maybeOpenApp(): void {
-  const { appPort } = servicePorts(currentTargetDir());
-  void shell.openExternal(`http://127.0.0.1:${appPort}`);
-}
-
 const setupEngine = createSetupEngine((state: SetupState) => send("setup:state", state));
 let lastStatus: ServerStatus = { app: false, python: false, appPort: 3000, pythonPort: 8000 };
 
@@ -205,12 +285,14 @@ if (!gotLock) {
     registerIpc();
     createWindow();
     startGuiTest(mainWindow as BrowserWindow);
+    createTray();
 
     const stopPolling = startStatusPolling(
       () => servicePorts(currentTargetDir()),
       (status) => {
         lastStatus = status;
         send("server:status", status);
+        rebuildTrayMenu();
       },
     );
 
@@ -225,6 +307,7 @@ if (!gotLock) {
     });
 
     app.on("before-quit", () => {
+      quitting = true;
       stopPolling();
       ptyManager.killAll();
     });

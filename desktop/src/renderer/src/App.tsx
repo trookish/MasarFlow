@@ -47,6 +47,11 @@ export default function App() {
     const offList = window.masarFlow.session.onList(setSessions);
     const offChanged = window.masarFlow.session.onChanged(upsertSession);
     const offMax = window.masarFlow.window.onMaximized(setMaximized);
+    const offNav = window.masarFlow.ui.onNavigate((page) => {
+      if (page === "run" || page === "setup" || page === "config" || page === "testing") {
+        setPage(page);
+      }
+    });
 
     const onKey = (e: KeyboardEvent): void => {
       if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "`")) {
@@ -62,6 +67,7 @@ export default function App() {
       offList();
       offChanged();
       offMax();
+      offNav();
       window.removeEventListener("keydown", onKey);
     };
   }, [setEnv, setMaximized, setPage, setServer, setSessions, setSetup, setSettings, upsertSession]);

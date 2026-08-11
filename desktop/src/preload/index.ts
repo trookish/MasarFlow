@@ -96,6 +96,13 @@ const api = {
     chooseDirectory: (): Promise<{ path: string; ok: boolean } | null> =>
       ipcRenderer.invoke("dialog:choose-directory"),
   },
+  ui: {
+    onNavigate: (cb: (page: string) => void): Unsubscribe => {
+      const listener = (_e: IpcRendererEvent, page: string): void => cb(page);
+      ipcRenderer.on("ui:navigate", listener);
+      return () => ipcRenderer.removeListener("ui:navigate", listener);
+    },
+  },
 };
 
 export type MasarFlowApi = typeof api;
