@@ -8,7 +8,7 @@ export function TerminalView({ sessionId }: { sessionId: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Xterm | null>(null);
   const fontSize = useApp((s) => s.settings?.fontSize ?? 13);
-  const accent = useApp((s) => s.settings?.accent ?? "#7c5cfc");
+  const accent = useApp((s) => s.settings?.accent ?? "#dedede");
 
   useEffect(() => {
     const container = containerRef.current;

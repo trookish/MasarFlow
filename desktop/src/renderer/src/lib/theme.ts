@@ -9,6 +9,7 @@ import type {
 import { contrastText } from "./cn";
 
 export const ACCENTS = [
+  { name: "White", value: "#dedede" },
   { name: "Violet", value: "#7c5cfc" },
   { name: "Indigo", value: "#6366f1" },
   { name: "Blue", value: "#3b82f6" },
@@ -24,7 +25,7 @@ export const ACCENTS = [
 ];
 
 export const GRADIENT_PRESETS: Array<{ name: string; from: string; to: string; angle: number }> = [
-  { name: "Aurora", from: "#7c5cfc", to: "#22d3ee", angle: 135 },
+  { name: "Aurora", from: "#dedede", to: "#22d3ee", angle: 135 },
   { name: "Sunset", from: "#f43f5e", to: "#f59e0b", angle: 135 },
   { name: "Ocean", from: "#3b82f6", to: "#06b6d4", angle: 135 },
   { name: "Forest", from: "#10b981", to: "#84cc16", angle: 135 },
@@ -63,17 +64,17 @@ export const LOGO_BG_OPTIONS: Array<{ mode: LogoBgMode; label: string }> = [
 export const APPEARANCE_DEFAULTS = {
   theme: "dark" as ThemeMode,
   accentMode: "solid" as AccentMode,
-  accent: "#7c5cfc",
+  accent: "#dedede",
   accent2: "#22d3ee",
   gradientStops: [
-    { color: "#7c5cfc", position: 0 },
+    { color: "#dedede", position: 0 },
     { color: "#22d3ee", position: 100 },
   ] as GradientStop[],
   gradientAngle: 135,
   radius: 0.625,
   fontScale: 1,
   logoColorMode: "original" as LogoColorMode,
-  logoColor: "#7c5cfc",
+  logoColor: "#dedede",
   logoBgMode: "none" as LogoBgMode,
   logoBgColor: "#ffffff",
 };
@@ -87,7 +88,7 @@ export function clampPosition(pos: number): number {
 export function normalizeStops(stops: GradientStop[]): GradientStop[] {
   const sorted = [...stops]
     .map((s) => ({
-      color: /^#[0-9a-fA-F]{6}$/.test(s.color) ? s.color.toLowerCase() : "#7c5cfc",
+      color: /^#[0-9a-fA-F]{6}$/.test(s.color) ? s.color.toLowerCase() : "#dedede",
       position: clampPosition(s.position),
     }))
     .sort((a, b) => a.position - b.position);
@@ -100,7 +101,7 @@ export function normalizeStops(stops: GradientStop[]): GradientStop[] {
   return deduped.length >= 2
     ? deduped
     : [
-        { color: "#7c5cfc", position: 0 },
+        { color: "#dedede", position: 0 },
         { color: "#22d3ee", position: 100 },
       ];
 }
@@ -112,7 +113,7 @@ export function gradientCss(stops: GradientStop[], angle: number): string {
 
 export function hexToRgba(hex: string, alpha: number): string {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
-  if (!m) return `rgba(124, 92, 252, ${alpha})`;
+  if (!m) return `rgba(222, 222, 222, ${alpha})`;
   const r = parseInt(m[1].slice(0, 2), 16);
   const g = parseInt(m[1].slice(2, 4), 16);
   const b = parseInt(m[1].slice(4, 6), 16);

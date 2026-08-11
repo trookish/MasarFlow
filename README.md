@@ -207,15 +207,22 @@ terminal window needed:
   mode switch, live status chip, port health indicators, open-in-browser,
   and Stop (kills the whole process tree).
 - **Configuration** — a form for every `.env.local` variable plus launcher
-  settings (target directory, dark / light / AMOLED theme, accent color,
-  auto-open browser, terminal font size).
+  settings (target directory, auto-open browser, terminal font size) and a
+  full **Appearance** panel: Light / Dark / AMOLED / System color scheme,
+  solid or gradient accent style with presets and a custom gradient editor,
+  corner radius, UI scale, and logo color/background modes.
 - **Testing** — one-click `lint`, `typecheck`, `test`, `e2e`, and Python
   `pytest` runs, each streaming to its own terminal tab with pass/fail badges.
 - **Terminal** — collapsible panel with a tab per session and an interactive
   shell (real PTY: ANSI colors, Ctrl-C, resize-aware).
+- **System tray** — the launcher keeps running in the Windows notification
+  area when you close the window. Right-click the tray icon for quick
+  actions: show the launcher, run/stop/build the app, open it in the
+  browser, jump to a page, or exit.
 
-The interface mirrors the MasarFlow web UI — same dark theme, violet accent,
-components, and fonts.
+The interface mirrors the MasarFlow web UI — same dark theme, default white
+accent, components, and fonts (the accent, gradient, radius, and scale all
+sync with the launcher's appearance settings).
 
 ```bash
 npm run desktop:dev        # launcher in development (hot reload)

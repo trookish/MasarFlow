@@ -18,7 +18,7 @@ interface LogoProps {
  */
 export function Logo({ size = 44, className }: LogoProps) {
   const settings = useApp((s) => s.settings);
-  const accent = settings?.accent ?? "#7c5cfc";
+  const accent = settings?.accent ?? "#dedede";
   const logoColorMode = settings?.logoColorMode ?? "original";
   const logoColor = settings?.logoColor ?? accent;
   const logoBgMode = settings?.logoBgMode ?? "none";

@@ -43,12 +43,12 @@ describe("normalizeStops", () => {
     expect(normalizeStops([])).toHaveLength(2);
   });
 
-  it("replaces invalid colors with the default violet", () => {
+  it("replaces invalid colors with the default white", () => {
     const stops = normalizeStops([
       { color: "not-a-color", position: 0 },
       { color: "#FF0000", position: 100 },
     ]);
-    expect(stops[0].color).toBe("#7c5cfc");
+    expect(stops[0].color).toBe("#dedede");
     expect(stops[1].color).toBe("#ff0000");
   });
 });

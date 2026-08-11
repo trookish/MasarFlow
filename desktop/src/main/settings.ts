@@ -4,6 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import type { AppSettings } from "@shared/types";
 
 const ACCENTS = [
+  "#dedede",
   "#7c5cfc",
   "#6366f1",
   "#3b82f6",

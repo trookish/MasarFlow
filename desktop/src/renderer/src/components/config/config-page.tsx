@@ -105,7 +105,7 @@ function ColorField({
     <div className="flex items-center gap-2">
       <input
         type="color"
-        value={/^#[0-9a-f]{6}$/i.test(value) ? value : "#7c5cfc"}
+        value={/^#[0-9a-f]{6}$/i.test(value) ? value : "#dedede"}
         onChange={(e) => {
           onChange(e.target.value);
           setText(e.target.value);
@@ -121,7 +121,7 @@ function ColorField({
           if (/^#[0-9a-fA-F]{6}$/.test(v)) onChange(v);
         }}
         onBlur={() => setText(value)}
-        placeholder="#7c5cfc"
+        placeholder="#dedede"
         className="h-7 w-24 font-mono text-xs"
       />
     </div>

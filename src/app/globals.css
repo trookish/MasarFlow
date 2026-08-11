@@ -34,10 +34,10 @@
   --sidebar-border: #e4e4e7;
   --radius: 0.625rem;
 
-  /* Default accent palette (violet). Overridden by [data-accent]. */
-  --primary: #7c5cfc;
-  --primary-foreground: #ffffff;
-  --ring: #7c5cfc;
+  /* Default accent palette (white). Overridden by [data-accent]. */
+  --primary: #dedede;
+  --primary-foreground: #18181b;
+  --ring: #dedede;
 
   /* Knowledge-graph / entity type colors */
   --node-idea: #f59e0b;

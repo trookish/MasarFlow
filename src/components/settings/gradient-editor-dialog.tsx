@@ -231,7 +231,7 @@ export function GradientEditorDialog({
                   updateStop(selected, {
                     color: /^#[0-9a-fA-F]{6}$/.test(draft[selected].color)
                       ? draft[selected].color
-                      : "#7c5cfc",
+                      : "#dedede",
                   })
                 }
                 aria-label="Stop hex color"

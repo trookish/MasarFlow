@@ -43,9 +43,9 @@
   --sidebar-border: #e4e4e7;
   --radius: 0.625rem;
 
-  --primary: #7c5cfc;
-  --primary-foreground: #ffffff;
-  --ring: #7c5cfc;
+  --primary: #dedede;
+  --primary-foreground: #18181b;
+  --ring: #dedede;
 }
 
 .dark {

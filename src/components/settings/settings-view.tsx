@@ -626,7 +626,7 @@ function ColorField({
           if (/^#[0-9a-fA-F]{6}$/.test(v)) onChange(v);
         }}
         onBlur={() => setText(value)}
-        placeholder="#7c5cfc"
+        placeholder="#dedede"
         className="h-7 w-24 font-mono text-xs"
       />
     </div>

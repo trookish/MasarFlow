@@ -44,7 +44,7 @@ export function normalizeStops(stops: GradientStop[]): GradientStop[] {
     .map((s) => ({
       color: /^#[0-9a-fA-F]{6}$/.test(s.color)
         ? s.color.toLowerCase()
-        : "#7c5cfc",
+        : "#dedede",
       position: clampPosition(s.position),
     }))
     .sort((a, b) => a.position - b.position);
@@ -58,7 +58,7 @@ export function normalizeStops(stops: GradientStop[]): GradientStop[] {
   return deduped.length >= 2
     ? deduped
     : [
-        { color: "#7c5cfc", position: 0 },
+        { color: "#dedede", position: 0 },
         { color: "#22d3ee", position: 100 },
       ];
 }
@@ -73,6 +73,7 @@ export function gradientCss(stops: GradientStop[], angle: number): string {
 
 /** Solid accent swatches offered in the picker. Any hex is also allowed. */
 export const ACCENT_PRESETS: AccentPreset[] = [
+  { name: "White", color: "#dedede" },
   { name: "Violet", color: "#7c5cfc" },
   { name: "Indigo", color: "#6366f1" },
   { name: "Blue", color: "#3b82f6" },
@@ -89,7 +90,7 @@ export const ACCENT_PRESETS: AccentPreset[] = [
 
 /** Ready-made gradients. Selecting one fills accentColor/accentColor2/gradientAngle. */
 export const GRADIENT_PRESETS: GradientPreset[] = [
-  { name: "Aurora", from: "#7c5cfc", to: "#22d3ee", angle: 135 },
+  { name: "Aurora", from: "#dedede", to: "#22d3ee", angle: 135 },
   { name: "Sunset", from: "#f43f5e", to: "#f59e0b", angle: 135 },
   { name: "Ocean", from: "#3b82f6", to: "#06b6d4", angle: 135 },
   { name: "Forest", from: "#10b981", to: "#84cc16", angle: 135 },
@@ -104,11 +105,11 @@ export const GRADIENT_PRESETS: GradientPreset[] = [
 export const APPEARANCE_DEFAULTS = {
   mode: "dark" as ThemeMode,
   accentMode: "solid" as AccentMode,
-  accentColor: "#7c5cfc",
+  accentColor: "#dedede",
   accentColor2: "#22d3ee",
   /** The gradient's color stops (source of truth for gradient mode). */
   gradientStops: [
-    { color: "#7c5cfc", position: 0 },
+    { color: "#dedede", position: 0 },
     { color: "#22d3ee", position: 100 },
   ] as GradientStop[],
   gradientAngle: 135,
@@ -118,7 +119,7 @@ export const APPEARANCE_DEFAULTS = {
   fontScale: 1,
   /** Brand logo tint: keep the source PNG, follow the accent, or a custom hex. */
   logoColorMode: "original" as LogoColorMode,
-  logoColor: "#7c5cfc",
+  logoColor: "#dedede",
   /** Background fill behind the logo. */
   logoBgMode: "white" as LogoBgMode,
   logoBgColor: "#ffffff",
