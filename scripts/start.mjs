@@ -15,6 +15,7 @@ import { existsSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { installOpencodeTools } from "./install-opencode-tools.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -50,8 +51,14 @@ function resolveOpencodeBin() {
   if (process.platform === "win32") {
     // Windows default npm global root (no npm call needed — execFileSync
     // cannot resolve the extension-less `npm` shim).
-    const appDataRoot = path.join(process.env.APPDATA ?? "", "npm", "node_modules");
-    candidates.push(path.join(appDataRoot, "opencode-ai", "bin", "opencode.exe"));
+    const appDataRoot = path.join(
+      process.env.APPDATA ?? "",
+      "npm",
+      "node_modules",
+    );
+    candidates.push(
+      path.join(appDataRoot, "opencode-ai", "bin", "opencode.exe"),
+    );
     try {
       const npmRoot = execFileSync(
         process.platform === "win32" ? "npm.cmd" : "npm",
@@ -62,7 +69,9 @@ function resolveOpencodeBin() {
     } catch {}
   } else {
     try {
-      const npmRoot = execFileSync("npm", ["root", "-g"], { encoding: "utf8" }).trim();
+      const npmRoot = execFileSync("npm", ["root", "-g"], {
+        encoding: "utf8",
+      }).trim();
       candidates.push(path.join(npmRoot, "opencode-ai", "bin", "opencode"));
     } catch {}
   }
@@ -77,7 +86,7 @@ function resolveOpencodeBin() {
  * and wait until /global/health responds. Returns the child, or null when the
  * server is already running / spawning is disabled / health never came up.
  */
-async function startOpencode() {
+async function startOpencode(bridgeEnv) {
   const requestedUrl = process.env.OPENCODE_BASE_URL?.trim();
   if (requestedUrl) {
     const health = await fetchJson(
@@ -116,12 +125,21 @@ async function startOpencode() {
   if (serverPassword) {
     env.OPENCODE_SERVER_PASSWORD = serverPassword;
     env.OPENCODE_SERVER_USERNAME =
-      process.env.OPENCODE_SERVER_USERNAME ?? process.env.OPENCODE_USERNAME ?? "opencode";
+      process.env.OPENCODE_SERVER_USERNAME ??
+      process.env.OPENCODE_USERNAME ??
+      "opencode";
   }
+  // Runtime overrides for the generated workspace-tool files (the baked-in
+  // values stay valid, but these keep a manually-started server in sync with
+  // a relocated MasarFlow server or rotated secret).
+  if (bridgeEnv?.secret) env.MASARFLOW_BRIDGE_SECRET = bridgeEnv.secret;
+  if (bridgeEnv?.url) env.MASARFLOW_BRIDGE_URL = bridgeEnv.url;
   const child = startProcess(
     "opencode",
     bin.endsWith(".cmd") ? "cmd.exe" : bin,
-    bin.endsWith(".cmd") ? ["/c", bin, "serve", "--hostname", "127.0.0.1", "--port", String(port)] : ["serve", "--hostname", "127.0.0.1", "--port", String(port)],
+    bin.endsWith(".cmd")
+      ? ["/c", bin, "serve", "--hostname", "127.0.0.1", "--port", String(port)]
+      : ["serve", "--hostname", "127.0.0.1", "--port", String(port)],
     { cwd: root, env },
   );
   const baseUrl = `http://127.0.0.1:${port}`;
@@ -135,12 +153,59 @@ async function startOpencode() {
     }
     if ((await fetchJson(`${baseUrl}/global/health`, 1000))?.healthy) {
       console.log(`[opencode] ready at ${baseUrl}.`);
+      await verifyWorkspaceTools(baseUrl);
       return { child, baseUrl };
     }
     await sleep(500);
   }
   console.warn("[opencode] health check timed out — continuing without it.");
   return { child, baseUrl };
+}
+
+/**
+ * Confirm the opencode server actually registered MasarFlow's workspace
+ * functions (create_note, read_spec, …). Only a server that started AFTER
+ * the tool files were installed has them — an already-running server needs
+ * a restart. Warns, never fails: chat degrades with a notice instead.
+ */
+async function verifyWorkspaceTools(baseUrl) {
+  try {
+    const ids = await fetchJson(
+      `${baseUrl}/experimental/tool/ids`,
+      // The first call compiles the custom tools (can take ~10-30s) — and
+      // this call warms the cache so the first chat turn is fast.
+      60_000,
+    );
+    if (!Array.isArray(ids)) {
+      console.warn(
+        "[opencode] could not list tool ids — workspace functions may not be registered.",
+      );
+      return;
+    }
+    // The first few workspace functions, as a spot check.
+    const spot = [
+      "search_workspace",
+      "create_note",
+      "read_spec",
+      "create_task",
+    ];
+    const missing = spot.filter((name) => !ids.includes(name));
+    if (missing.length === spot.length) {
+      console.warn(
+        "[opencode] the workspace functions are NOT registered — the server was already running and needs a restart to pick up the installed tools (or run `npm run tools:install` and restart it).",
+      );
+    } else if (missing.length) {
+      console.warn(
+        `[opencode] some workspace functions are missing: ${missing.join(", ")} — restart the server to register the full tool set.`,
+      );
+    } else {
+      console.log(
+        "[opencode] workspace functions registered (create_note, read_spec, create_task, …).",
+      );
+    }
+  } catch {
+    console.warn("[opencode] tool verification failed — continuing.");
+  }
 }
 
 /** Is something already bound to this loopback port? */
@@ -187,9 +252,13 @@ async function ensureVenv() {
   console.log("[setup] creating python-service/.venv …");
   await run("python", ["-m", "venv", ".venv"], { cwd: pyDir });
   console.log("[setup] installing requirements/base.txt …");
-  await run(venvPython, ["-m", "pip", "install", "-r", "requirements/base.txt"], {
-    cwd: pyDir,
-  });
+  await run(
+    venvPython,
+    ["-m", "pip", "install", "-r", "requirements/base.txt"],
+    {
+      cwd: pyDir,
+    },
+  );
   console.log("[setup] python service ready.");
 }
 
@@ -232,7 +301,9 @@ async function main() {
   const isDev = process.argv.includes("--dev");
   const nextArgs = isDev
     ? ["dev", "--webpack"]
-    : (process.env.PORT ? ["start", "-p", String(process.env.PORT)] : ["start"]);
+    : process.env.PORT
+      ? ["start", "-p", String(process.env.PORT)]
+      : ["start"];
   if (isDev && process.env.PORT) {
     nextArgs.push("-p", String(process.env.PORT));
   }
@@ -254,13 +325,24 @@ async function main() {
   }
 
   // Bring up the OpenCode agent backend before Next so the chat works on the
-  // first page load (spawn skipped when a server is already reachable).
-  const opencode = await startOpencode();
+  // first page load (spawn skipped when a server is already reachable). The
+  // workspace functions are installed as opencode custom tools FIRST — a
+  // running server only registers tools that existed when it started.
+  let bridgeEnv = { secret: "", url: "" };
+  try {
+    const installed = await installOpencodeTools();
+    bridgeEnv = { secret: installed.secret, url: installed.bridgeUrl };
+  } catch (e) {
+    console.warn(`[tools] ${e.message}`);
+  }
+  const opencode = await startOpencode(bridgeEnv);
   const nextEnv = {
     ...process.env,
     PYTHON_SERVICE_URL: `http://127.0.0.1:${pyPort}`,
     PYTHON_PORT: String(pyPort),
   };
+  if (bridgeEnv.secret) nextEnv.MASARFLOW_BRIDGE_SECRET = bridgeEnv.secret;
+  if (bridgeEnv.url) nextEnv.MASARFLOW_BRIDGE_URL = bridgeEnv.url;
   if (opencode?.baseUrl) nextEnv.OPENCODE_BASE_URL = opencode.baseUrl;
 
   const nextChild = startProcess(
@@ -288,12 +370,7 @@ async function main() {
     pyArgs.push("--reload", "--reload-dir", "python-service/app");
   }
 
-  const pyChild = startProcess(
-    "py",
-    venvPython,
-    pyArgs,
-    { cwd: root },
-  );
+  const pyChild = startProcess("py", venvPython, pyArgs, { cwd: root });
 
   const cleanup = (signal) => {
     for (const c of [

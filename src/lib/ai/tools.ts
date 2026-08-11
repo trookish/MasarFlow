@@ -37,725 +37,39 @@ import {
   type Folder,
   type Commit,
 } from "@/lib/db/schema";
-import { buildSearchItems, createSearchIndex, type SearchItem } from "@/lib/utils/search";
+import {
+  buildSearchItems,
+  createSearchIndex,
+  type SearchItem,
+} from "@/lib/utils/search";
+import type { ToolCallRequest } from "./workspace-tool-defs";
 
 /**
- * The workspace tool belt: real function-calling tools the AI uses to read
- * and mutate the local database. Definitions use provider-neutral JSON Schema
- * (converted to OpenAI/Anthropic shapes by /api/chat); execution runs in the
- * browser against the Dexie repos, and every mutation writes a dev-log entry
- * so the trail is visible in Dev Logs.
+ * The workspace tool execution engine: real function-calling tools the AI
+ * uses to read and mutate the local database. Tool definitions live in
+ * `workspace-tool-defs.ts` (the single source of truth shared with the
+ * OpenCode bridge and the system prompt); execution runs in the browser
+ * against the Dexie repos, and every mutation writes a dev-log entry so the
+ * trail is visible in Dev Logs.
  *
  * Coverage is page-to-page: every workspace page's backing entities are
  * readable, and the content pages are creatable/updatable. Config/pipeline
  * pages (agents, workflow, plugins, sync, watcher, files) are read-only.
  */
 
-export interface WorkspaceToolDef {
-  name: string;
-  description: string;
-  parameters: Record<string, unknown>;
-}
-
-export interface ToolCallRequest {
-  id: string;
-  name: string;
-  arguments: Record<string, unknown>;
-}
-
-const str = (description: string) => ({ type: "string", description });
-const strArr = (description: string) => ({
-  type: "array",
-  items: { type: "string" },
-  description,
-});
-const num = (description: string) => ({ type: "number", description });
-const enumOf = (values: readonly string[], description: string) => ({
-  type: "string",
-  enum: [...values],
-  description,
-});
-
-export const WORKSPACE_TOOLS: WorkspaceToolDef[] = [
-  {
-    name: "search_workspace",
-    description:
-      "Fuzzy-search everything in the workspace (notes, specs, tasks, docs, standards, systems, memories, dev logs). Use before claiming something does not exist.",
-    parameters: {
-      type: "object",
-      properties: {
-        query: str("Free-text search query."),
-        limit: num("Max results (default 10)."),
-      },
-      required: ["query"],
-    },
-  },
-
-  /* ── Brain: notes, templates, canvas, folders ──────────────────────── */
-  {
-    name: "read_note",
-    description:
-      "Read a brain note's full markdown body by id or exact title.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: str("Note id (preferred when known)."),
-        title: str("Exact note title (case-insensitive)."),
-      },
-    },
-  },
-  {
-    name: "create_note",
-    description:
-      "Create a brain note. Body is markdown; [[Wikilinks]] auto-link to other notes (creating placeholders when needed).",
-    parameters: {
-      type: "object",
-      properties: {
-        title: str("Note title."),
-        body: str("Markdown body."),
-        type: enumOf(noteTypeSchema.options, "Note type (default: note)."),
-        tags: strArr("Tags without #."),
-        folderId: str("Folder id to place the note under (optional)."),
-      },
-      required: ["title", "body"],
-    },
-  },
-  {
-    name: "update_note",
-    description:
-      "Update a brain note. Provide body to replace it, or appendBody to add to the end.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: str("Note id."),
-        title: str("New title."),
-        body: str("Replacement markdown body."),
-        appendBody: str("Markdown appended to the existing body."),
-        tags: strArr("Replacement tag list."),
-        folderId: str("Move the note to this folder."),
-      },
-      required: ["id"],
-    },
-  },
-  {
-    name: "list_note_templates",
-    description: "List available brain note templates.",
-    parameters: { type: "object", properties: {} },
-  },
-  {
-    name: "read_note_template",
-    description: "Read a note template's body and front-matter by id.",
-    parameters: {
-      type: "object",
-      properties: { id: str("Template id.") },
-      required: ["id"],
-    },
-  },
-  {
-    name: "list_canvases",
-    description: "List all canvases in the project.",
-    parameters: { type: "object", properties: {} },
-  },
-  {
-    name: "read_canvas",
-    description: "Read a canvas with its nodes and edges by id.",
-    parameters: {
-      type: "object",
-      properties: { id: str("Canvas id.") },
-      required: ["id"],
-    },
-  },
-  {
-    name: "create_canvas",
-    description: "Create a blank canvas.",
-    parameters: {
-      type: "object",
-      properties: {
-        name: str("Canvas name."),
-        description: str("Short description."),
-      },
-      required: ["name"],
-    },
-  },
-  {
-    name: "update_canvas",
-    description: "Rename or re-describe a canvas.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: str("Canvas id."),
-        name: str("New name."),
-        description: str("New description."),
-      },
-      required: ["id"],
-    },
-  },
-  {
-    name: "list_folders",
-    description: "List all brain folders (the note tree).",
-    parameters: { type: "object", properties: {} },
-  },
-  {
-    name: "create_folder",
-    description: "Create a folder for organizing notes.",
-    parameters: {
-      type: "object",
-      properties: {
-        name: str("Folder name."),
-        parentId: str("Parent folder id (null for root)."),
-      },
-      required: ["name"],
-    },
-  },
-  {
-    name: "update_folder",
-    description: "Rename a folder or move it under a new parent.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: str("Folder id."),
-        name: str("New name."),
-        parentId: str("New parent folder id (or null for root)."),
-      },
-      required: ["id"],
-    },
-  },
-
-  /* ── Specifications ────────────────────────────────────────────────── */
-  {
-    name: "read_spec",
-    description: "Read a full specification by id or RFC number (e.g. RFC-001).",
-    parameters: {
-      type: "object",
-      properties: {
-        id: str("Spec id."),
-        number: str("Spec number, e.g. RFC-001."),
-      },
-    },
-  },
-  {
-    name: "create_spec",
-    description:
-      "Create an RFC-style specification. The RFC number is assigned automatically.",
-    parameters: {
-      type: "object",
-      properties: {
-        title: str("Spec title."),
-        purpose: str("Why this exists."),
-        status: enumOf(specStatusSchema.options, "Status (default: draft)."),
-        goals: strArr("Goals."),
-        features: strArr("Feature list."),
-        constraints: strArr("Constraints."),
-        dependencies: strArr("Dependencies."),
-        acceptance: strArr("Acceptance criteria."),
-        risks: strArr("Risks."),
-        technicalNotes: str("Free-form technical notes (markdown)."),
-      },
-      required: ["title", "purpose"],
-    },
-  },
-  {
-    name: "update_spec",
-    description: "Update fields of an existing specification.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: str("Spec id."),
-        title: str("New title."),
-        status: enumOf(specStatusSchema.options, "New status."),
-        purpose: str("New purpose."),
-        goals: strArr("Replacement goals."),
-        features: strArr("Replacement features."),
-        constraints: strArr("Replacement constraints."),
-        acceptance: strArr("Replacement acceptance criteria."),
-        risks: strArr("Replacement risks."),
-        technicalNotes: str("Replacement technical notes."),
-      },
-      required: ["id"],
-    },
-  },
-
-  /* ── Standards ─────────────────────────────────────────────────────── */
-  {
-    name: "list_standards",
-    description: "List coding standards, optionally filtered by category.",
-    parameters: {
-      type: "object",
-      properties: {
-        category: enumOf(
-          standardCategorySchema.options,
-          "Filter by category.",
-        ),
-      },
-    },
-  },
-  {
-    name: "read_standard",
-    description: "Read a coding standard's rule and examples by id.",
-    parameters: {
-      type: "object",
-      properties: { id: str("Standard id.") },
-      required: ["id"],
-    },
-  },
-  {
-    name: "create_standard",
-    description: "Create a coding standard.",
-    parameters: {
-      type: "object",
-      properties: {
-        title: str("Standard title."),
-        rule: str("The rule text."),
-        category: enumOf(
-          standardCategorySchema.options,
-          "Category (default: other).",
-        ),
-        examples: strArr("Good/bad examples."),
-        enforced: { type: "boolean", description: "Machine-enforced (default true)." },
-        pattern: str("Optional forbidden regex (empty = documentation-only)."),
-      },
-      required: ["title", "rule"],
-    },
-  },
-  {
-    name: "update_standard",
-    description: "Update a coding standard.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: str("Standard id."),
-        title: str("New title."),
-        rule: str("New rule."),
-        category: enumOf(standardCategorySchema.options, "New category."),
-        examples: strArr("Replacement examples."),
-        enforced: { type: "boolean", description: "Machine-enforced." },
-        pattern: str("New forbidden regex."),
-      },
-      required: ["id"],
-    },
-  },
-
-  /* ── Tasks & sprints ───────────────────────────────────────────────── */
-  {
-    name: "list_tasks",
-    description: "List tasks, optionally filtered by status.",
-    parameters: {
-      type: "object",
-      properties: {
-        status: enumOf(taskStatusSchema.options, "Filter by status."),
-      },
-    },
-  },
-  {
-    name: "create_task",
-    description: "Create a task on the board.",
-    parameters: {
-      type: "object",
-      properties: {
-        title: str("Task title."),
-        description: str("What needs to be done."),
-        status: enumOf(taskStatusSchema.options, "Initial status (default: todo)."),
-        priority: enumOf(taskPrioritySchema.options, "Priority (default: medium)."),
-        assignee: enumOf(assigneeSchema.options, "Who works it (default: human)."),
-        specNumber: str("Link to a spec by number, e.g. RFC-001."),
-        sprintId: str("Link to a sprint by id."),
-        tags: strArr("Tags."),
-      },
-      required: ["title"],
-    },
-  },
-  {
-    name: "update_task",
-    description: "Update a task's status, progress, priority, assignee, or description.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: str("Task id (find it via list_tasks or search_workspace)."),
-        status: enumOf(taskStatusSchema.options, "New status."),
-        priority: enumOf(taskPrioritySchema.options, "New priority."),
-        assignee: enumOf(assigneeSchema.options, "New assignee."),
-        progress: num("Progress 0-100."),
-        description: str("New description."),
-        title: str("New title."),
-        sprintId: str("Move to this sprint (or null to unassign)."),
-      },
-      required: ["id"],
-    },
-  },
-  {
-    name: "list_sprints",
-    description: "List all sprints.",
-    parameters: { type: "object", properties: {} },
-  },
-  {
-    name: "read_sprint",
-    description: "Read a sprint by id.",
-    parameters: {
-      type: "object",
-      properties: { id: str("Sprint id.") },
-      required: ["id"],
-    },
-  },
-  {
-    name: "create_sprint",
-    description: "Create a sprint.",
-    parameters: {
-      type: "object",
-      properties: {
-        name: str("Sprint name."),
-        goal: str("Sprint goal."),
-        startDate: str("ISO date, e.g. 2026-07-01."),
-        endDate: str("ISO date."),
-        status: enumOf(["planned", "active", "completed"], "Status (default planned)."),
-      },
-      required: ["name"],
-    },
-  },
-  {
-    name: "update_sprint",
-    description: "Update a sprint's name, goal, status, or date range.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: str("Sprint id."),
-        name: str("New name."),
-        goal: str("New goal."),
-        status: enumOf(["planned", "active", "completed"], "New status."),
-        startDate: str("New ISO start date."),
-        endDate: str("New ISO end date."),
-      },
-      required: ["id"],
-    },
-  },
-
-  /* ── Architecture / systems ────────────────────────────────────────── */
-  {
-    name: "list_systems",
-    description: "List architecture systems.",
-    parameters: { type: "object", properties: {} },
-  },
-  {
-    name: "read_system",
-    description: "Read an architecture system by id.",
-    parameters: {
-      type: "object",
-      properties: { id: str("System id.") },
-      required: ["id"],
-    },
-  },
-  {
-    name: "create_system",
-    description: "Create an architecture system.",
-    parameters: {
-      type: "object",
-      properties: {
-        name: str("System name."),
-        description: str("What it does."),
-        category: str("Category, e.g. module, service, data (default: module)."),
-        status: enumOf(["planned", "active", "deprecated"], "Status (default: active)."),
-        health: num("Health 0-100 (default 100)."),
-        dependencies: strArr("Names or ids of systems this depends on."),
-      },
-      required: ["name"],
-    },
-  },
-  {
-    name: "update_system",
-    description: "Update an architecture system.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: str("System id."),
-        name: str("New name."),
-        description: str("New description."),
-        category: str("New category."),
-        status: enumOf(["planned", "active", "deprecated"], "New status."),
-        health: num("New health 0-100."),
-        dependencies: strArr("Replacement dependency list."),
-      },
-      required: ["id"],
-    },
-  },
-
-  /* ── Knowledge graph: links ────────────────────────────────────────── */
-  {
-    name: "list_links",
-    description:
-      "List knowledge-graph links (optionally only those from/to a given entity).",
-    parameters: {
-      type: "object",
-      properties: {
-        fromType: str("Only links from this entity kind."),
-        fromId: str("Only links from this entity id."),
-        toType: str("Only links to this entity kind."),
-        toId: str("Only links to this entity id."),
-      },
-    },
-  },
-  {
-    name: "create_link",
-    description:
-      "Create a knowledge-graph link between two entities (e.g. a task that implements a spec).",
-    parameters: {
-      type: "object",
-      properties: {
-        sourceType: enumOf(
-          ["note", "spec", "task", "system", "commit", "memory", "doc", "archNode"],
-          "Source entity kind.",
-        ),
-        sourceId: str("Source entity id."),
-        targetType: enumOf(
-          ["note", "spec", "task", "system", "commit", "memory", "doc", "archNode"],
-          "Target entity kind.",
-        ),
-        targetId: str("Target entity id."),
-        linkType: enumOf(
-          ["wikilink", "dependency", "reference", "implements", "relates"],
-          "Link type (default: reference).",
-        ),
-        label: str("Optional label."),
-      },
-      required: ["sourceType", "sourceId", "targetType", "targetId"],
-    },
-  },
-  {
-    name: "remove_link",
-    description: "Remove a knowledge-graph link by id.",
-    parameters: {
-      type: "object",
-      properties: { id: str("Link id.") },
-      required: ["id"],
-    },
-  },
-
-  /* ── Documentation ─────────────────────────────────────────────────── */
-  {
-    name: "read_doc",
-    description: "Read a documentation page's full body by id or exact title.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: str("Doc id."),
-        title: str("Exact doc title (case-insensitive)."),
-      },
-    },
-  },
-  {
-    name: "create_doc",
-    description: "Create a documentation page (markdown).",
-    parameters: {
-      type: "object",
-      properties: {
-        title: str("Doc title."),
-        body: str("Markdown body."),
-        category: str("Category, e.g. guides, api, systems (default: general)."),
-      },
-      required: ["title", "body"],
-    },
-  },
-  {
-    name: "update_doc",
-    description: "Update a documentation page.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: str("Doc id."),
-        title: str("New title."),
-        body: str("Replacement markdown body."),
-        appendBody: str("Markdown appended to the existing body."),
-        category: str("New category."),
-      },
-      required: ["id"],
-    },
-  },
-
-  /* ── Dev logs ──────────────────────────────────────────────────────── */
-  {
-    name: "list_devlogs",
-    description: "List recent dev-log entries.",
-    parameters: {
-      type: "object",
-      properties: { limit: num("Max results (default 20).") },
-    },
-  },
-  {
-    name: "read_devlog",
-    description: "Read a dev-log entry by id.",
-    parameters: {
-      type: "object",
-      properties: { id: str("Dev-log id.") },
-      required: ["id"],
-    },
-  },
-  {
-    name: "create_devlog",
-    description:
-      "Write a dev-log entry recording what happened (a change, decision, or milestone).",
-    parameters: {
-      type: "object",
-      properties: {
-        title: str("One-line summary."),
-        body: str("Details (markdown)."),
-      },
-      required: ["title"],
-    },
-  },
-  {
-    name: "update_devlog",
-    description: "Update a dev-log entry's title or body.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: str("Dev-log id."),
-        title: str("New title."),
-        body: str("New body."),
-      },
-      required: ["id"],
-    },
-  },
-
-  /* ── Memories ──────────────────────────────────────────────────────── */
-  {
-    name: "list_memories",
-    description: "List long-term memories, highest weight first.",
-    parameters: { type: "object", properties: {} },
-  },
-  {
-    name: "read_memory",
-    description: "Read a memory by id.",
-    parameters: {
-      type: "object",
-      properties: { id: str("Memory id.") },
-      required: ["id"],
-    },
-  },
-  {
-    name: "create_memory",
-    description:
-      "Save a long-term memory (fact, lesson, decision, or preference) that future AI sessions should know.",
-    parameters: {
-      type: "object",
-      properties: {
-        content: str("The memory content — one crisp fact."),
-        type: enumOf(["fact", "lesson", "decision", "preference"], "Memory type."),
-        tags: strArr("Tags."),
-        weight: num("Importance 0-1 (default 0.5)."),
-      },
-      required: ["content"],
-    },
-  },
-  {
-    name: "update_memory",
-    description: "Update a memory's content, type, tags, or weight.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: str("Memory id."),
-        content: str("New content."),
-        type: enumOf(["fact", "lesson", "decision", "preference"], "New type."),
-        tags: strArr("Replacement tags."),
-        weight: num("New importance 0-1."),
-      },
-      required: ["id"],
-    },
-  },
-
-  /* ── Commits (read + annotate) ─────────────────────────────────────── */
-  {
-    name: "list_commits",
-    description: "List recent commits (newest first).",
-    parameters: {
-      type: "object",
-      properties: { limit: num("Max results (default 15).") },
-    },
-  },
-  {
-    name: "read_commit",
-    description: "Read a commit by id.",
-    parameters: {
-      type: "object",
-      properties: { id: str("Commit id.") },
-      required: ["id"],
-    },
-  },
-  {
-    name: "update_commit",
-    description:
-      "Annotate a commit: set the AI summary or link it to specs/tasks.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: str("Commit id."),
-        aiSummary: str("AI-generated summary of the commit."),
-        linkedSpecIds: strArr("Replacement spec links."),
-        linkedTaskIds: strArr("Replacement task links."),
-      },
-      required: ["id"],
-    },
-  },
-
-  /* ── Config / pipeline (read-only) ─────────────────────────────────── */
-  {
-    name: "list_files",
-    description:
-      "List vault files & attachments tracked by the sync engine (images, media, docs).",
-    parameters: { type: "object", properties: {} },
-  },
-  {
-    name: "list_agents",
-    description: "List configured AI agents and their roles.",
-    parameters: { type: "object", properties: {} },
-  },
-  {
-    name: "read_agent",
-    description: "Read an AI agent's configuration by id.",
-    parameters: {
-      type: "object",
-      properties: { id: str("Agent id.") },
-      required: ["id"],
-    },
-  },
-  {
-    name: "list_agent_runs",
-    description: "List recent agent runs for the project.",
-    parameters: {
-      type: "object",
-      properties: { limit: num("Max results (default 15).") },
-    },
-  },
-  {
-    name: "read_workflow_state",
-    description:
-      "Read the 16-step workflow runs and each step's status for the project.",
-    parameters: { type: "object", properties: {} },
-  },
-  {
-    name: "list_plugins",
-    description: "List installed plugins and their enabled state.",
-    parameters: { type: "object", properties: {} },
-  },
-  {
-    name: "list_sync_files",
-    description: "List the project's synced file index (paths + sync status).",
-    parameters: { type: "object", properties: {} },
-  },
-  {
-    name: "list_watch_events",
-    description: "List recent project-watcher file-change events.",
-    parameters: {
-      type: "object",
-      properties: { limit: num("Max results (default 20).") },
-    },
-  },
-];
-
-/** Look up tool definitions by name. */
-export function getToolDef(name: string): WorkspaceToolDef | undefined {
-  return WORKSPACE_TOOLS.find((t) => t.name === name);
-}
+export {
+  WORKSPACE_TOOLS,
+  WORKSPACE_TOOL_NAMES,
+  getToolDef,
+  type WorkspaceToolDef,
+  type ToolCallRequest,
+} from "./workspace-tool-defs";
 
 function ok(data: unknown): string {
-  return JSON.stringify({ ok: true, ...(typeof data === "object" && data !== null ? data : { result: data }) });
+  return JSON.stringify({
+    ok: true,
+    ...(typeof data === "object" && data !== null ? data : { result: data }),
+  });
 }
 function fail(message: string): string {
   return JSON.stringify({ ok: false, error: message });
@@ -810,13 +124,37 @@ export async function executeWorkspaceTool(
 ): Promise<string> {
   const a = call.arguments ?? {};
   const s = (k: string): string | undefined =>
-    typeof a[k] === "string" && (a[k] as string).trim() ? (a[k] as string) : undefined;
+    typeof a[k] === "string" && (a[k] as string).trim()
+      ? (a[k] as string)
+      : undefined;
   const arr = (k: string): string[] | undefined =>
     Array.isArray(a[k]) ? (a[k] as unknown[]).map(String) : undefined;
   const n = (k: string): number | undefined =>
-    typeof a[k] === "number" && Number.isFinite(a[k]) ? (a[k] as number) : undefined;
+    typeof a[k] === "number" && Number.isFinite(a[k])
+      ? (a[k] as number)
+      : undefined;
   const bool = (k: string): boolean | undefined =>
     typeof a[k] === "boolean" ? (a[k] as boolean) : undefined;
+
+  /** True when the model actually provided the argument (even as "" or null). */
+  const has = (k: string): boolean => a[k] !== undefined;
+  /** Provided string value, possibly empty. Undefined when absent. */
+  const raw = (k: string): string | undefined =>
+    has(k) && typeof a[k] === "string" ? (a[k] as string) : undefined;
+  /**
+   * Nullable string argument: undefined when absent, null when the model
+   * passed null/empty (explicit "clear this reference"), else the string.
+   */
+  const nullable = (k: string): string | null | undefined =>
+    !has(k)
+      ? undefined
+      : typeof a[k] === "string" && (a[k] as string).trim()
+        ? (a[k] as string)
+        : null;
+  /** True when the entity belongs to the active project. */
+  const own = <T extends { projectId?: string | null }>(
+    e: T | undefined,
+  ): e is T => Boolean(e && e.projectId === projectId);
 
   try {
     switch (call.name) {
@@ -841,7 +179,9 @@ export async function executeWorkspaceTool(
             results?: { id: string; kind: string }[];
           };
           if (data.ok && data.results?.length) {
-            const byKey = new Map(items.map((it) => [`${it.kind}:${it.id}`, it]));
+            const byKey = new Map(
+              items.map((it) => [`${it.kind}:${it.id}`, it]),
+            );
             ranked = data.results
               .map((r) => byKey.get(`${r.kind}:${r.id}`))
               .filter((it): it is SearchItem => Boolean(it));
@@ -851,7 +191,10 @@ export async function executeWorkspaceTool(
         }
         if (!ranked || ranked.length === 0) {
           const index = createSearchIndex(items);
-          ranked = index.search(query).slice(0, limit).map((r) => r.item);
+          ranked = index
+            .search(query)
+            .slice(0, limit)
+            .map((r) => r.item);
         }
 
         const results = ranked.slice(0, limit).map((item) => ({
@@ -873,7 +216,7 @@ export async function executeWorkspaceTool(
           : title
             ? await notesRepo.getByTitle(projectId, title)
             : undefined;
-        if (!note) return fail("Note not found");
+        if (!own(note)) return fail("Note not found");
         return ok({
           note: {
             id: note.id,
@@ -889,8 +232,16 @@ export async function executeWorkspaceTool(
 
       case "create_note": {
         const title = s("title");
-        const body = s("body") ?? "";
+        const body = raw("body") ?? "";
         if (!title) return fail("title is required");
+        const folderId = nullable("folderId");
+        if (folderId) {
+          const folders = await foldersRepo.listByProject(projectId);
+          if (!folders.some((f) => f.id === folderId))
+            return fail(
+              `Folder not found: ${folderId} — list_folders to pick a real one.`,
+            );
+        }
         const parsedType = noteTypeSchema.safeParse(a.type);
         const note = await notesRepo.create({
           projectId,
@@ -898,9 +249,14 @@ export async function executeWorkspaceTool(
           body,
           type: parsedType.success ? parsedType.data : "note",
           tags: arr("tags") ?? [],
-          folderId: s("folderId") ?? null,
+          folderId: folderId ?? null,
         });
-        await logAgentAction(projectId, `AI created note "${title}"`, "note", note.id);
+        await logAgentAction(
+          projectId,
+          `AI created note "${title}"`,
+          "note",
+          note.id,
+        );
         return ok({ id: note.id, title: note.title });
       }
 
@@ -908,16 +264,31 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const existing = await notesRepo.get(id);
-        if (!existing) return fail("Note not found");
+        if (!own(existing)) return fail("Note not found");
         const append = s("appendBody");
         const patch: Parameters<typeof notesRepo.update>[1] = {};
         if (s("title")) patch.title = s("title");
-        if (s("body") !== undefined) patch.body = s("body");
+        if (raw("body") !== undefined) patch.body = raw("body");
         if (append) patch.body = `${existing.body.trimEnd()}\n\n${append}`;
         if (arr("tags")) patch.tags = arr("tags");
-        if (s("folderId") !== undefined) patch.folderId = s("folderId") ?? null;
+        const folderId = nullable("folderId");
+        if (folderId !== undefined) {
+          if (folderId) {
+            const folders = await foldersRepo.listByProject(projectId);
+            if (!folders.some((f) => f.id === folderId))
+              return fail(
+                `Folder not found: ${folderId} — list_folders to pick a real one.`,
+              );
+          }
+          patch.folderId = folderId;
+        }
         await notesRepo.update(id, patch);
-        await logAgentAction(projectId, `AI updated note "${patch.title ?? existing.title}"`, "note", id);
+        await logAgentAction(
+          projectId,
+          `AI updated note "${patch.title ?? existing.title}"`,
+          "note",
+          id,
+        );
         return ok({ id });
       }
 
@@ -938,7 +309,7 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const t = await noteTemplatesRepo.get(id);
-        if (!t) return fail("Template not found");
+        if (!own(t)) return fail("Template not found");
         return ok({
           template: {
             id: t.id,
@@ -968,7 +339,7 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const canvas = await canvasRepo.get(id);
-        if (!canvas) return fail("Canvas not found");
+        if (!own(canvas)) return fail("Canvas not found");
         const [nodes, edges] = await Promise.all([
           canvasRepo.nodes(id),
           canvasRepo.edges(id),
@@ -991,7 +362,12 @@ export async function executeWorkspaceTool(
           name,
           description: s("description") ?? "",
         });
-        await logAgentAction(projectId, `AI created canvas "${name}"`, null, canvas.id);
+        await logAgentAction(
+          projectId,
+          `AI created canvas "${name}"`,
+          null,
+          canvas.id,
+        );
         return ok({ id: canvas.id, name: canvas.name });
       }
 
@@ -999,10 +375,11 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const existing = await canvasRepo.get(id);
-        if (!existing) return fail("Canvas not found");
+        if (!own(existing)) return fail("Canvas not found");
         const patch: Partial<Canvas> = {};
         if (s("name")) patch.name = s("name");
-        if (s("description") !== undefined) patch.description = s("description");
+        if (raw("description") !== undefined)
+          patch.description = raw("description");
         await canvasRepo.update(id, patch);
         await logAgentAction(
           projectId,
@@ -1033,7 +410,12 @@ export async function executeWorkspaceTool(
           name,
           parentId: s("parentId") ?? null,
         });
-        await logAgentAction(projectId, `AI created folder "${name}"`, null, folder.id);
+        await logAgentAction(
+          projectId,
+          `AI created folder "${name}"`,
+          null,
+          folder.id,
+        );
         return ok({ id: folder.id, name: folder.name });
       }
 
@@ -1046,7 +428,7 @@ export async function executeWorkspaceTool(
         const patch: Partial<Folder> = {};
         if (s("name")) patch.name = s("name");
         if (a.parentId !== undefined) {
-          patch.parentId = a.parentId === null ? null : s("parentId") ?? null;
+          patch.parentId = a.parentId === null ? null : (s("parentId") ?? null);
         }
         await foldersRepo.update(id, patch);
         await logAgentAction(
@@ -1070,7 +452,7 @@ export async function executeWorkspaceTool(
             (x) => x.number.toLowerCase() === number.toLowerCase(),
           );
         }
-        if (!spec) return fail("Spec not found");
+        if (!own(spec)) return fail("Spec not found");
         return ok({ spec });
       }
 
@@ -1093,7 +475,12 @@ export async function executeWorkspaceTool(
           risks: arr("risks") ?? [],
           technicalNotes: s("technicalNotes") ?? "",
         });
-        await logAgentAction(projectId, `AI created spec ${spec.number} "${title}"`, "spec", spec.id);
+        await logAgentAction(
+          projectId,
+          `AI created spec ${spec.number} "${title}"`,
+          "spec",
+          spec.id,
+        );
         return ok({ id: spec.id, number: spec.number, title: spec.title });
       }
 
@@ -1101,19 +488,19 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const existing = await specsRepo.get(id);
-        if (!existing) return fail("Spec not found");
+        if (!own(existing)) return fail("Spec not found");
         const patch: Partial<Spec> = {};
         const status = specStatusSchema.safeParse(a.status);
         if (status.success) patch.status = status.data;
         if (s("title")) patch.title = s("title");
-        if (s("purpose") !== undefined) patch.purpose = s("purpose");
+        if (raw("purpose") !== undefined) patch.purpose = raw("purpose");
         if (arr("goals")) patch.goals = arr("goals");
         if (arr("features")) patch.features = arr("features");
         if (arr("constraints")) patch.constraints = arr("constraints");
         if (arr("acceptance")) patch.acceptance = arr("acceptance");
         if (arr("risks")) patch.risks = arr("risks");
-        if (s("technicalNotes") !== undefined)
-          patch.technicalNotes = s("technicalNotes");
+        if (raw("technicalNotes") !== undefined)
+          patch.technicalNotes = raw("technicalNotes");
         await specsRepo.update(id, patch);
         await logAgentAction(
           projectId,
@@ -1128,7 +515,8 @@ export async function executeWorkspaceTool(
       case "list_standards": {
         const category = s("category");
         let standards = await standardsRepo.listByProject(projectId);
-        if (category) standards = standards.filter((x) => x.category === category);
+        if (category)
+          standards = standards.filter((x) => x.category === category);
         return ok({
           standards: standards.map((x) => ({
             id: x.id,
@@ -1144,7 +532,7 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const standard = await standardsRepo.get(id);
-        if (!standard) return fail("Standard not found");
+        if (!own(standard)) return fail("Standard not found");
         return ok({ standard });
       }
 
@@ -1162,7 +550,12 @@ export async function executeWorkspaceTool(
           enforced: bool("enforced") ?? true,
           pattern: s("pattern") ?? "",
         });
-        await logAgentAction(projectId, `AI created standard "${title}"`, null, standard.id);
+        await logAgentAction(
+          projectId,
+          `AI created standard "${title}"`,
+          null,
+          standard.id,
+        );
         return ok({ id: standard.id, title: standard.title });
       }
 
@@ -1170,15 +563,15 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const existing = await standardsRepo.get(id);
-        if (!existing) return fail("Standard not found");
+        if (!own(existing)) return fail("Standard not found");
         const patch: Partial<Standard> = {};
         const cat = standardCategorySchema.safeParse(a.category);
         if (cat.success) patch.category = cat.data;
         if (s("title")) patch.title = s("title");
-        if (s("rule") !== undefined) patch.rule = s("rule");
+        if (raw("rule") !== undefined) patch.rule = raw("rule");
         if (arr("examples")) patch.examples = arr("examples");
         if (bool("enforced") !== undefined) patch.enforced = bool("enforced")!;
-        if (s("pattern") !== undefined) patch.pattern = s("pattern");
+        if (raw("pattern") !== undefined) patch.pattern = raw("pattern");
         await standardsRepo.update(id, patch);
         await logAgentAction(
           projectId,
@@ -1216,9 +609,22 @@ export async function executeWorkspaceTool(
         const specNumber = s("specNumber");
         if (specNumber) {
           const all = await specsRepo.listByProject(projectId);
-          specId =
-            all.find((x) => x.number.toLowerCase() === specNumber.toLowerCase())
-              ?.id ?? null;
+          const match = all.find(
+            (x) => x.number.toLowerCase() === specNumber.toLowerCase(),
+          );
+          if (!match)
+            return fail(
+              `Spec not found: "${specNumber}" — list specs or read_spec to pick a real one.`,
+            );
+          specId = match.id;
+        }
+        const sprintId = nullable("sprintId");
+        if (sprintId) {
+          const sprints = await sprintsRepo.listByProject(projectId);
+          if (!sprints.some((sp) => sp.id === sprintId))
+            return fail(
+              `Sprint not found: ${sprintId} — list_sprints to pick a real one.`,
+            );
         }
         const status = taskStatusSchema.safeParse(a.status);
         const priority = taskPrioritySchema.safeParse(a.priority);
@@ -1226,16 +632,21 @@ export async function executeWorkspaceTool(
         const task = await tasksRepo.create({
           projectId,
           title,
-          description: s("description") ?? "",
+          description: raw("description") ?? "",
           status: status.success ? status.data : "todo",
           priority: priority.success ? priority.data : "medium",
           assignee: assignee.success ? assignee.data : "human",
           specId,
-          sprintId: s("sprintId") ?? null,
+          sprintId: sprintId ?? null,
           tags: arr("tags") ?? [],
         });
         if (specId) await specsRepo.recomputeProgress(specId);
-        await logAgentAction(projectId, `AI created task "${title}"`, "task", task.id);
+        await logAgentAction(
+          projectId,
+          `AI created task "${title}"`,
+          "task",
+          task.id,
+        );
         return ok({ id: task.id, title: task.title, status: task.status });
       }
 
@@ -1243,7 +654,7 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const existing = await tasksRepo.get(id);
-        if (!existing) return fail("Task not found");
+        if (!own(existing)) return fail("Task not found");
         const patch: Partial<Task> = {};
         const status = taskStatusSchema.safeParse(a.status);
         const priority = taskPrioritySchema.safeParse(a.priority);
@@ -1253,15 +664,29 @@ export async function executeWorkspaceTool(
         if (assignee.success) patch.assignee = assignee.data;
         if (n("progress") !== undefined)
           patch.progress = Math.min(100, Math.max(0, n("progress")!));
-        if (s("description") !== undefined) patch.description = s("description");
+        if (raw("description") !== undefined)
+          patch.description = raw("description");
         if (s("title")) patch.title = s("title");
-        if (a.sprintId !== undefined) {
-          patch.sprintId = a.sprintId === null ? null : s("sprintId") ?? null;
+        const sprintId = nullable("sprintId");
+        if (sprintId !== undefined) {
+          if (sprintId) {
+            const sprints = await sprintsRepo.listByProject(projectId);
+            if (!sprints.some((sp) => sp.id === sprintId))
+              return fail(
+                `Sprint not found: ${sprintId} — list_sprints to pick a real one.`,
+              );
+          }
+          patch.sprintId = sprintId;
         }
         if (patch.status === "done" && patch.progress === undefined)
           patch.progress = 100;
         await tasksRepo.update(id, patch);
-        if (existing.specId) await specsRepo.recomputeProgress(existing.specId);
+        // Recompute the progress of every spec this task touched (it may
+        // have moved between specs during the update).
+        const specIds = new Set<string>();
+        if (existing.specId) specIds.add(existing.specId);
+        if (patch.specId) specIds.add(patch.specId);
+        for (const sid of specIds) await specsRepo.recomputeProgress(sid);
         await logAgentAction(
           projectId,
           `AI updated task "${patch.title ?? existing.title}"${patch.status ? ` → ${patch.status}` : ""}`,
@@ -1290,21 +715,27 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const sprint = await sprintsRepo.get(id);
-        if (!sprint) return fail("Sprint not found");
+        if (!own(sprint)) return fail("Sprint not found");
         const tasks = (await tasksRepo.listByProject(projectId)).filter(
           (t) => t.sprintId === id,
         );
         return ok({
           sprint,
           taskCount: tasks.length,
-          tasks: tasks.map((t) => ({ id: t.id, title: t.title, status: t.status })),
+          tasks: tasks.map((t) => ({
+            id: t.id,
+            title: t.title,
+            status: t.status,
+          })),
         });
       }
 
       case "create_sprint": {
         const name = s("name");
         if (!name) return fail("name is required");
-        const status = ["planned", "active", "completed"].includes(String(a.status))
+        const status = ["planned", "active", "completed"].includes(
+          String(a.status),
+        )
           ? (String(a.status) as "planned" | "active" | "completed")
           : "planned";
         const sprint = await sprintsRepo.create({
@@ -1315,7 +746,12 @@ export async function executeWorkspaceTool(
           startDate: parseDate(s("startDate")),
           endDate: parseDate(s("endDate")),
         });
-        await logAgentAction(projectId, `AI created sprint "${name}"`, null, sprint.id);
+        await logAgentAction(
+          projectId,
+          `AI created sprint "${name}"`,
+          null,
+          sprint.id,
+        );
         return ok({ id: sprint.id, name: sprint.name });
       }
 
@@ -1323,13 +759,14 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const existing = await sprintsRepo.get(id);
-        if (!existing) return fail("Sprint not found");
+        if (!own(existing)) return fail("Sprint not found");
         const patch: Partial<Sprint> = {};
         if (s("name")) patch.name = s("name");
-        if (s("goal") !== undefined) patch.goal = s("goal");
+        if (raw("goal") !== undefined) patch.goal = raw("goal");
         if (["planned", "active", "completed"].includes(String(a.status)))
           patch.status = String(a.status) as Sprint["status"];
-        if (a.startDate !== undefined) patch.startDate = parseDate(s("startDate"));
+        if (a.startDate !== undefined)
+          patch.startDate = parseDate(s("startDate"));
         if (a.endDate !== undefined) patch.endDate = parseDate(s("endDate"));
         await sprintsRepo.update(id, patch);
         await logAgentAction(
@@ -1361,14 +798,16 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const system = await systemsRepo.get(id);
-        if (!system) return fail("System not found");
+        if (!own(system)) return fail("System not found");
         return ok({ system });
       }
 
       case "create_system": {
         const name = s("name");
         if (!name) return fail("name is required");
-        const status = ["planned", "active", "deprecated"].includes(String(a.status))
+        const status = ["planned", "active", "deprecated"].includes(
+          String(a.status),
+        )
           ? (String(a.status) as System["status"])
           : "active";
         const system = await systemsRepo.create({
@@ -1380,7 +819,12 @@ export async function executeWorkspaceTool(
           health: n("health") ?? 100,
           dependencies: arr("dependencies") ?? [],
         });
-        await logAgentAction(projectId, `AI created system "${name}"`, "system", system.id);
+        await logAgentAction(
+          projectId,
+          `AI created system "${name}"`,
+          "system",
+          system.id,
+        );
         return ok({ id: system.id, name: system.name });
       }
 
@@ -1388,11 +832,12 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const existing = await systemsRepo.get(id);
-        if (!existing) return fail("System not found");
+        if (!own(existing)) return fail("System not found");
         const patch: Partial<System> = {};
         if (s("name")) patch.name = s("name");
-        if (s("description") !== undefined) patch.description = s("description");
-        if (s("category") !== undefined) patch.category = s("category");
+        if (raw("description") !== undefined)
+          patch.description = raw("description");
+        if (raw("category") !== undefined) patch.category = raw("category");
         if (["planned", "active", "deprecated"].includes(String(a.status)))
           patch.status = String(a.status) as System["status"];
         if (n("health") !== undefined)
@@ -1442,16 +887,20 @@ export async function executeWorkspaceTool(
         const targetType = s("targetType") as EntityKind | undefined;
         const targetId = s("targetId");
         if (!sourceType || !sourceId || !targetType || !targetId)
-          return fail("sourceType, sourceId, targetType, targetId are required");
-        const linkType = (["wikilink", "dependency", "reference", "implements", "relates"]
-          .includes(String(a.linkType))
-          ? String(a.linkType)
-          : "reference") as
-          | "wikilink"
-          | "dependency"
-          | "reference"
-          | "implements"
-          | "relates";
+          return fail(
+            "sourceType, sourceId, targetType, targetId are required",
+          );
+        const linkType = (
+          [
+            "wikilink",
+            "dependency",
+            "reference",
+            "implements",
+            "relates",
+          ].includes(String(a.linkType))
+            ? String(a.linkType)
+            : "reference"
+        ) as "wikilink" | "dependency" | "reference" | "implements" | "relates";
         const link = await linksRepo.create({
           projectId,
           sourceType,
@@ -1473,6 +922,8 @@ export async function executeWorkspaceTool(
       case "remove_link": {
         const id = s("id");
         if (!id) return fail("id is required");
+        const link = await linksRepo.get(id);
+        if (!own(link)) return fail("Link not found");
         await linksRepo.remove(id);
         return ok({ id });
       }
@@ -1482,13 +933,13 @@ export async function executeWorkspaceTool(
         const id = s("id");
         const title = s("title");
         let doc = id ? await docsRepo.get(id) : undefined;
-        if (!doc && title) {
+        if (!own(doc) && title) {
           const all = await docsRepo.listByProject(projectId);
           doc = all.find(
             (d) => d.title.trim().toLowerCase() === title.trim().toLowerCase(),
           );
         }
-        if (!doc) return fail("Doc not found");
+        if (!own(doc)) return fail("Doc not found");
         return ok({ doc });
       }
 
@@ -1503,7 +954,12 @@ export async function executeWorkspaceTool(
           category: s("category") ?? "general",
           sourceType: "auto",
         });
-        await logAgentAction(projectId, `AI created doc "${title}"`, "doc", doc.id);
+        await logAgentAction(
+          projectId,
+          `AI created doc "${title}"`,
+          "doc",
+          doc.id,
+        );
         return ok({ id: doc.id, title: doc.title });
       }
 
@@ -1511,22 +967,30 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const existing = await docsRepo.get(id);
-        if (!existing) return fail("Doc not found");
+        if (!own(existing)) return fail("Doc not found");
         const append = s("appendBody");
         const patch: Record<string, unknown> = {};
         if (s("title")) patch.title = s("title");
-        if (s("body") !== undefined) patch.body = s("body");
+        if (raw("body") !== undefined) patch.body = raw("body");
         if (append) patch.body = `${existing.body.trimEnd()}\n\n${append}`;
-        if (s("category")) patch.category = s("category");
+        if (raw("category") !== undefined) patch.category = raw("category");
         await docsRepo.update(id, patch);
-        await logAgentAction(projectId, `AI updated doc "${existing.title}"`, "doc", id);
+        await logAgentAction(
+          projectId,
+          `AI updated doc "${existing.title}"`,
+          "doc",
+          id,
+        );
         return ok({ id });
       }
 
       /* ── Dev logs ─────────────────────────────────────────────────── */
       case "list_devlogs": {
         const limit = Math.min(Math.max(n("limit") ?? 20, 1), 50);
-        const logs = (await devLogsRepo.listByProject(projectId)).slice(0, limit);
+        const logs = (await devLogsRepo.listByProject(projectId)).slice(
+          0,
+          limit,
+        );
         return ok({
           devlogs: logs.map((l) => ({
             id: l.id,
@@ -1544,7 +1008,7 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const log = await devLogsRepo.get(id);
-        if (!log) return fail("Dev log not found");
+        if (!own(log)) return fail("Dev log not found");
         return ok({ devlog: log });
       }
 
@@ -1564,19 +1028,19 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const existing = await devLogsRepo.get(id);
-        if (!existing) return fail("Dev log not found");
+        if (!own(existing)) return fail("Dev log not found");
         const patch: Partial<typeof existing> = {};
         if (s("title")) patch.title = s("title");
-        if (s("body") !== undefined) patch.body = s("body");
+        if (raw("body") !== undefined) patch.body = raw("body");
         await devLogsRepo.update(id, patch);
         return ok({ id });
       }
 
       /* ── Memories ─────────────────────────────────────────────────── */
       case "list_memories": {
-        const memories = [...(await memoriesRepo.listByProject(projectId))].sort(
-          (x, y) => y.weight - x.weight,
-        );
+        const memories = [
+          ...(await memoriesRepo.listByProject(projectId)),
+        ].sort((x, y) => y.weight - x.weight);
         return ok({
           memories: memories.map((m) => ({
             id: m.id,
@@ -1592,7 +1056,7 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const memory = await memoriesRepo.get(id);
-        if (!memory) return fail("Memory not found");
+        if (!own(memory)) return fail("Memory not found");
         return ok({ memory });
       }
 
@@ -1611,7 +1075,13 @@ export async function executeWorkspaceTool(
           tags: arr("tags") ?? [],
           weight: Math.min(1, Math.max(0, n("weight") ?? 0.5)),
         });
-        await logAgentAction(projectId, `AI saved a ${type} to memory`, "memory", memory.id, content);
+        await logAgentAction(
+          projectId,
+          `AI saved a ${type} to memory`,
+          "memory",
+          memory.id,
+          content,
+        );
         return ok({ id: memory.id });
       }
 
@@ -1619,10 +1089,12 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const existing = await memoriesRepo.get(id);
-        if (!existing) return fail("Memory not found");
+        if (!own(existing)) return fail("Memory not found");
         const patch: Partial<typeof existing> = {};
-        if (s("content")) patch.content = s("content");
-        if (["fact", "lesson", "decision", "preference"].includes(String(a.type)))
+        if (raw("content") !== undefined) patch.content = raw("content");
+        if (
+          ["fact", "lesson", "decision", "preference"].includes(String(a.type))
+        )
           patch.type = String(a.type) as typeof existing.type;
         if (arr("tags")) patch.tags = arr("tags");
         if (n("weight") !== undefined)
@@ -1634,7 +1106,10 @@ export async function executeWorkspaceTool(
       /* ── Commits ──────────────────────────────────────────────────── */
       case "list_commits": {
         const limit = Math.min(Math.max(n("limit") ?? 15, 1), 50);
-        const commits = (await commitsRepo.listByProject(projectId)).slice(0, limit);
+        const commits = (await commitsRepo.listByProject(projectId)).slice(
+          0,
+          limit,
+        );
         return ok({
           commits: commits.map((c) => ({
             id: c.id,
@@ -1651,7 +1126,7 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const commit = await commitsRepo.get(id);
-        if (!commit) return fail("Commit not found");
+        if (!own(commit)) return fail("Commit not found");
         return ok({ commit });
       }
 
@@ -1659,9 +1134,9 @@ export async function executeWorkspaceTool(
         const id = s("id");
         if (!id) return fail("id is required");
         const existing = await commitsRepo.get(id);
-        if (!existing) return fail("Commit not found");
+        if (!own(existing)) return fail("Commit not found");
         const patch: Partial<Commit> = {};
-        if (s("aiSummary") !== undefined) patch.aiSummary = s("aiSummary");
+        if (raw("aiSummary") !== undefined) patch.aiSummary = raw("aiSummary");
         if (arr("linkedSpecIds")) patch.linkedSpecIds = arr("linkedSpecIds")!;
         if (arr("linkedTaskIds")) patch.linkedTaskIds = arr("linkedTaskIds")!;
         await commitsRepo.update(id, patch);
@@ -1710,7 +1185,10 @@ export async function executeWorkspaceTool(
 
       case "list_agent_runs": {
         const limit = Math.min(Math.max(n("limit") ?? 15, 1), 50);
-        const runs = (await agentRunsRepo.listByProject(projectId)).slice(0, limit);
+        const runs = (await agentRunsRepo.listByProject(projectId)).slice(
+          0,
+          limit,
+        );
         return ok({
           agentRuns: runs.map((r) => ({
             id: r.id,
@@ -1772,7 +1250,10 @@ export async function executeWorkspaceTool(
 
       case "list_watch_events": {
         const limit = Math.min(Math.max(n("limit") ?? 20, 1), 100);
-        const events = (await watchEventsRepo.listByProject(projectId)).slice(0, limit);
+        const events = (await watchEventsRepo.listByProject(projectId)).slice(
+          0,
+          limit,
+        );
         return ok({
           watchEvents: events.map((e) => ({
             id: e.id,

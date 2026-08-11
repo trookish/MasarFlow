@@ -79,6 +79,11 @@ import {
   fetchOpenCodeModels,
   fetchOpenCodeTools,
   checkOpenCodeHealth,
+  subscribeBridge,
+  claimBridgeCall,
+  postBridgeResult,
+  postBridgeError,
+  type BridgeWsToolCall,
   type OpenCodeModelsPayload,
   type OpenCodeToolInfo,
 } from "@/lib/ai/opencode-client";
@@ -106,7 +111,7 @@ import {
   type AiModel,
   type AiProvider,
 } from "@/lib/ai/catalog";
-import { WORKSPACE_TOOLS } from "@/lib/ai/tools";
+import { WORKSPACE_TOOLS, WORKSPACE_TOOL_NAMES } from "@/lib/ai/tools";
 import {
   FS_TOOLS,
   FS_TOOL_NAMES,
@@ -219,6 +224,15 @@ export function ChatView() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [ocTools, setOcTools] = useState<OpenCodeToolInfo[]>([]);
   const [opencodeHealthy, setOpencodeHealthy] = useState(true);
+  /**
+   * The opencode session this browser answers workspace-tool calls for. Kept
+   * in sync with the active thread's session (created/ensured per turn), so
+   * the SSE bridge only delivers calls that belong to this chat.
+   */
+  const [bridgeSession, setBridgeSession] = useState<string | null>(null);
+  const bridgeSessionRef = useRef<string | null>(null);
+  /** Latest handler for bridge tool calls (stable across reconnects). */
+  const bridgeHandlerRef = useRef<(call: BridgeWsToolCall) => void>(() => {});
   const [input, setInput] = useState("");
   const [interim, setInterim] = useState("");
   const [threadQuery, setThreadQuery] = useState("");
@@ -301,6 +315,27 @@ export function ChatView() {
     })();
   }, []);
 
+  // The registered workspace functions + the server's native fs tools, split
+  // for the prompt: workspace functions mutate the project DB, fs tools hit
+  // the real files on disk. Only tools the server actually exposes are listed.
+  const ocToolIds = useMemo(() => new Set(ocTools.map((t) => t.id)), [ocTools]);
+  const registeredWorkspaceTools = useMemo(
+    () =>
+      WORKSPACE_TOOLS.filter((def) => ocToolIds.has(def.name)).map((def) => ({
+        name: def.name,
+        description: def.description,
+      })),
+    [ocToolIds],
+  );
+  const nativeFsTools = useMemo(
+    () => ocTools.filter((t) => !WORKSPACE_TOOL_NAMES.includes(t.id)),
+    [ocTools],
+  );
+
+  useEffect(() => {
+    bridgeSessionRef.current = bridgeSession;
+  }, [bridgeSession]);
+
   const threadsRaw = useLiveQuery(
     () => chatThreadsRepo.listByProject(projectId),
     [projectId],
@@ -319,6 +354,60 @@ export function ChatView() {
   const connections = useLiveQuery(() => aiConnectionsRepo.list(), []) ?? [];
 
   const thread = threads.find((t) => t.id === threadId) ?? null;
+
+  // The session this browser answers workspace-tool calls for: the explicit
+  // one created/ensured this session wins over the thread's stored id.
+  const activeBridgeSession =
+    bridgeSession ?? thread?.opencodeSessionId ?? null;
+
+  // Keep the ref the (reconnect-stable) executor reads in step.
+  useEffect(() => {
+    bridgeSessionRef.current = activeBridgeSession;
+  }, [activeBridgeSession]);
+
+  // The bridge executor: claim → execute → post result. Exactly one tab
+  // claims each call, so duplicate subscriptions never double-mutate.
+  useEffect(() => {
+    bridgeHandlerRef.current = (call) => {
+      const sid = bridgeSessionRef.current;
+      if (!sid || !projectId) {
+        void postBridgeError(
+          call.correlationId,
+          sid ?? "",
+          "No active MasarFlow project — open a chat inside a project first.",
+        );
+        return;
+      }
+      void (async () => {
+        const claimed = await claimBridgeCall(call.correlationId, sid);
+        if (!claimed) return; // another tab owns this call
+        try {
+          const result = await executeWorkspaceToolWithUndo(
+            projectId,
+            { id: call.correlationId, name: call.name, arguments: call.args },
+            activeAssistantRef.current ?? "",
+          );
+          void postBridgeResult(call.correlationId, sid, result);
+        } catch (e) {
+          void postBridgeError(call.correlationId, sid, (e as Error).message);
+        }
+      })();
+    };
+  }, [projectId]);
+
+  // SSE subscription: opencode server → Next → this browser. Re-subscribes
+  // whenever the active session changes (thread switch, fresh load, repair,
+  // or a newly created session via the session_created event handler).
+  useEffect(() => {
+    if (!projectId || !activeBridgeSession) return;
+    const controller = new AbortController();
+    subscribeBridge({
+      sessionId: activeBridgeSession,
+      signal: controller.signal,
+      onCall: (call) => bridgeHandlerRef.current(call),
+    });
+    return () => controller.abort();
+  }, [projectId, activeBridgeSession]);
 
   const mode = thread?.mode ?? "agentic";
   const backend: ChatBackend = thread?.backend ?? "opencode";
@@ -570,6 +659,7 @@ export function ChatView() {
     try {
       const result = await ensureChatSession(threadId, directory);
       if (!result) return null;
+      setBridgeSession(result.opencodeSessionId);
       await chatThreadsRepo.update(threadId, {
         opencodeSessionId: result.opencodeSessionId,
         opencodeDirectory: directory ?? t.opencodeDirectory ?? "",
@@ -1010,6 +1100,7 @@ export function ChatView() {
           break;
         case "session_created":
           sessionId = e.sessionId;
+          setBridgeSession(e.sessionId);
           void chatThreadsRepo.update(thread.id, {
             opencodeSessionId: e.sessionId,
             opencodeDirectory: sessionDirectoryFor() ?? "",
@@ -1046,22 +1137,25 @@ export function ChatView() {
       }
       // Agentic turns are grounded in the live workspace briefing; chat turns
       // talk to the model directly (OpenCode still supplies its own rules).
-      // The filesystem toolbelt describes exactly the tools OpenCode exposes —
-      // never phantom workspace tools the model cannot actually call.
+      // The toolbelt describes exactly what the server can execute: the
+      // workspace functions (mutate the project DB via the bridge) when they
+      // are registered, plus the real filesystem tools OpenCode exposes —
+      // never phantom tools the model cannot actually call.
       const context = agentic
         ? await buildAgentSystemPrompt({
             projectId: projectId!,
             query: userText,
             withTools: true,
-            toolbelt: "filesystem",
+            toolbelt: registeredWorkspaceTools.length ? "hybrid" : "filesystem",
             linkedRoots: (linkedRoots ?? []).map((r) => ({
               name: r.name,
               rootPath: r.rootPath,
             })),
-            filesystemTools: ocTools,
+            workspaceTools: registeredWorkspaceTools,
+            filesystemTools: nativeFsTools,
             filesystemNote: linkedRoots?.length
               ? undefined
-              : "The tools are rooted in the MasarFlow workspace folder. To work on an external folder (e.g. a web app, a Unity game, or any other codebase), the user must link it from the chat header (folder icon) — until then you cannot reach other folders on the machine.",
+              : "The filesystem/shell tools are rooted in the MasarFlow workspace folder. To work on an external folder (e.g. a web app, a Unity game, or any other codebase), the user must link it from the chat header (folder icon) — until then you cannot reach other folders on the machine.",
             signal: controller.signal,
           })
         : null;

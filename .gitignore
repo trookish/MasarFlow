@@ -37,6 +37,10 @@ yarn-error.log*
 .env*
 !.env.local.example
 
+# generated opencode workspace tools + bridge secret (regenerated on start)
+/.opencode/tools/
+/.masarflow/
+
 # vercel
 .vercel
 

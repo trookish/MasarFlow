@@ -21,6 +21,7 @@ import type { OpenCodeConfig } from "./config";
 import { OpenCodeError, classifyAssistantError, userMessage } from "./errors";
 import { eventBus } from "./events";
 import { createOpencodeLogger, newOpenCodeRequestId } from "./logger";
+import { WORKSPACE_TOOL_NAMES } from "@/lib/ai/workspace-tool-defs";
 import {
   buildPromptBody,
   buildPromptParts,
@@ -342,6 +343,20 @@ export function runTurn(
 
         unsubscribe = eventBus.subscribe(sessionId, handleEvent);
 
+        // Agentic turns rely on the workspace functions being registered on
+        // the server (create_note, read_spec, … via the browser bridge). When
+        // they're missing, tell the user up front so a "create this note"
+        // request doesn't fail mysteriously mid-turn.
+        if (input.toolsEnabled) {
+          const missing = await missingWorkspaceTools(client);
+          if (missing && missing.length > 0) {
+            emit({
+              type: "notice",
+              message: `The OpenCode server is missing MasarFlow's workspace functions (e.g. ${missing.slice(0, 3).join(", ")}). Restart it with \`npm run dev:full\` (or run \`npm run tools:install\`) so the agent can create and update notes, specs, and tasks in your project.`,
+            });
+          }
+        }
+
         const promptInput: {
           text: string;
           attachments?: ChatAttachmentInput[];
@@ -563,4 +578,42 @@ async function disabledTools(
   const map: Record<string, boolean> = {};
   for (const id of ids) map[id] = false;
   return map;
+}
+
+let missingToolsCache: { at: number; missing: string[] | null } | null = null;
+
+/**
+ * The workspace functions the OpenCode server has NOT registered as tools
+ * (cached 5 min). A server started before the `.opencode/tools/*.ts` files
+ * existed won't have them until it restarts. Returns null when the tool
+ * registry can't be queried (older server builds without the experimental
+ * endpoint) — callers must NOT report "missing" in that case, since it
+ * would be a false alarm. The first call on a fresh server compiles the
+ * custom tools and can take a while, so this uses a generous timeout.
+ */
+async function missingWorkspaceTools(
+  client: OpenCodeClient,
+): Promise<string[] | null> {
+  if (missingToolsCache && Date.now() - missingToolsCache.at < 300_000)
+    return missingToolsCache.missing;
+  let ids: string[] | null = null;
+  try {
+    const raw = await client.request<string[]>("/experimental/tool/ids", {
+      timeoutMs: 60_000,
+    });
+    ids = Array.isArray(raw) ? raw : [];
+  } catch {
+    ids = null;
+  }
+  const missing =
+    ids === null
+      ? null
+      : WORKSPACE_TOOL_NAMES.filter((name) => !ids.includes(name));
+  missingToolsCache = { at: Date.now(), missing };
+  return missing;
+}
+
+/** Test seam: clear the cached tool-registry check between cases. */
+export function resetMissingToolsCacheForTests(): void {
+  missingToolsCache = null;
 }

@@ -33,6 +33,10 @@ export const projectsRepo = {
     return db.projects.get(id);
   },
 
+  count(): Promise<number> {
+    return db.projects.count();
+  },
+
   async create(
     input: Pick<Project, "name"> & Partial<Project>,
   ): Promise<Project> {
@@ -42,6 +46,14 @@ export const projectsRepo = {
       name: input.name,
       slug: input.slug ?? slugify(input.name),
       description: input.description ?? "",
+      icon: input.icon ?? "box",
+      iconImage: input.iconImage ?? "",
+      tags: input.tags ?? [],
+      category: input.category ?? "",
+      banner: input.banner ?? "",
+      bannerMode: input.bannerMode ?? "none",
+      bannerBlur: input.bannerBlur ?? 0,
+      bannerBrightness: input.bannerBrightness ?? 100,
       health: input.health ?? 100,
       archScore: input.archScore ?? 100,
       techDebt: input.techDebt ?? 0,

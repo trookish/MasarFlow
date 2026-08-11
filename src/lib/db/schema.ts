@@ -99,6 +99,19 @@ export const projectSchema = z.object({
   name: z.string(),
   slug: z.string(),
   description: z.string().default(""),
+  icon: z.string().default("box"),
+  /** Custom image overriding the lucide icon (data URL or remote URL). */
+  iconImage: z.string().default(""),
+  tags: z.array(z.string()).default([]),
+  category: z.string().default(""),
+  /** Project banner image (data URL or remote URL). */
+  banner: z.string().default(""),
+  /** How the banner is shown: hidden, header banner, or workspace background. */
+  bannerMode: z.enum(["none", "banner", "background"]).default("none"),
+  /** Background blur in px (background mode only). */
+  bannerBlur: z.number().min(0).max(24).default(0),
+  /** Background brightness percent (background mode only). */
+  bannerBrightness: z.number().min(10).max(100).default(100),
   health: z.number().min(0).max(100).default(100),
   archScore: z.number().min(0).max(100).default(100),
   techDebt: z.number().min(0).max(100).default(0),

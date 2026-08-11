@@ -38,6 +38,7 @@ import {
 import { computeProjectMetrics } from "@/lib/metrics";
 import { useActiveProjectId, useActiveProject } from "@/lib/hooks/use-project";
 import { usePageSettings } from "@/lib/stores/page-settings";
+import { ProjectIcon } from "@/components/shell/project-fields";
 import type { TaskStatus, Task } from "@/lib/db/schema";
 import { NOTE_TYPE_DOT } from "@/lib/colors";
 import { taskStatusLabel, priorityMeta, specStatusMeta } from "@/lib/workflow";
@@ -193,17 +194,50 @@ export function DashboardView() {
   const router = useRouter();
   const { showMetrics, showActivity } = usePageSettings((s) => s.dashboard);
 
-  const notes = useLiveQuery(() => notesRepo.listByProject(projectId), [projectId]);
-  const specs = useLiveQuery(() => specsRepo.listByProject(projectId), [projectId]);
-  const tasks = useLiveQuery(() => tasksRepo.listByProject(projectId), [projectId]);
-  const standards = useLiveQuery(() => standardsRepo.listByProject(projectId), [projectId]);
-  const memories = useLiveQuery(() => memoriesRepo.listByProject(projectId), [projectId]);
-  const commits = useLiveQuery(() => commitsRepo.listByProject(projectId), [projectId]);
-  const devLogs = useLiveQuery(() => devLogsRepo.listByProject(projectId), [projectId]);
-  const syncFiles = useLiveQuery(() => syncRepo.listByProject(projectId), [projectId]);
-  const systems = useLiveQuery(() => systemsRepo.listByProject(projectId), [projectId]);
-  const sprints = useLiveQuery(() => sprintsRepo.listByProject(projectId), [projectId]);
-  const docs = useLiveQuery(() => docsRepo.listByProject(projectId), [projectId]);
+  const notes = useLiveQuery(
+    () => notesRepo.listByProject(projectId),
+    [projectId],
+  );
+  const specs = useLiveQuery(
+    () => specsRepo.listByProject(projectId),
+    [projectId],
+  );
+  const tasks = useLiveQuery(
+    () => tasksRepo.listByProject(projectId),
+    [projectId],
+  );
+  const standards = useLiveQuery(
+    () => standardsRepo.listByProject(projectId),
+    [projectId],
+  );
+  const memories = useLiveQuery(
+    () => memoriesRepo.listByProject(projectId),
+    [projectId],
+  );
+  const commits = useLiveQuery(
+    () => commitsRepo.listByProject(projectId),
+    [projectId],
+  );
+  const devLogs = useLiveQuery(
+    () => devLogsRepo.listByProject(projectId),
+    [projectId],
+  );
+  const syncFiles = useLiveQuery(
+    () => syncRepo.listByProject(projectId),
+    [projectId],
+  );
+  const systems = useLiveQuery(
+    () => systemsRepo.listByProject(projectId),
+    [projectId],
+  );
+  const sprints = useLiveQuery(
+    () => sprintsRepo.listByProject(projectId),
+    [projectId],
+  );
+  const docs = useLiveQuery(
+    () => docsRepo.listByProject(projectId),
+    [projectId],
+  );
 
   // Live metrics computed from real workspace data (no stored scores).
   const metrics = computeProjectMetrics({
@@ -247,7 +281,8 @@ export function DashboardView() {
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, 6);
 
-  const activeSprint = (sprints ?? []).find((s) => s.status === "active") ?? null;
+  const activeSprint =
+    (sprints ?? []).find((s) => s.status === "active") ?? null;
 
   const statusCounts = (
     ["backlog", "todo", "in_progress", "review", "done"] as TaskStatus[]
@@ -271,27 +306,63 @@ export function DashboardView() {
     <div className="flex h-full flex-col overflow-hidden">
       <ScrollArea className="flex-1 px-6 py-6">
         <div className="mx-auto max-w-6xl space-y-5">
+          {/* Project banner (header mode) */}
+          {project?.banner && project.bannerMode === "banner" ? (
+            <div className="relative h-40 overflow-hidden rounded-xl border border-border">
+              <img
+                src={project.banner}
+                alt={`${project.name} banner`}
+                draggable={false}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          ) : null}
+
           {/* Header + quick actions */}
           <div className="flex flex-wrap items-center gap-3">
-            <div className="min-w-56 flex-1">
-              <h1 className="truncate text-xl font-semibold">
-                {project?.name ?? "Dashboard"}
-              </h1>
-              <p className="truncate text-sm text-muted-foreground">
-                {project?.description || "Project overview and health."}
-              </p>
+            <div className="flex min-w-56 flex-1 items-center gap-3">
+              <ProjectIcon
+                icon={project?.icon}
+                iconImage={project?.iconImage}
+                accent={project?.accent}
+                size="lg"
+              />
+              <div className="min-w-0">
+                <h1 className="truncate text-xl font-semibold">
+                  {project?.name ?? "Dashboard"}
+                </h1>
+                <p className="truncate text-sm text-muted-foreground">
+                  {project?.description || "Project overview and health."}
+                </p>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button size="sm" onClick={() => void newNote()} disabled={!projectId}>
+              <Button
+                size="sm"
+                onClick={() => void newNote()}
+                disabled={!projectId}
+              >
                 <Plus className="h-3.5 w-3.5" /> New note
               </Button>
-              <Button variant="outline" size="sm" onClick={() => router.push("/tasks")}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push("/tasks")}
+              >
                 <KanbanSquare className="h-3.5 w-3.5" /> New task
               </Button>
-              <Button variant="outline" size="sm" onClick={() => router.push("/specs")}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push("/specs")}
+              >
                 <FileText className="h-3.5 w-3.5" /> New spec
               </Button>
-              <Button variant="outline" size="sm" onClick={() => router.push("/chat")}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push("/chat")}
+              >
                 <Sparkles className="h-3.5 w-3.5 text-primary" /> Ask AI
               </Button>
             </div>
@@ -312,13 +383,25 @@ export function DashboardView() {
                   notes, specs, and tasks directly.
                 </p>
                 <div className="flex flex-wrap justify-center gap-2 pt-1">
-                  <Button size="sm" onClick={() => void newNote()} disabled={!projectId}>
+                  <Button
+                    size="sm"
+                    onClick={() => void newNote()}
+                    disabled={!projectId}
+                  >
                     <PenTool className="h-3.5 w-3.5" /> Write a note
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => router.push("/workflow")}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push("/workflow")}
+                  >
                     Run the 16-step workflow
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => router.push("/chat")}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push("/chat")}
+                  >
                     <MessageSquare className="h-3.5 w-3.5" /> Ask AI
                   </Button>
                 </div>
@@ -351,20 +434,70 @@ export function DashboardView() {
 
           {/* Counts strip — every tile goes straight to its module */}
           <div className="flex flex-wrap gap-2">
-            <StatTile icon={PenTool} label="Notes" value={notes?.length ?? 0} href="/brain" />
-            <StatTile icon={FileText} label="Specs" value={specs?.length ?? 0} href="/specs" />
-            <StatTile icon={KanbanSquare} label="Tasks" value={taskList.length} href="/tasks" />
-            <StatTile icon={Flag} label="Sprints" value={sprints?.length ?? 0} href="/sprints" />
-            <StatTile icon={ShieldCheck} label="Standards" value={standards?.length ?? 0} href="/standards" />
-            <StatTile icon={BookOpen} label="Docs" value={docs?.length ?? 0} href="/docs" />
-            <StatTile icon={Boxes} label="Systems" value={systems?.length ?? 0} href="/architecture" />
-            <StatTile icon={Brain} label="Memories" value={memories?.length ?? 0} href="/knowledge" />
-            <StatTile icon={Layers} label="Files" value={filesCount} href="/files" />
+            <StatTile
+              icon={PenTool}
+              label="Notes"
+              value={notes?.length ?? 0}
+              href="/brain"
+            />
+            <StatTile
+              icon={FileText}
+              label="Specs"
+              value={specs?.length ?? 0}
+              href="/specs"
+            />
+            <StatTile
+              icon={KanbanSquare}
+              label="Tasks"
+              value={taskList.length}
+              href="/tasks"
+            />
+            <StatTile
+              icon={Flag}
+              label="Sprints"
+              value={sprints?.length ?? 0}
+              href="/sprints"
+            />
+            <StatTile
+              icon={ShieldCheck}
+              label="Standards"
+              value={standards?.length ?? 0}
+              href="/standards"
+            />
+            <StatTile
+              icon={BookOpen}
+              label="Docs"
+              value={docs?.length ?? 0}
+              href="/docs"
+            />
+            <StatTile
+              icon={Boxes}
+              label="Systems"
+              value={systems?.length ?? 0}
+              href="/architecture"
+            />
+            <StatTile
+              icon={Brain}
+              label="Memories"
+              value={memories?.length ?? 0}
+              href="/knowledge"
+            />
+            <StatTile
+              icon={Layers}
+              label="Files"
+              value={filesCount}
+              href="/files"
+            />
           </div>
 
           {/* Work grid */}
           <div className="grid gap-4 lg:grid-cols-2">
-            <DashCard icon={KanbanSquare} title="Active work" href="/tasks" hrefLabel="Open board">
+            <DashCard
+              icon={KanbanSquare}
+              title="Active work"
+              href="/tasks"
+              hrefLabel="Open board"
+            >
               {activeTasks.length === 0 ? (
                 <EmptyHint>
                   Nothing in flight. Move a task to “To do” or “In progress” on
@@ -442,7 +575,9 @@ export function DashboardView() {
                             <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
                               <div
                                 className="h-full rounded-full bg-primary"
-                                style={{ width: `${s.implementationProgress}%` }}
+                                style={{
+                                  width: `${s.implementationProgress}%`,
+                                }}
                               />
                             </div>
                             <span className="text-[10px] text-muted-foreground tabular-nums">
@@ -457,7 +592,12 @@ export function DashboardView() {
               )}
             </DashCard>
 
-            <DashCard icon={PenTool} title="Recent notes" href="/brain" hrefLabel="Open Brain">
+            <DashCard
+              icon={PenTool}
+              title="Recent notes"
+              href="/brain"
+              hrefLabel="Open Brain"
+            >
               {recentNotes.length === 0 ? (
                 <EmptyHint>No notes yet — capture your first idea.</EmptyHint>
               ) : (
@@ -494,16 +634,24 @@ export function DashboardView() {
 
             <DashCard
               icon={Flag}
-              title={activeSprint ? `Task pipeline — ${activeSprint.name}` : "Task pipeline"}
+              title={
+                activeSprint
+                  ? `Task pipeline — ${activeSprint.name}`
+                  : "Task pipeline"
+              }
               href="/sprints"
               hrefLabel="Sprints"
             >
               {taskList.length === 0 ? (
-                <EmptyHint>No tasks yet — the pipeline fills in as you plan work.</EmptyHint>
+                <EmptyHint>
+                  No tasks yet — the pipeline fills in as you plan work.
+                </EmptyHint>
               ) : (
                 <div className="space-y-2">
                   {statusCounts.map(({ status, count }) => {
-                    const pct = taskList.length ? (count / taskList.length) * 100 : 0;
+                    const pct = taskList.length
+                      ? (count / taskList.length) * 100
+                      : 0;
                     return (
                       <div key={status}>
                         <div className="mb-1 flex justify-between text-xs">
@@ -534,7 +682,12 @@ export function DashboardView() {
             </DashCard>
 
             {showActivity && (
-              <DashCard icon={ScrollText} title="Recent activity" href="/devlogs" hrefLabel="Dev Logs">
+              <DashCard
+                icon={ScrollText}
+                title="Recent activity"
+                href="/devlogs"
+                hrefLabel="Dev Logs"
+              >
                 {(devLogs ?? []).length === 0 ? (
                   <EmptyHint>
                     No activity yet. Changes, agent actions, and commits land

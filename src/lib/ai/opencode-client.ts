@@ -407,3 +407,150 @@ export async function fetchOpenCodeTools(
 }
 
 export type { OpenCodeFrontendEvent };
+
+/* ── Workspace-tool bridge (opencode-executed project functions) ─────── */
+
+/** A pending workspace-function call delivered to the browser over SSE. */
+export interface BridgeWsToolCall {
+  correlationId: string;
+  name: string;
+  args: Record<string, unknown>;
+}
+
+export interface BridgeSubscriptionOptions {
+  /** The opencode session whose calls this browser should answer. */
+  sessionId: string;
+  /** Called once per pending workspace-tool call (browser must answer it). */
+  onCall: (call: BridgeWsToolCall) => void;
+  /** Abort to stop subscribing (also stops reconnect attempts). */
+  signal?: AbortSignal;
+  /** Test seam. */
+  fetchImpl?: typeof fetch;
+}
+
+/**
+ * Subscribe to the workspace-tool bridge SSE stream for a session. The
+ * browser executes each delivered call against IndexedDB, then posts the
+ * result back via `postBridgeResult`. Auto-reconnects with backoff while the
+ * signal is active; the caller must execute calls from `onCall` — exactly
+ * one tab claims each call, so duplicates never double-mutate.
+ */
+export function subscribeBridge(opts: BridgeSubscriptionOptions): void {
+  const { sessionId, onCall, signal } = opts;
+  const fetchImpl = opts.fetchImpl ?? fetch;
+  let closed = false;
+  let retryMs = 1500;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const stop = () => {
+    if (closed) return;
+    closed = true;
+    if (timer) clearTimeout(timer);
+    signal?.removeEventListener("abort", stop);
+  };
+  if (signal) {
+    if (signal.aborted) return;
+    signal.addEventListener("abort", stop, { once: true });
+  }
+
+  const connect = async () => {
+    if (closed || signal?.aborted) return;
+    try {
+      const res = await fetchImpl(
+        `/api/opencode/bridge?sessionId=${encodeURIComponent(sessionId)}`,
+        { cache: "no-store", signal },
+      );
+      if (!res.ok || !res.body)
+        throw new Error(`bridge failed (${res.status})`);
+      retryMs = 1500; // a healthy connection resets the backoff
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      for (;;) {
+        if (closed || signal?.aborted) break;
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const frames = buffer.split("\n\n");
+        buffer = frames.pop() ?? "";
+        for (const frame of frames) {
+          const line = frame
+            .split("\n")
+            .map((l) => l.trim())
+            .find((l) => l.startsWith("data:"));
+          if (!line) continue;
+          let event: {
+            type?: string;
+            correlationId?: string;
+            name?: string;
+            args?: Record<string, unknown>;
+          };
+          try {
+            event = JSON.parse(line.slice(5).trim()) as typeof event;
+          } catch {
+            continue;
+          }
+          if (event.type === "ws_tool" && event.correlationId && event.name) {
+            onCall({
+              correlationId: event.correlationId,
+              name: event.name,
+              args: event.args ?? {},
+            });
+          }
+        }
+      }
+    } catch {
+      // Connection dropped (or abort) — reconnect unless stopped.
+    }
+    if (closed || signal?.aborted) return;
+    timer = setTimeout(connect, retryMs);
+    retryMs = Math.min(retryMs * 2, 30_000);
+  };
+
+  void connect();
+}
+
+/** Claim a pending call so exactly one tab executes it. */
+export async function claimBridgeCall(
+  correlationId: string,
+  sessionId: string,
+): Promise<boolean> {
+  try {
+    const res = await fetch("/api/opencode/ws-call/claim", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ correlationId, sessionId }),
+    });
+    if (!res.ok) return false;
+    const data = (await res.json()) as { claimed?: boolean };
+    return data.claimed === true;
+  } catch {
+    return false;
+  }
+}
+
+/** Deliver a workspace-tool result back to the pending opencode call. */
+export async function postBridgeResult(
+  correlationId: string,
+  sessionId: string,
+  result: string,
+): Promise<void> {
+  await fetch("/api/opencode/ws-call/result", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ correlationId, sessionId, result }),
+  }).catch(() => {});
+}
+
+/** Report a browser-side execution failure for a pending call. */
+export async function postBridgeError(
+  correlationId: string,
+  sessionId: string,
+  error: string,
+): Promise<void> {
+  await fetch("/api/opencode/ws-call/result", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ correlationId, sessionId, error }),
+  }).catch(() => {});
+}

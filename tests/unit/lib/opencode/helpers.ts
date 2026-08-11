@@ -6,7 +6,12 @@
 
 import { vi } from "vitest";
 
-import type { OpenCodeMessage, OpenCodePart, SessionStatus } from "@/lib/opencode/types";
+import type {
+  OpenCodeMessage,
+  OpenCodePart,
+  SessionStatus,
+} from "@/lib/opencode/types";
+import { WORKSPACE_TOOL_NAMES } from "@/lib/ai/workspace-tool-defs";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -61,13 +66,23 @@ export interface FakeServerOptions {
   sendDelayMs?: number;
   /** Whether POST /session/{id}/message should hang until the test resolves it. */
   pendingSends?: Map<string, (result: OpenCodeMessage) => void>;
+  /**
+   * Tool ids served by /experimental/tool/ids. Defaults to the native tools
+   * PLUS the MasarFlow workspace functions — the standard dev:full setup.
+   * Pass a list without the workspace names to simulate a stale server.
+   */
+  toolIds?: string[];
 }
 
 export class FakeOpenCodeServer {
   readonly sse = new SseBus();
   sessions = new Map<string, FakeSession>();
   abortCalls: string[] = [];
-  permissionReplies: { sessionId: string; permissionId: string; response: string }[] = [];
+  permissionReplies: {
+    sessionId: string;
+    permissionId: string;
+    response: string;
+  }[] = [];
   deleteCalls: string[] = [];
   private opts: FakeServerOptions;
   private messageSeq = 0;
@@ -79,15 +94,28 @@ export class FakeOpenCodeServer {
   }
 
   private json(body: unknown, status = 200): Response {
-    return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { "content-type": "application/json" },
+    });
   }
 
   textPart(text: string): OpenCodePart {
     this.partSeq += 1;
-    return { id: `prt_${this.partSeq}`, sessionID: "", messageID: "", type: "text", text };
+    return {
+      id: `prt_${this.partSeq}`,
+      sessionID: "",
+      messageID: "",
+      type: "text",
+      text,
+    };
   }
 
-  message(role: "user" | "assistant", parts: OpenCodePart[], extra: Partial<OpenCodeMessage["info"]> = {}): OpenCodeMessage {
+  message(
+    role: "user" | "assistant",
+    parts: OpenCodePart[],
+    extra: Partial<OpenCodeMessage["info"]> = {},
+  ): OpenCodeMessage {
     this.messageSeq += 1;
     const id = `msg_${this.messageSeq}`;
     return {
@@ -104,10 +132,15 @@ export class FakeOpenCodeServer {
 
   /** fetchImpl + global stub: routes the real API paths to this fake. */
   readonly fetchImpl: typeof fetch = async (input, init) => {
-    const url = typeof input === "string" ? new URL(input) : new URL((input as Request).url);
+    const url =
+      typeof input === "string"
+        ? new URL(input)
+        : new URL((input as Request).url);
     const method = init?.method ?? "GET";
     const path = url.pathname;
-    const body = init?.body ? (JSON.parse(init.body as string) as unknown) : undefined;
+    const body = init?.body
+      ? (JSON.parse(init.body as string) as unknown)
+      : undefined;
 
     if (path === "/global/health" && method === "GET") {
       return this.json({ healthy: true, version: "1.18.15" });
@@ -145,15 +178,28 @@ export class FakeOpenCodeServer {
     if (sessionMatch && method === "GET") {
       const s = this.sessions.get(sessionMatch[1]);
       return s
-        ? this.json({ id: s.id, projectID: "proj", directory: s.directory, title: s.title, version: "1.18.15", time: { created: 0, updated: 0 } })
-        : this.json({ name: "NotFoundError", data: { message: "not found" } }, 404);
+        ? this.json({
+            id: s.id,
+            projectID: "proj",
+            directory: s.directory,
+            title: s.title,
+            version: "1.18.15",
+            time: { created: 0, updated: 0 },
+          })
+        : this.json(
+            { name: "NotFoundError", data: { message: "not found" } },
+            404,
+          );
     }
     if (sessionMatch && method === "DELETE") {
       this.deleteCalls.push(sessionMatch[1]);
       this.sessions.delete(sessionMatch[1]);
       return this.json(true);
     }
-    if (/^\/session\/(ses_[A-Za-z0-9]+)\/abort$/.test(path) && method === "POST") {
+    if (
+      /^\/session\/(ses_[A-Za-z0-9]+)\/abort$/.test(path) &&
+      method === "POST"
+    ) {
       const id = /^\/session\/(ses_[A-Za-z0-9]+)\/abort$/.exec(path)![1];
       this.abortCalls.push(id);
       return this.json(true);
@@ -168,7 +214,11 @@ export class FakeOpenCodeServer {
       }
       if (method === "POST") {
         const session = this.sessions.get(id);
-        if (!session) return this.json({ name: "NotFoundError", data: { message: "session not found" } }, 404);
+        if (!session)
+          return this.json(
+            { name: "NotFoundError", data: { message: "session not found" } },
+            404,
+          );
         session.status = { type: "busy" };
         const delay = this.opts.sendDelayMs ?? 1;
         // Respect the caller's abort signal (watchdogs/cancellation) so the
@@ -180,8 +230,9 @@ export class FakeOpenCodeServer {
                 reject(new DOMException("Aborted", "AbortError"));
                 return;
               }
-              abortSignal.addEventListener("abort", () =>
-                reject(new DOMException("Aborted", "AbortError")),
+              abortSignal.addEventListener(
+                "abort",
+                () => reject(new DOMException("Aborted", "AbortError")),
                 { once: true },
               );
             })
@@ -192,20 +243,33 @@ export class FakeOpenCodeServer {
             ...(abortPromise ? [abortPromise] : []),
           ]);
         } catch {
-          return this.json({ name: "MessageAbortedError", data: { message: "aborted" } }, 499);
+          return this.json(
+            { name: "MessageAbortedError", data: { message: "aborted" } },
+            499,
+          );
         }
         if (this.opts.onSendMessage) {
           const result = await this.opts.onSendMessage(id, body);
           session.status = { type: "idle" };
           return this.json(result);
         }
-        const result = this.message("assistant", [this.textPart("Hello from fake opencode.")]);
+        const result = this.message("assistant", [
+          this.textPart("Hello from fake opencode."),
+        ]);
         session.status = { type: "idle" };
         return this.json(result);
       }
     }
-    if (/^\/session\/(ses_[A-Za-z0-9]+)\/permissions\/([A-Za-z0-9_-]+)$/.test(path) && method === "POST") {
-      const m = /^\/session\/(ses_[A-Za-z0-9]+)\/permissions\/([A-Za-z0-9_-]+)$/.exec(path)!;
+    if (
+      /^\/session\/(ses_[A-Za-z0-9]+)\/permissions\/([A-Za-z0-9_-]+)$/.test(
+        path,
+      ) &&
+      method === "POST"
+    ) {
+      const m =
+        /^\/session\/(ses_[A-Za-z0-9]+)\/permissions\/([A-Za-z0-9_-]+)$/.exec(
+          path,
+        )!;
       this.permissionReplies.push({
         sessionId: m[1],
         permissionId: m[2],
@@ -213,7 +277,10 @@ export class FakeOpenCodeServer {
       });
       return this.json(true);
     }
-    if (/^\/session\/(ses_[A-Za-z0-9]+)\/revert$/.test(path) && method === "POST") {
+    if (
+      /^\/session\/(ses_[A-Za-z0-9]+)\/revert$/.test(path) &&
+      method === "POST"
+    ) {
       return this.json(true);
     }
     if (path === "/provider" && method === "GET") {
@@ -228,7 +295,12 @@ export class FakeOpenCodeServer {
                 id: "fake-model-1",
                 providerID: "fake",
                 name: "Fake Model 1",
-                capabilities: { reasoning: true, attachment: false, toolcall: true, temperature: true },
+                capabilities: {
+                  reasoning: true,
+                  attachment: false,
+                  toolcall: true,
+                  temperature: true,
+                },
               },
             },
           },
@@ -238,9 +310,26 @@ export class FakeOpenCodeServer {
       });
     }
     if (path === "/experimental/tool/ids" && method === "GET") {
-      return this.json(["read", "bash", "edit", "webfetch", "glob", "grep", "list"]);
+      return this.json(
+        this.opts.toolIds ?? [
+          "read",
+          "bash",
+          "edit",
+          "webfetch",
+          "glob",
+          "grep",
+          "list",
+          ...WORKSPACE_TOOL_NAMES,
+        ],
+      );
     }
-    return this.json({ name: "NotFoundError", data: { message: `no route ${method} ${path}` } }, 404);
+    return this.json(
+      {
+        name: "NotFoundError",
+        data: { message: `no route ${method} ${path}` },
+      },
+      404,
+    );
   };
 
   /** Install the fake as global fetch (the shared event bus uses it). */
@@ -254,7 +343,9 @@ export class FakeOpenCodeServer {
 }
 
 /** Drain a ReadableStream<Uint8Array> of NDJSON lines → parsed events. */
-export async function drainNdjson(stream: ReadableStream<Uint8Array>): Promise<unknown[]> {
+export async function drainNdjson(
+  stream: ReadableStream<Uint8Array>,
+): Promise<unknown[]> {
   const reader = stream.getReader();
   const out: unknown[] = [];
   let buffer = "";

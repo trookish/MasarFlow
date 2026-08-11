@@ -472,9 +472,12 @@ export async function assembleWorkspaceContext(
  *     Agent Loop (AI Agents, Workflow, chat over API/Ollama backends).
  *   - "filesystem" — opencode-style fs/shell/web tools executed by the
  *     OpenCode server against the session's working directory. Used by
- *     OpenCode-backed chat. The workspace briefing is real but read-only:
- *     there are NO workspace-DB tools in this session, so the prompt never
- *     offers tools the model cannot actually call.
+ *     OpenCode-backed chat when the workspace tools are not registered.
+ *   - "hybrid" — BOTH the workspace functions (mutate the project DB) and
+ *     the OpenCode server's fs/shell tools (act on real files). Used by
+ *     OpenCode-backed chat when the workspace tools ARE registered on the
+ *     server. `workspaceTools` lists the actual registered functions;
+ *     `filesystemTools` lists the server's native tools.
  *   - undefined + withTools=false — chat mode: answer from the briefing only.
  */
 export function buildAssistantSystemPrompt(
@@ -482,7 +485,7 @@ export function buildAssistantSystemPrompt(
   opts: {
     withTools?: boolean;
     role?: string;
-    toolbelt?: "workspace" | "filesystem";
+    toolbelt?: "workspace" | "filesystem" | "hybrid";
     /** External projects linked to this workspace project (fs/shell tools). */
     linkedRoots?: { name: string; rootPath: string }[];
     /**
@@ -496,6 +499,12 @@ export function buildAssistantSystemPrompt(
      * the generic fs_* names — the model can then call tools that exist.
      */
     filesystemTools?: { id: string; description: string }[];
+    /**
+     * The workspace functions actually registered on the OpenCode server
+     * (name + description). Used by the "hybrid" toolbelt so the model sees
+     * exactly the functions it can call.
+     */
+    workspaceTools?: { name: string; description: string }[];
   } = {},
 ): string {
   const identity =
@@ -518,47 +527,71 @@ Always:
 - Reference entities precisely (spec numbers like RFC-001, task titles, note titles, system names).
 - Never invent workspace content: if it is not in the briefing or a tool result, say so.`;
 
-  const filesystemToolGuidance = opts.filesystemTools?.length
-    ? `
-You can ACT on the machine through filesystem/shell tools, not just advise. The tools you actually have in this session are:
-${opts.filesystemTools
-  .map((t) => {
-    if (t.id === "question") {
-      return "- question — ask the user something by opening a question dialog in the chat UI. Use it when you need a decision, preference, or clarification before continuing; the user answers in the dialog and the turn resumes with their reply.";
-    }
-    const approval =
-      t.id === "bash" ||
-      t.id === "edit" ||
-      t.id === "write" ||
-      t.id === "apply_patch" ||
-      t.id === "webfetch" ||
-      t.id === "shell"
-        ? " REQUIRES user approval — the user sees and reviews each command/file before it executes; propose edits and commands confidently but expect review."
-        : " Runs freely — no approval needed.";
-    const desc = t.description.slice(0, 220);
-    return `- ${t.id} — ${desc}${approval}`;
-  })
-  .join("\n")}
-${opts.filesystemNote ? `Working directory note: ${opts.filesystemNote}\n` : ""}The workspace briefing below is real data from the user's MasarFlow project, but you have NO tools to mutate it in this session — it is read-only context only. Your tools work on the real files on disk.
-Rules of engagement:
-- Orient yourself with a read/list tool before reading or writing; read a file before overwriting it.
-- Prefer search tools over guessing paths; prefer small, reviewable edits over full-file rewrites when possible.
-- Use the shell tool for builds/tests/package commands; report failures honestly and propose fixes.
-- When you change code, suggest (or ask the user to add) matching notes/specs/docs updates in the workspace — you cannot write those yourself in this session.
-- Never invent files or content: if something is not on disk, say so.`
+  /** The filesystem tools listing (real registered tools, or generic fs_*). */
+  const filesystemToolListing = opts.filesystemTools?.length
+    ? opts.filesystemTools
+        .map((t) => {
+          if (t.id === "question") {
+            return "- question — ask the user something by opening a question dialog in the chat UI. Use it when you need a decision, preference, or clarification before continuing; the user answers in the dialog and the turn resumes with their reply.";
+          }
+          const approval =
+            t.id === "bash" ||
+            t.id === "edit" ||
+            t.id === "write" ||
+            t.id === "apply_patch" ||
+            t.id === "webfetch" ||
+            t.id === "shell"
+              ? " REQUIRES user approval — the user sees and reviews each command/file before it executes; propose edits and commands confidently but expect review."
+              : " Runs freely — no approval needed.";
+          const desc = t.description.slice(0, 220);
+          return `- ${t.id} — ${desc}${approval}`;
+        })
+        .join("\n")
     : `
-You can ACT on the machine through filesystem/shell tools, not just advise. The tools you actually have in this session are:
 - fs_list — list a directory tree (read-only, runs freely).
 - fs_read — read a text file (read-only, runs freely).
 - fs_search — search files for names or content (read-only, runs freely).
 - fs_write — create or overwrite a file (REQUIRES user approval — the user reviews the path and content first; propose edits confidently but expect review).
 - shell_run — run a shell command, e.g. builds, tests, git, package managers, engine CLIs (REQUIRES user approval per command).
-- webfetch — fetch a URL and return its contents.
+- webfetch — fetch a URL and return its contents.`;
+
+  const workspaceToolListing = opts.workspaceTools?.length
+    ? opts.workspaceTools
+        .map(
+          (t) =>
+            `- ${t.name} — ${t.description.slice(0, 180)} (mutates your MasarFlow project).`,
+        )
+        .join("\n")
+    : "";
+
+  const filesystemRules = `
+- Orient yourself with a read/list tool before reading or writing; read a file before overwriting it.
+- Prefer search tools over guessing paths; prefer small, reviewable edits over full-file rewrites when possible.
+- Use the shell tool for builds/tests/package commands; report failures honestly and propose fixes.
+- Never invent files or content: if something is not on disk, say so.`;
+
+  const hybridToolGuidance = `
+You can ACT on the MasarFlow workspace AND on the machine through tools, not just advise.
+
+WORKSPACE FUNCTIONS — mutate the user's MasarFlow project database (brain notes, specs, tasks, sprints, standards, systems, docs, dev logs, memories, knowledge-graph links). Every change is recorded in Dev Logs and can be rolled back from the chat UI. You have these functions in this session:
+${workspaceToolListing || "- (none registered on this server — rely on the briefing for workspace facts)"}
+
+FILESYSTEM/SHELL TOOLS — act on the real files on disk (the session's working directory):
+${filesystemToolListing}
+${opts.filesystemNote ? `Working directory note: ${opts.filesystemNote}\n` : ""}Rules of engagement:
+- When the user asks you to create, update, or look up something in the project, CALL the matching workspace function right away — emit the tool call, then act on its result. Do not merely describe what you would do.
+- Workspace functions remain available in every round; use them whenever you need more project information. After a tool returns, examine its result and keep working until the task is done.
+- Use search_workspace or the list/read functions before claiming something does not exist in the project.
+- Keep the workspace and the code on disk in sync: when you change code, update the matching notes/specs/docs via the workspace functions, and vice versa.
+${filesystemRules}
+- Never invent workspace content: if it is not in the briefing or a tool result, say so.`;
+
+  const filesystemToolGuidance = `
+You can ACT on the machine through filesystem/shell tools, not just advise. The tools you actually have in this session are:
+${filesystemToolListing}
 ${opts.filesystemNote ? `Working directory note: ${opts.filesystemNote}\n` : ""}The workspace briefing below is real data from the user's MasarFlow project, but you have NO tools to mutate it in this session — it is read-only context only. Your tools work on the real files on disk.
 Rules of engagement:
-- Orient with fs_list before reading or writing; read a file before overwriting it.
-- Prefer fs_search over guessing paths; prefer small, reviewable edits over full-file rewrites when possible.
-- Use shell_run for builds/tests/package commands; report failures honestly and propose fixes.
+${filesystemRules}
 - When you change code, suggest (or ask the user to add) matching notes/specs/docs updates in the workspace — you cannot write those yourself in this session.
 - Never invent files or content: if something is not on disk, say so.`;
 
@@ -567,7 +600,9 @@ Rules of engagement:
 Answer strictly from the workspace briefing below. If something is not in it, say you don't see it in the workspace rather than inventing it.`
     : opts.toolbelt === "filesystem"
       ? filesystemToolGuidance
-      : workspaceToolGuidance;
+      : opts.toolbelt === "hybrid"
+        ? hybridToolGuidance
+        : workspaceToolGuidance;
 
   const linked = opts.linkedRoots?.length
     ? `

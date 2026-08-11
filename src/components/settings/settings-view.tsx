@@ -65,11 +65,14 @@ import { projectsRepo } from "@/lib/db/repos";
 import type { Project } from "@/lib/db/schema";
 import { resetData } from "@/lib/db/data";
 import { seedDemoProject } from "@/lib/db/demo-seed";
+import {
+  ProjectFields,
+  type ProjectFieldValues,
+} from "@/components/shell/project-fields";
 import { GradientEditorDialog } from "@/components/settings/gradient-editor-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogHeader,
@@ -661,7 +664,7 @@ function ProjectSection() {
   return (
     <SectionPanel
       title="Active Project"
-      description="Rename or add a description to the current project."
+      description="Edit the active project's identity, description, and tags."
     >
       {project ? (
         <ProjectForm key={project.id} project={project} />
@@ -1808,28 +1811,56 @@ export function SettingsView() {
 // ─── Shared sub-components ────────────────────────────────────────────────────
 
 function ProjectForm({ project }: { project: Project }) {
-  const [name, setName] = useState(project.name);
-  const [description, setDescription] = useState(project.description);
+  const [fields, setFields] = useState<ProjectFieldValues>({
+    name: project.name,
+    icon: project.icon,
+    iconImage: project.iconImage,
+    accent: project.accent,
+    description: project.description,
+    tags: project.tags,
+    category: project.category,
+    banner: project.banner,
+    bannerMode: project.bannerMode,
+    bannerBlur: project.bannerBlur,
+    bannerBrightness: project.bannerBrightness,
+  });
+  const [saved, setSaved] = useState(false);
 
   function save() {
-    void projectsRepo.update(project.id, { name, description });
+    const trimmed = fields.name.trim();
+    void projectsRepo.update(project.id, {
+      name: trimmed || project.name,
+      icon: fields.icon,
+      iconImage: fields.iconImage,
+      accent: fields.accent,
+      description: fields.description,
+      tags: fields.tags,
+      category: fields.category,
+      banner: fields.banner,
+      bannerMode: fields.bannerMode,
+      bannerBlur: fields.bannerBlur,
+      bannerBrightness: fields.bannerBrightness,
+    });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
   }
 
   return (
     <div className="space-y-3">
-      <Input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onBlur={save}
-        placeholder="Project name"
+      <ProjectFields
+        value={fields}
+        onChange={(patch) => setFields((f) => ({ ...f, ...patch }))}
       />
-      <Textarea
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        onBlur={save}
-        placeholder="Description"
-        rows={3}
-      />
+      <div className="flex items-center justify-end gap-3">
+        {saved ? (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Check className="h-3.5 w-3.5" /> Saved
+          </span>
+        ) : null}
+        <Button size="sm" onClick={save}>
+          Save project
+        </Button>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 {
   "name": "masarflow",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "node scripts/start.mjs",
     "setup:python": "node scripts/start.mjs --setup-only",
+    "tools:install": "node scripts/install-opencode-tools.mjs",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",

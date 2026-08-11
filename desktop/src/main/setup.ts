@@ -12,7 +12,9 @@ import type {
 import { ptyManager } from "./pty";
 import { settings } from "./settings";
 
-const MIN_NODE = 20;
+// Node 22.6+ — the OpenCode workspace-tool installer uses Node's built-in
+// TypeScript support (older versions still run, minus those tools).
+const MIN_NODE = 22;
 const MIN_PYTHON = 3.11;
 
 interface PythonInfo {
@@ -45,19 +47,19 @@ function checkNode(): SetupStep {
   const version = m?.[1] ? parseInt(m[1], 10) : null;
   const step: SetupStep = {
     key: "node",
-    label: "Node.js 20+",
+    label: "Node.js 22+",
     description: "Runtime for the Next.js app, launcher scripts, and tooling.",
     status: "missing",
   };
   if (code !== 0 || version === null) {
     step.status = "fail";
-    step.detail = "Node.js not found. Install Node.js 20+ from https://nodejs.org and restart the launcher.";
+    step.detail = "Node.js not found. Install Node.js 22+ from https://nodejs.org and restart the launcher.";
   } else if (version >= MIN_NODE) {
     step.status = "pass";
     step.detail = `Found v${out}`;
   } else {
     step.status = "fail";
-    step.detail = `Found v${out} — MasarFlow needs Node.js 20+.`;
+    step.detail = `Found v${out} — MasarFlow needs Node.js 22+.`;
   }
   return step;
 }

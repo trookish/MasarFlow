@@ -22,16 +22,20 @@ export interface AgentContextOptions {
   withTools: boolean;
   /**
    * Which tools the prompt should describe as actually available:
-   * "workspace" (in-browser Agent Loop) or "filesystem" (OpenCode-backed
-   * chat). Only meaningful when withTools is true.
+   * "workspace" (in-browser Agent Loop), "filesystem" (OpenCode-backed chat
+   * without workspace tools), or "hybrid" (OpenCode-backed chat with the
+   * workspace functions registered on the server). Only meaningful when
+   * withTools is true.
    */
-  toolbelt?: "workspace" | "filesystem";
+  toolbelt?: "workspace" | "filesystem" | "hybrid";
   linkedRoots?: { name: string; rootPath: string }[];
   role?: string;
   /** Extra note about where the filesystem tools are rooted. */
   filesystemNote?: string;
   /** Real tools registered on the OpenCode server (filesystem toolbelt). */
   filesystemTools?: { id: string; description: string }[];
+  /** Real workspace functions registered on the OpenCode server (hybrid). */
+  workspaceTools?: { name: string; description: string }[];
   /** Caller's cancellation signal (honored during RAG retrieval). */
   signal?: AbortSignal;
 }
@@ -66,6 +70,7 @@ export async function buildAgentSystemPrompt(
     linkedRoots: opts.linkedRoots,
     filesystemNote: opts.filesystemNote,
     filesystemTools: opts.filesystemTools,
+    workspaceTools: opts.workspaceTools,
   });
   return { system, trimmed };
 }

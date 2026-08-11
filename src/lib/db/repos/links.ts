@@ -12,6 +12,10 @@ export const linksRepo = {
     return db.links.where("[sourceType+sourceId]").equals([type, id]).toArray();
   },
 
+  get(id: string): Promise<Link | undefined> {
+    return db.links.get(id);
+  },
+
   /** Incoming links to an entity (backlinks). */
   listByTarget(type: EntityKind, id: string): Promise<Link[]> {
     return db.links.where("[targetType+targetId]").equals([type, id]).toArray();

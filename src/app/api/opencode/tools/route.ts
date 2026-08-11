@@ -45,7 +45,10 @@ export async function GET(): Promise<Response> {
 
     const raw = await oc.request<OpenCodeToolInfo[]>(
       `/experimental/tool?${params.toString()}`,
-      { timeoutMs: 5000 },
+      // The first call on a fresh server compiles the custom workspace tools
+      // and can take a while — a short timeout would report an empty set and
+      // make the chat fall back to a filesystem-only prompt.
+      { timeoutMs: 60_000 },
     );
     const tools = (Array.isArray(raw) ? raw : [])
       .map((t) => ({
