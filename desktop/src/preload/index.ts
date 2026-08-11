@@ -71,6 +71,10 @@ const api = {
     get: (): Promise<AppSettings> => ipcRenderer.invoke("settings:get"),
     set: (patch: Partial<AppSettings>): Promise<AppSettings> =>
       ipcRenderer.invoke("settings:set", patch),
+    markLaunched: (): Promise<void> => ipcRenderer.invoke("settings:mark-launched"),
+  },
+  assets: {
+    getBanner: (): Promise<string | null> => ipcRenderer.invoke("assets:banner"),
   },
   server: {
     getStatus: (): Promise<ServerStatus> => ipcRenderer.invoke("server:get-status"),

@@ -83,6 +83,8 @@ export interface GradientStop {
 
 export interface AppSettings {
   targetDir: string;
+  /** Set to true after the launcher window is first opened (drives "Welcome back"). */
+  hasLaunchedBefore: boolean;
   theme: ThemeMode;
   accentMode: AccentMode;
   accent: string;

@@ -40,6 +40,8 @@ const STATUS_BADGE: Record<StepStatus, { label: string; variant: "success" | "de
 export function SetupPage() {
   const setup = useApp((s) => s.setup);
   const setPage = useApp((s) => s.setPage);
+  const banner = useApp((s) => s.banner);
+  const welcomeBack = useApp((s) => s.settings?.hasLaunchedBefore ?? false);
   const [busy, setBusy] = useState(false);
 
   const check = async (): Promise<void> => {
@@ -68,12 +70,24 @@ export function SetupPage() {
   return (
     <div className="scrollbar-thin h-full overflow-y-auto">
       <div className="mx-auto max-w-2xl space-y-5 px-6 py-6">
-        <div>
-          <h1 className="text-xl font-semibold">Setup</h1>
-          <p className="text-sm text-muted-foreground">
-            The launcher checks that everything MasarFlow needs is installed, and installs it for you.
+        <section className="text-center">
+          {banner && (
+            <img
+              src={banner}
+              alt="MasarFlow"
+              className="mx-auto w-60 select-none object-contain"
+              draggable={false}
+            />
+          )}
+          <h1 className="mt-3 text-2xl font-semibold">
+            {welcomeBack ? "Welcome back" : "Welcome to MasarFlow"}
+          </h1>
+          <p className="mx-auto mt-1.5 max-w-xl text-sm text-muted-foreground">
+            {welcomeBack
+              ? "Good to see you again. Everything runs locally on your machine — check the steps below, or jump straight to the Run tab when you're ready."
+              : "MasarFlow is a local-first, AI-native project workspace — notes, tasks, specs, canvases, and AI chat, all in your browser with a local Python AI service. This one-time setup checks that everything is installed and installs what's missing."}
           </p>
-        </div>
+        </section>
 
         {initialized ? (
           <div className="flex items-center gap-3 rounded-lg border border-node-lore/40 bg-node-lore/10 px-4 py-3">

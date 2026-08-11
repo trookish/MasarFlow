@@ -30,6 +30,9 @@ interface AppStore {
   setSettings: (s: AppSettings) => void;
   patchSettings: (p: Partial<AppSettings>) => Promise<AppSettings>;
 
+  banner: string | null;
+  setBanner: (b: string | null) => void;
+
   setup: SetupState | null;
   setSetup: (s: SetupState) => void;
 
@@ -79,6 +82,9 @@ export const useApp = create<AppStore>()((set) => ({
     set({ settings: next });
     return next;
   },
+
+  banner: null,
+  setBanner: (banner) => set({ banner }),
 
   setup: null,
   setSetup: (setup) => set({ setup }),

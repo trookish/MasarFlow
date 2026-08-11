@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell, Tray } from "electron";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, join as pathJoin } from "node:path";
 import type {
   AppSettings,
@@ -223,6 +223,21 @@ function registerIpc(): void {
     const next = settings.set(patch);
     if (patch.targetDir) setupEngine.check(next.targetDir);
     return next;
+  });
+  ipcMain.handle("settings:mark-launched", () => settings.markLaunched());
+
+  // ── assets ──────────────────────────────────────────────────────────────
+  // The transparent launcher banner lives in the workspace's public/ folder
+  // (single source of truth); serve it as a data URL so it works identically
+  // from the dev server and the packaged file:// renderer.
+  ipcMain.handle("assets:banner", (): string | null => {
+    const file = join(currentTargetDir(), "public", "BannerNoBackground.png");
+    if (!existsSync(file)) return null;
+    try {
+      return `data:image/png;base64,${readFileSync(file).toString("base64")}`;
+    } catch {
+      return null;
+    }
   });
 
   // ── status / server ─────────────────────────────────────────────────────

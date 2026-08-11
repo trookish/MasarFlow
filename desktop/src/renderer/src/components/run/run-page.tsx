@@ -70,6 +70,8 @@ export function RunPage() {
   const sessions = useApp((s) => s.sessions);
   const server = useApp((s) => s.server);
   const settings = useApp((s) => s.settings);
+  const banner = useApp((s) => s.banner);
+  const welcomeBack = useApp((s) => s.settings?.hasLaunchedBefore ?? false);
 
   const runSessions = sessions.filter((s) => s.kind === "run");
   const lastRun = runSessions[runSessions.length - 1];
@@ -139,11 +141,24 @@ export function RunPage() {
     <div className="scrollbar-thin h-full overflow-y-auto">
       <div className="mx-auto max-w-3xl space-y-5 px-6 py-6">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-semibold">Run</h1>
-            <p className="text-sm text-muted-foreground">
-              Start MasarFlow in development or production — everything streams to the built-in terminal.
-            </p>
+          <div className="flex items-center gap-3">
+            {banner && (
+              <img
+                src={banner}
+                alt=""
+                aria-hidden
+                className="h-10 select-none object-contain"
+                draggable={false}
+              />
+            )}
+            <div>
+              <h1 className="text-xl font-semibold">
+                {welcomeBack ? "Welcome back" : "Welcome to MasarFlow"}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Start MasarFlow in development or production — everything streams to the built-in terminal.
+              </p>
+            </div>
           </div>
           <ServiceChips />
         </div>

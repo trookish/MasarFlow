@@ -19,16 +19,18 @@ export default function App() {
   const setSessions = useApp((s) => s.setSessions);
   const upsertSession = useApp((s) => s.upsertSession);
   const setEnv = useApp((s) => s.setEnv);
+  const setBanner = useApp((s) => s.setBanner);
   const setMaximized = useApp((s) => s.setMaximized);
 
   useEffect(() => {
     void (async () => {
-      const [settings, setup, status, sessions, env] = await Promise.all([
+      const [settings, setup, status, sessions, env, banner] = await Promise.all([
         window.masarFlow.settings.get(),
         window.masarFlow.setup.check(),
         window.masarFlow.server.getStatus(),
         window.masarFlow.session.list(),
         window.masarFlow.env.read(),
+        window.masarFlow.assets.getBanner(),
       ]);
       applyAppearance(settings);
       setSettings(settings);
@@ -36,7 +38,10 @@ export default function App() {
       setServer(status);
       setSessions(sessions);
       setEnv(env.fields);
-      // If nothing is set up yet, land on the setup page.
+      setBanner(banner);
+      // First launch: remember it for the next time ("Welcome back"), and
+      // land on the setup page until everything is installed.
+      if (!settings.hasLaunchedBefore) void window.masarFlow.settings.markLaunched();
       if (!setup.initialized && sessions.length === 0) setPage("setup");
       const maximized = await window.masarFlow.window.isMaximized();
       setMaximized(maximized);
@@ -70,7 +75,7 @@ export default function App() {
       offNav();
       window.removeEventListener("keydown", onKey);
     };
-  }, [setEnv, setMaximized, setPage, setServer, setSessions, setSetup, setSettings, upsertSession]);
+  }, [setBanner, setEnv, setMaximized, setPage, setServer, setSessions, setSetup, setSettings, upsertSession]);
 
   // While in system mode, re-apply the surface when the OS scheme flips.
   useEffect(() => {

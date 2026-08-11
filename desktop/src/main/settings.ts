@@ -57,6 +57,7 @@ function findMasarFlowRoot(dir: string): string | null {
 function defaultSettings(): AppSettings {
   return {
     targetDir: defaultTargetDir(),
+    hasLaunchedBefore: false,
     theme: "dark",
     accentMode: "solid",
     accent: ACCENTS[0],
@@ -101,6 +102,13 @@ class SettingsStore {
     this.data = { ...this.data, ...patch };
     this.persist();
     return this.get();
+  }
+
+  /** Remember that the launcher has been opened at least once. */
+  markLaunched(): void {
+    if (this.data.hasLaunchedBefore) return;
+    this.data.hasLaunchedBefore = true;
+    this.persist();
   }
 
   private persist(): void {
