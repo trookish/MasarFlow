@@ -71,7 +71,7 @@ export function SetupPage() {
     <div className="scrollbar-thin h-full overflow-y-auto">
       <div className="mx-auto max-w-2xl space-y-5 px-6 py-6">
         <section className="text-center">
-          <Banner imgClassName="mx-auto w-60" />
+          <Banner wrapperClassName="mx-auto" imgClassName="w-60" />
           <h1 className="mt-3 text-2xl font-semibold">
             {welcomeBack ? "Welcome back" : "Welcome to MasarFlow"}
           </h1>

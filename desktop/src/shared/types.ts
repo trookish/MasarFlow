@@ -75,6 +75,7 @@ export type ThemeMode = "light" | "dark" | "amoled" | "system";
 export type AccentMode = "solid" | "gradient";
 export type LogoColorMode = "original" | "accent" | "custom";
 export type LogoBgMode = "none" | "white" | "accent" | "custom";
+export type BannerGlowMode = "accent" | "custom";
 
 export interface GradientStop {
   color: string;
@@ -97,6 +98,10 @@ export interface AppSettings {
   logoColor: string;
   logoBgMode: LogoBgMode;
   logoBgColor: string;
+  bannerColorMode: LogoColorMode;
+  bannerColor: string;
+  bannerGlowMode: BannerGlowMode;
+  bannerGlowColor: string;
   autoOpenBrowser: boolean;
   fontSize: number;
 }

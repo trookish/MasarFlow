@@ -141,16 +141,14 @@ export function RunPage() {
     <div className="scrollbar-thin h-full overflow-y-auto">
       <div className="mx-auto max-w-3xl space-y-5 px-6 py-6">
         <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Banner imgClassName="h-10" />
-            <div>
-              <h1 className="text-xl font-semibold">
-                {welcomeBack ? "Welcome back" : "Welcome to MasarFlow"}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Start MasarFlow in development or production — everything streams to the built-in terminal.
-              </p>
-            </div>
+          <div>
+            <Banner imgClassName="h-12" glowClassName="scale-[2.4] blur-xl" />
+            <h1 className="mt-2 text-xl font-semibold">
+              {welcomeBack ? "Welcome back" : "Welcome to MasarFlow"}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Start MasarFlow in development or production — everything streams to the built-in terminal.
+            </p>
           </div>
           <ServiceChips />
         </div>

@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   AccentMode,
   AppSettings,
+  BannerGlowMode,
   EnvField,
   GradientStop,
   LogoBgMode,
@@ -20,6 +21,7 @@ import {
   ACCENTS,
   ACCENT_MODE_OPTIONS,
   APPEARANCE_DEFAULTS,
+  BANNER_GLOW_OPTIONS,
   GRADIENT_PRESETS,
   LOGO_BG_OPTIONS,
   LOGO_COLOR_OPTIONS,
@@ -38,6 +40,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Logo } from "@/components/shell/logo";
+import { Banner } from "@/components/shell/banner";
 
 function SettingRow({
   label,
@@ -347,8 +350,8 @@ function AppearanceCard() {
   };
 
   const resetAppearance = (): void => {
-    const { theme, accentMode, accent, accent2, gradientStops, gradientAngle, radius, fontScale, logoColorMode, logoColor, logoBgMode, logoBgColor } = APPEARANCE_DEFAULTS;
-    apply({ theme, accentMode, accent, accent2, gradientStops, gradientAngle, radius, fontScale, logoColorMode, logoColor, logoBgMode, logoBgColor });
+    const { theme, accentMode, accent, accent2, gradientStops, gradientAngle, radius, fontScale, logoColorMode, logoColor, logoBgMode, logoBgColor, bannerColorMode, bannerColor, bannerGlowMode, bannerGlowColor } = APPEARANCE_DEFAULTS;
+    apply({ theme, accentMode, accent, accent2, gradientStops, gradientAngle, radius, fontScale, logoColorMode, logoColor, logoBgMode, logoBgColor, bannerColorMode, bannerColor, bannerGlowMode, bannerGlowColor });
   };
 
   return (
@@ -556,6 +559,44 @@ function AppearanceCard() {
         {settings.logoBgMode === "custom" && (
           <SettingRow label="Logo background color" description="Exact fill behind the logo.">
             <ColorField value={settings.logoBgColor} onChange={(logoBgColor) => apply({ logoBgColor })} />
+          </SettingRow>
+        )}
+
+        <SettingRow
+          label="Banner color"
+          description="Keep the original artwork, tint it with the accent, or pick a custom color."
+        >
+          <div className="flex items-center gap-3">
+            <Banner imgClassName="h-8" />
+            <Segmented<LogoColorMode>
+              value={settings.bannerColorMode}
+              options={LOGO_COLOR_OPTIONS.map((o) => ({ value: o.mode, label: o.label }))}
+              onChange={(bannerColorMode) => apply({ bannerColorMode })}
+            />
+          </div>
+        </SettingRow>
+        {settings.bannerColorMode === "custom" && (
+          <SettingRow label="Banner custom color" description="Exact tint for the banner artwork.">
+            <ColorField value={settings.bannerColor} onChange={(bannerColor) => apply({ bannerColor })} />
+          </SettingRow>
+        )}
+
+        <SettingRow
+          label="Banner glow color"
+          description="Keep the banner halo on the accent (solid or gradient), or pick a custom color."
+        >
+          <div className="flex items-center gap-3">
+            <Banner imgClassName="h-8" />
+            <Segmented<BannerGlowMode>
+              value={settings.bannerGlowMode}
+              options={BANNER_GLOW_OPTIONS.map((o) => ({ value: o.mode, label: o.label }))}
+              onChange={(bannerGlowMode) => apply({ bannerGlowMode })}
+            />
+          </div>
+        </SettingRow>
+        {settings.bannerGlowMode === "custom" && (
+          <SettingRow label="Banner glow custom color" description="Exact color for the banner halo.">
+            <ColorField value={settings.bannerGlowColor} onChange={(bannerGlowColor) => apply({ bannerGlowColor })} />
           </SettingRow>
         )}
 

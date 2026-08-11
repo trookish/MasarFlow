@@ -1,6 +1,7 @@
 import type {
   AccentMode,
   AppSettings,
+  BannerGlowMode,
   GradientStop,
   LogoBgMode,
   LogoColorMode,
@@ -60,6 +61,11 @@ export const LOGO_BG_OPTIONS: Array<{ mode: LogoBgMode; label: string }> = [
   { mode: "custom", label: "Custom" },
 ];
 
+export const BANNER_GLOW_OPTIONS: Array<{ mode: BannerGlowMode; label: string }> = [
+  { mode: "accent", label: "Accent" },
+  { mode: "custom", label: "Custom" },
+];
+
 /** Default appearance values (mirror of the main-process defaults). */
 export const APPEARANCE_DEFAULTS = {
   theme: "dark" as ThemeMode,
@@ -77,6 +83,10 @@ export const APPEARANCE_DEFAULTS = {
   logoColor: "#dedede",
   logoBgMode: "accent" as LogoBgMode,
   logoBgColor: "#ffffff",
+  bannerColorMode: "original" as LogoColorMode,
+  bannerColor: "#dedede",
+  bannerGlowMode: "accent" as BannerGlowMode,
+  bannerGlowColor: "#dedede",
 };
 
 // ─── Gradient helpers ───────────────────────────────────────────────────────
@@ -159,15 +169,17 @@ export function backgroundCss(settings: AppSettings): string {
 /**
  * Ambient glow behind the launcher banner. Two soft radial blobs tinted by
  * the accent (solid) or the gradient endpoints — mirrors `backgroundCss` so
- * the banner halo follows the chosen accent and adapts to the theme.
+ * the banner halo follows the chosen accent and adapts to the theme. In
+ * "custom" mode the glow uses a single user-picked color instead.
  */
 export function bannerGlowCss(settings: AppSettings): string {
+  const custom = settings.bannerGlowMode === "custom";
   const stops =
-    settings.accentMode === "gradient"
+    !custom && settings.accentMode === "gradient"
       ? normalizeStops(settings.gradientStops)
       : [
-          { color: settings.accent, position: 0 },
-          { color: settings.accent, position: 100 },
+          { color: custom ? settings.bannerGlowColor : settings.accent, position: 0 },
+          { color: custom ? settings.bannerGlowColor : settings.accent, position: 100 },
         ];
   const c1 = stops[0].color;
   const c2 = stops[stops.length - 1].color;

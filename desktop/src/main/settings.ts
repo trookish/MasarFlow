@@ -73,6 +73,10 @@ function defaultSettings(): AppSettings {
     logoColor: ACCENTS[0],
     logoBgMode: "accent",
     logoBgColor: "#ffffff",
+    bannerColorMode: "original",
+    bannerColor: ACCENTS[0],
+    bannerGlowMode: "accent",
+    bannerGlowColor: ACCENTS[0],
     autoOpenBrowser: true,
     fontSize: 13,
   };
