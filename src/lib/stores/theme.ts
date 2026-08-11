@@ -121,7 +121,7 @@ export const APPEARANCE_DEFAULTS = {
   logoColorMode: "original" as LogoColorMode,
   logoColor: "#dedede",
   /** Background fill behind the logo. */
-  logoBgMode: "white" as LogoBgMode,
+  logoBgMode: "accent" as LogoBgMode,
   logoBgColor: "#ffffff",
 };
 

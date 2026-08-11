@@ -70,7 +70,7 @@ function defaultSettings(): AppSettings {
     fontScale: 1,
     logoColorMode: "original",
     logoColor: ACCENTS[0],
-    logoBgMode: "none",
+    logoBgMode: "accent",
     logoBgColor: "#ffffff",
     autoOpenBrowser: true,
     fontSize: 13,

@@ -75,7 +75,7 @@ export const APPEARANCE_DEFAULTS = {
   fontScale: 1,
   logoColorMode: "original" as LogoColorMode,
   logoColor: "#dedede",
-  logoBgMode: "none" as LogoBgMode,
+  logoBgMode: "accent" as LogoBgMode,
   logoBgColor: "#ffffff",
 };
 
