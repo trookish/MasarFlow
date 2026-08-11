@@ -45,7 +45,6 @@ export function Logo({ size = 44, className }: LogoProps) {
       aria-label="MasarFlow"
       className={cn(
         "flex shrink-0 items-center justify-center overflow-hidden rounded-md",
-        logoBgMode === "none" ? "p-0" : "p-[4%]",
         className,
       )}
       style={{
@@ -53,6 +52,9 @@ export function Logo({ size = 44, className }: LogoProps) {
         backgroundImage: accentIsGradient && logoBgMode === "accent" ? background : undefined,
         width: size,
         height: size,
+        // Size-based padding — a percentage would resolve against the parent's
+        // width (e.g. a wide config row) and squash the artwork.
+        padding: logoBgMode === "none" ? 0 : Math.max(1, Math.round(size * 0.06)),
       }}
     >
       {logoColorMode !== "original" ? (
