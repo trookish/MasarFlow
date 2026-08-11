@@ -156,6 +156,28 @@ export function backgroundCss(settings: AppSettings): string {
   return layers.join(", ");
 }
 
+/**
+ * Ambient glow behind the launcher banner. Two soft radial blobs tinted by
+ * the accent (solid) or the gradient endpoints — mirrors `backgroundCss` so
+ * the banner halo follows the chosen accent and adapts to the theme.
+ */
+export function bannerGlowCss(settings: AppSettings): string {
+  const stops =
+    settings.accentMode === "gradient"
+      ? normalizeStops(settings.gradientStops)
+      : [
+          { color: settings.accent, position: 0 },
+          { color: settings.accent, position: 100 },
+        ];
+  const c1 = stops[0].color;
+  const c2 = stops[stops.length - 1].color;
+  const alpha = isDarkTheme(settings.theme) ? 0.4 : 0.26;
+  return [
+    `radial-gradient(45% 130% at 20% 55%, ${hexToRgba(c1, alpha)}, transparent 70%)`,
+    `radial-gradient(45% 130% at 80% 55%, ${hexToRgba(c2, alpha)}, transparent 70%)`,
+  ].join(", ");
+}
+
 /** Apply the full appearance (theme surface + accent + gradient + scale) to <html>. */
 export function applyAppearance(settings: AppSettings): void {
   const root = document.documentElement;

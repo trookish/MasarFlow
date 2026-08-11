@@ -15,6 +15,7 @@ import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Banner } from "@/components/shell/banner";
 
 function StepIcon({ status }: { status: StepStatus }) {
   switch (status) {
@@ -40,7 +41,6 @@ const STATUS_BADGE: Record<StepStatus, { label: string; variant: "success" | "de
 export function SetupPage() {
   const setup = useApp((s) => s.setup);
   const setPage = useApp((s) => s.setPage);
-  const banner = useApp((s) => s.banner);
   const welcomeBack = useApp((s) => s.settings?.hasLaunchedBefore ?? false);
   const [busy, setBusy] = useState(false);
 
@@ -71,14 +71,7 @@ export function SetupPage() {
     <div className="scrollbar-thin h-full overflow-y-auto">
       <div className="mx-auto max-w-2xl space-y-5 px-6 py-6">
         <section className="text-center">
-          {banner && (
-            <img
-              src={banner}
-              alt="MasarFlow"
-              className="mx-auto w-60 select-none object-contain"
-              draggable={false}
-            />
-          )}
+          <Banner imgClassName="mx-auto w-60" />
           <h1 className="mt-3 text-2xl font-semibold">
             {welcomeBack ? "Welcome back" : "Welcome to MasarFlow"}
           </h1>

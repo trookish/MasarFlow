@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/kbd";
+import { Banner } from "@/components/shell/banner";
 
 type Mode = "dev" | "prod";
 
@@ -70,7 +71,6 @@ export function RunPage() {
   const sessions = useApp((s) => s.sessions);
   const server = useApp((s) => s.server);
   const settings = useApp((s) => s.settings);
-  const banner = useApp((s) => s.banner);
   const welcomeBack = useApp((s) => s.settings?.hasLaunchedBefore ?? false);
 
   const runSessions = sessions.filter((s) => s.kind === "run");
@@ -142,15 +142,7 @@ export function RunPage() {
       <div className="mx-auto max-w-3xl space-y-5 px-6 py-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            {banner && (
-              <img
-                src={banner}
-                alt=""
-                aria-hidden
-                className="h-10 select-none object-contain"
-                draggable={false}
-              />
-            )}
+            <Banner imgClassName="h-10" />
             <div>
               <h1 className="text-xl font-semibold">
                 {welcomeBack ? "Welcome back" : "Welcome to MasarFlow"}
