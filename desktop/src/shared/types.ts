@@ -71,12 +71,30 @@ export interface SaveEnvResult {
   error?: string;
 }
 
-export type ThemeMode = "dark" | "light" | "amoled";
+export type ThemeMode = "light" | "dark" | "amoled" | "system";
+export type AccentMode = "solid" | "gradient";
+export type LogoColorMode = "original" | "accent" | "custom";
+export type LogoBgMode = "none" | "white" | "accent" | "custom";
+
+export interface GradientStop {
+  color: string;
+  position: number;
+}
 
 export interface AppSettings {
   targetDir: string;
   theme: ThemeMode;
+  accentMode: AccentMode;
   accent: string;
+  accent2: string;
+  gradientStops: GradientStop[];
+  gradientAngle: number;
+  radius: number;
+  fontScale: number;
+  logoColorMode: LogoColorMode;
+  logoColor: string;
+  logoBgMode: LogoBgMode;
+  logoBgColor: string;
   autoOpenBrowser: boolean;
   fontSize: number;
 }

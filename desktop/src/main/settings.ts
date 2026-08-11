@@ -57,7 +57,20 @@ function defaultSettings(): AppSettings {
   return {
     targetDir: defaultTargetDir(),
     theme: "dark",
+    accentMode: "solid",
     accent: ACCENTS[0],
+    accent2: "#22d3ee",
+    gradientStops: [
+      { color: ACCENTS[0], position: 0 },
+      { color: "#22d3ee", position: 100 },
+    ],
+    gradientAngle: 135,
+    radius: 0.625,
+    fontScale: 1,
+    logoColorMode: "original",
+    logoColor: ACCENTS[0],
+    logoBgMode: "none",
+    logoBgColor: "#ffffff",
     autoOpenBrowser: true,
     fontSize: 13,
   };

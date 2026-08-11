@@ -85,6 +85,23 @@
   --sidebar-border: #141418;
 }
 
+/* ── Accent ────────────────────────────────────────────────────────────────
+ * --primary / --primary-foreground / --ring are written inline on <html> by
+ * the appearance applier. In gradient mode, repaint solid primary surfaces
+ * with the gradient (the solid --primary stays as the fallback color). */
+[data-accent-mode="gradient"] .bg-primary {
+  background-image: var(--accent-gradient);
+}
+[data-accent-mode="gradient"] .accent-gradient-text {
+  background-image: var(--accent-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.accent-gradient-bg {
+  background-image: var(--accent-gradient);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

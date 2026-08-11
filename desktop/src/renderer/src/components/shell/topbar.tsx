@@ -1,9 +1,8 @@
-import { ExternalLink, Moon, SquareTerminal, Sun } from "lucide-react";
+import { ExternalLink, Monitor, Moon, SquareTerminal, Sun } from "lucide-react";
 import { useEffect } from "react";
 import { THEME_MODES, applyAppearance } from "@/lib/theme";
 import { useApp } from "@/lib/store";
 import { cn } from "@/lib/cn";
-import { Logo } from "./logo";
 import { TitlebarControls } from "./titlebar-controls";
 
 function StatusChip() {
@@ -60,12 +59,9 @@ export function Topbar() {
     void window.masarFlow.settings.set({ theme: next });
   };
 
-  const isDark = settings ? settings.theme !== "light" : true;
-
   return (
     <header className="app-drag relative z-40 flex h-14 shrink-0 items-center border-b border-border bg-background/80 px-3 backdrop-blur">
-      <div className="app-no-drag flex items-center gap-2.5">
-        <Logo size={22} />
+      <div className="app-no-drag flex items-center">
         <span className="text-sm font-semibold">MasarFlow Launcher</span>
       </div>
 
@@ -89,7 +85,13 @@ export function Topbar() {
           title={`Theme: ${settings?.theme ?? "dark"}`}
           className="app-no-drag flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
         >
-          {isDark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+          {settings?.theme === "light" ? (
+            <Sun className="h-4 w-4" />
+          ) : settings?.theme === "system" ? (
+            <Monitor className="h-4 w-4" />
+          ) : (
+            <Moon className="h-4 w-4" />
+          )}
         </button>
         <button
           onClick={() => setTerminalOpen(!terminalOpen)}

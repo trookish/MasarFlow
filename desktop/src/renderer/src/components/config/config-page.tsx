@@ -1,7 +1,34 @@
-import { Check, FolderOpen, Save } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import type { EnvField } from "@shared/types";
-import { ACCENTS, applyAppearance, THEME_MODES } from "@/lib/theme";
+import {
+  Check,
+  FolderOpen,
+  Minus,
+  Plus,
+  RotateCcw,
+  Save,
+  Trash2,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type {
+  AccentMode,
+  AppSettings,
+  EnvField,
+  GradientStop,
+  LogoBgMode,
+  LogoColorMode,
+} from "@shared/types";
+import {
+  ACCENTS,
+  ACCENT_MODE_OPTIONS,
+  APPEARANCE_DEFAULTS,
+  GRADIENT_PRESETS,
+  LOGO_BG_OPTIONS,
+  LOGO_COLOR_OPTIONS,
+  THEME_MODES,
+  applyAppearance,
+  clampPosition,
+  gradientCss,
+  normalizeStops,
+} from "@/lib/theme";
 import { useApp } from "@/lib/store";
 import { cn } from "@/lib/cn";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +37,548 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Logo } from "@/components/shell/logo";
+
+function SettingRow({
+  label,
+  description,
+  children,
+}: {
+  label: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div>
+        <p className="text-xs font-medium">{label}</p>
+        <p className="text-[11px] text-muted-foreground">{description}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Segmented<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: Array<{ value: T; label: string }>;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex w-fit items-center gap-1 rounded-lg border border-border bg-muted/40 p-1">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          onClick={() => onChange(o.value)}
+          className={cn(
+            "rounded-md px-3 py-1 text-xs transition-colors",
+            value === o.value
+              ? "bg-accent font-medium text-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ColorField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (hex: string) => void;
+}) {
+  const [text, setText] = useState(value);
+  const [prevValue, setPrevValue] = useState(value);
+  if (prevValue !== value) {
+    setPrevValue(value);
+    setText(value);
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="color"
+        value={/^#[0-9a-f]{6}$/i.test(value) ? value : "#7c5cfc"}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setText(e.target.value);
+        }}
+        aria-label="Color picker"
+        className="h-7 w-9 cursor-pointer rounded-md border border-border bg-transparent p-0.5"
+      />
+      <Input
+        value={text}
+        onChange={(e) => {
+          const v = e.target.value;
+          setText(v);
+          if (/^#[0-9a-fA-F]{6}$/.test(v)) onChange(v);
+        }}
+        onBlur={() => setText(value)}
+        placeholder="#7c5cfc"
+        className="h-7 w-24 font-mono text-xs"
+      />
+    </div>
+  );
+}
+
+function RangeField({
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <input
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+    />
+  );
+}
+
+/** Unity-style stop bar: click to add a stop, drag markers to move them. */
+function GradientStopBar({
+  stops,
+  onStops,
+}: {
+  stops: GradientStop[];
+  onStops: (stops: GradientStop[]) => void;
+}) {
+  const [selected, setSelected] = useState(0);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  function positionFromClientX(clientX: number): number {
+    const bar = barRef.current;
+    if (!bar) return 0;
+    const rect = bar.getBoundingClientRect();
+    if (rect.width === 0) return 0;
+    return clampPosition(((clientX - rect.left) / rect.width) * 100);
+  }
+
+  function updateStop(index: number, patch: Partial<GradientStop>) {
+    onStops(stops.map((s, i) => (i === index ? { ...s, ...patch } : s)));
+  }
+
+  function addStop(position: number) {
+    onStops(normalizeStops([...stops, { color: "#ffffff", position }]));
+  }
+
+  function removeStop(index: number) {
+    if (stops.length <= 2) return;
+    const next = stops.filter((_, i) => i !== index);
+    setSelected((sel) => Math.min(sel, next.length - 1));
+    onStops(next);
+  }
+
+  const preview = gradientCss(stops, 90);
+
+  return (
+    <div className="space-y-1.5">
+      <div
+        ref={barRef}
+        onPointerDown={(e) => {
+          const pos = positionFromClientX(e.clientX);
+          const hit = stops.findIndex((s) => Math.abs(s.position - pos) <= 2.5);
+          if (hit === -1) addStop(pos);
+          else setSelected(hit);
+        }}
+        className="relative h-9 cursor-copy touch-none rounded-md border border-border bg-muted/40"
+      >
+        <div
+          className="absolute inset-0 rounded-md"
+          style={{ backgroundImage: preview }}
+        />
+        {stops.map((s, i) => (
+          <button
+            key={i}
+            type="button"
+            aria-label={`Stop ${i + 1} at ${s.position}%`}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              setSelected(i);
+              e.currentTarget.setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={(e) => {
+              if (e.buttons & 1) updateStop(i, { position: positionFromClientX(e.clientX) });
+            }}
+            onKeyDown={(e) => {
+              const step = e.shiftKey ? 10 : 1;
+              if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                updateStop(i, { position: clampPosition(s.position - step) });
+              } else if (e.key === "ArrowRight") {
+                e.preventDefault();
+                updateStop(i, { position: clampPosition(s.position + step) });
+              }
+            }}
+            className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none rounded-sm outline-none active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-ring"
+            style={{ left: `${s.position}%` }}
+            title={`${Math.round(s.position)}%`}
+          >
+            <span
+              className={cn(
+                "block h-6 w-4 rounded-sm border-2 shadow-md transition-transform",
+                i === selected ? "scale-125 border-white" : "border-black/50 hover:scale-110",
+              )}
+              style={{ backgroundColor: s.color }}
+            />
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {stops.map((s, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setSelected(i)}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] transition-colors",
+              i === selected
+                ? "border-primary bg-primary/10 text-foreground"
+                : "border-border text-muted-foreground hover:text-foreground",
+            )}
+            title={`Stop at ${Math.round(s.position)}%`}
+          >
+            <span
+              className="h-3 w-3 rounded-full border border-border"
+              style={{ backgroundColor: s.color }}
+            />
+            {Math.round(s.position)}%
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => addStop(50)}
+          className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[11px] text-muted-foreground hover:border-primary/50 hover:text-foreground"
+        >
+          <Plus className="h-3 w-3" /> Add stop
+        </button>
+      </div>
+
+      {stops[selected] && (
+        <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-muted/30 px-3 py-2">
+          <span className="text-xs font-medium text-muted-foreground">Stop</span>
+          <ColorField
+            value={stops[selected].color}
+            onChange={(hex) => updateStop(selected, { color: hex })}
+          />
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            Position
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={Math.round(stops[selected].position)}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (Number.isFinite(v)) updateStop(selected, { position: clampPosition(v) });
+              }}
+              aria-label="Stop position percent"
+              className="h-7 w-16 text-right text-xs"
+            />
+            %
+          </label>
+          <button
+            type="button"
+            onClick={() => removeStop(selected)}
+            disabled={stops.length <= 2}
+            aria-label="Remove stop"
+            title="Remove stop"
+            className="ml-auto flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-destructive disabled:opacity-40"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AppearanceCard() {
+  const settings = useApp((s) => s.settings);
+  const patch = useApp((s) => s.patchSettings);
+
+  const apply = useCallback(
+    (p: Partial<AppSettings>) => {
+      void patch(p);
+    },
+    [patch],
+  );
+
+  if (!settings) return null;
+
+  const setAccentColor = (hex: string): void => {
+    apply({
+      accent: hex,
+      gradientStops:
+        settings.accentMode === "gradient"
+          ? settings.gradientStops.map((s, i) => (i === 0 ? { ...s, color: hex } : s))
+          : settings.gradientStops,
+    });
+  };
+
+  const setGradientStops = (stops: GradientStop[]): void => {
+    const norm = normalizeStops(stops);
+    apply({
+      gradientStops: norm,
+      accent: norm[0].color,
+      accent2: norm[norm.length - 1].color,
+      accentMode: "gradient",
+    });
+  };
+
+  const resetAppearance = (): void => {
+    const { theme, accentMode, accent, accent2, gradientStops, gradientAngle, radius, fontScale, logoColorMode, logoColor, logoBgMode, logoBgColor } = APPEARANCE_DEFAULTS;
+    apply({ theme, accentMode, accent, accent2, gradientStops, gradientAngle, radius, fontScale, logoColorMode, logoColor, logoBgMode, logoBgColor });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Appearance</CardTitle>
+          <Button variant="ghost" size="sm" onClick={resetAppearance}>
+            <RotateCcw className="h-3.5 w-3.5" /> Reset
+          </Button>
+        </div>
+        <CardDescription>
+          Theme, accent, and layout — applied across the whole launcher.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <SettingRow
+          label="Color scheme"
+          description="Light, dark, pure-black AMOLED, or follow the OS."
+        >
+          <Segmented<AppSettings["theme"]>
+            value={settings.theme}
+            options={THEME_MODES.map((m) => ({ value: m.mode, label: m.label }))}
+            onChange={(theme) => apply({ theme })}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Accent style"
+          description="A single solid color or a multi-stop gradient."
+        >
+          <Segmented<AccentMode>
+            value={settings.accentMode}
+            options={ACCENT_MODE_OPTIONS.map((o) => ({ value: o.mode, label: o.label }))}
+            onChange={(accentMode) => apply({ accentMode })}
+          />
+        </SettingRow>
+
+        {settings.accentMode === "solid" && (
+          <>
+            <SettingRow
+              label="Accent color"
+              description="Pick a preset or enter any custom color."
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                {ACCENTS.map((a) => (
+                  <button
+                    key={a.value}
+                    type="button"
+                    onClick={() => setAccentColor(a.value)}
+                    aria-label={a.name}
+                    title={a.name}
+                    style={{ backgroundColor: a.value }}
+                    className={cn(
+                      "h-6 w-6 rounded-full transition-transform hover:scale-110",
+                      settings.accent.toLowerCase() === a.value &&
+                        "ring-2 ring-ring ring-offset-2 ring-offset-background",
+                    )}
+                  >
+                    {settings.accent.toLowerCase() === a.value && (
+                      <Check className="h-3.5 w-3.5 text-white mix-blend-difference" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </SettingRow>
+            <SettingRow label="Custom color" description="Exact hex value for the accent.">
+              <ColorField value={settings.accent} onChange={setAccentColor} />
+            </SettingRow>
+          </>
+        )}
+
+        {settings.accentMode === "gradient" && (
+          <>
+            <SettingRow
+              label="Gradient presets"
+              description="Quick-start gradients; use the editor below for a custom one."
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                {GRADIENT_PRESETS.map((g) => {
+                  const active =
+                    settings.gradientStops.length === 2 &&
+                    settings.gradientStops[0].color.toLowerCase() === g.from.toLowerCase() &&
+                    settings.gradientStops[1].color.toLowerCase() === g.to.toLowerCase();
+                  return (
+                    <button
+                      key={g.name}
+                      type="button"
+                      onClick={() =>
+                        apply({
+                          accentMode: "gradient",
+                          accent: g.from,
+                          accent2: g.to,
+                          gradientStops: [
+                            { color: g.from, position: 0 },
+                            { color: g.to, position: 100 },
+                          ],
+                          gradientAngle: g.angle,
+                        })
+                      }
+                      aria-label={g.name}
+                      title={g.name}
+                      style={{ backgroundImage: `linear-gradient(${g.angle}deg, ${g.from}, ${g.to})` }}
+                      className={cn(
+                        "h-6 w-10 rounded-md transition-transform hover:scale-110",
+                        active && "ring-2 ring-ring ring-offset-2 ring-offset-background",
+                      )}
+                    />
+                  );
+                })}
+              </div>
+            </SettingRow>
+            <SettingRow
+              label="Custom gradient"
+              description="Add as many color stops as you like and drag them on the bar."
+            >
+              <GradientStopBar stops={settings.gradientStops} onStops={setGradientStops} />
+            </SettingRow>
+            <SettingRow
+              label="Angle"
+              description={`Direction of the gradient (${settings.gradientAngle}°).`}
+            >
+              <RangeField
+                min={0}
+                max={360}
+                step={5}
+                value={settings.gradientAngle}
+                onChange={(gradientAngle) => apply({ gradientAngle })}
+              />
+            </SettingRow>
+          </>
+        )}
+
+        <SettingRow
+          label="Corner radius"
+          description={`Roundness of cards, buttons, and inputs (${settings.radius.toFixed(2)} rem).`}
+        >
+          <RangeField
+            min={0}
+            max={1.5}
+            step={0.0625}
+            value={settings.radius}
+            onChange={(radius) => apply({ radius })}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="UI scale"
+          description={`Overall interface size (${Math.round(settings.fontScale * 100)}%).`}
+        >
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label="Decrease UI scale"
+              onClick={() => apply({ fontScale: Math.max(0.85, settings.fontScale - 0.05) })}
+              disabled={settings.fontScale <= 0.85}
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </Button>
+            <span className="w-14 text-center text-sm font-medium tabular-nums">
+              {Math.round(settings.fontScale * 100)}%
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label="Increase UI scale"
+              onClick={() => apply({ fontScale: Math.min(1.25, settings.fontScale + 0.05) })}
+              disabled={settings.fontScale >= 1.25}
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </SettingRow>
+
+        <SettingRow
+          label="Logo color"
+          description="Keep the original artwork, follow the accent, or pick a custom color."
+        >
+          <div className="flex items-center gap-3">
+            <Logo size={28} />
+            <Segmented<LogoColorMode>
+              value={settings.logoColorMode}
+              options={LOGO_COLOR_OPTIONS.map((o) => ({ value: o.mode, label: o.label }))}
+              onChange={(logoColorMode) => apply({ logoColorMode })}
+            />
+          </div>
+        </SettingRow>
+        {settings.logoColorMode === "custom" && (
+          <SettingRow label="Logo custom color" description="Exact color for the logo mark.">
+            <ColorField value={settings.logoColor} onChange={(logoColor) => apply({ logoColor })} />
+          </SettingRow>
+        )}
+
+        <SettingRow
+          label="Logo background"
+          description="Fill behind the logo: transparent, white, the accent, or custom."
+        >
+          <Segmented<LogoBgMode>
+            value={settings.logoBgMode}
+            options={LOGO_BG_OPTIONS.map((o) => ({ value: o.mode, label: o.label }))}
+            onChange={(logoBgMode) => apply({ logoBgMode })}
+          />
+        </SettingRow>
+        {settings.logoBgMode === "custom" && (
+          <SettingRow label="Logo background color" description="Exact fill behind the logo.">
+            <ColorField value={settings.logoBgColor} onChange={(logoBgColor) => apply({ logoBgColor })} />
+          </SettingRow>
+        )}
+
+        <SettingRow label="Preview" description="A live sample of the current accent.">
+          <div className="flex items-center gap-2">
+            <Button size="sm" className="bg-primary text-primary-foreground">
+              Primary
+            </Button>
+            <span
+              className={cn(
+                "rounded-md border border-border px-2 py-1 text-xs font-medium",
+                settings.accentMode === "gradient" ? "accent-gradient-text" : "text-primary",
+              )}
+            >
+              Accent text
+            </span>
+            <span className="accent-gradient-bg h-7 w-7 rounded-full" />
+          </div>
+        </SettingRow>
+      </CardContent>
+    </Card>
+  );
+}
 
 function EnvInput({
   field,
@@ -234,51 +803,6 @@ function AppSettingsCard() {
           </div>
         </div>
 
-        <div>
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Theme</p>
-          <div className="flex w-fit items-center gap-1 rounded-lg border border-border bg-muted/40 p-1">
-            {THEME_MODES.map(({ mode, label }) => (
-              <button
-                key={mode}
-                onClick={() => void patch({ theme: mode })}
-                className={cn(
-                  "rounded-md px-3 py-1 text-xs transition-colors",
-                  settings.theme === mode
-                    ? "bg-accent font-medium text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Accent color</p>
-          <div className="flex flex-wrap items-center gap-2">
-            {ACCENTS.map((a) => (
-              <button
-                key={a.value}
-                title={a.name}
-                onClick={() => void patch({ accent: a.value })}
-                className={cn(
-                  "h-6 w-6 rounded-full transition-transform hover:scale-110",
-                  settings.accent.toLowerCase() === a.value && "ring-2 ring-ring ring-offset-2 ring-offset-background",
-                )}
-                style={{ backgroundColor: a.value }}
-              />
-            ))}
-            <Input
-              type="color"
-              value={/^#[0-9a-f]{6}$/i.test(settings.accent) ? settings.accent : "#7c5cfc"}
-              onChange={(e) => void patch({ accent: e.target.value })}
-              className="h-6 w-10 cursor-pointer rounded-md border border-input p-0"
-              title="Custom accent"
-            />
-          </div>
-        </div>
-
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-medium">Open in browser when ready</p>
@@ -326,9 +850,10 @@ export function ConfigPage() {
         <div>
           <h1 className="text-xl font-semibold">Configuration</h1>
           <p className="text-sm text-muted-foreground">
-            Environment variables for the MasarFlow services, plus launcher preferences.
+            Appearance, environment variables for the MasarFlow services, plus launcher preferences.
           </p>
         </div>
+        <AppearanceCard />
         <EnvFormCard />
         <AppSettingsCard />
         <AdvancedCard />

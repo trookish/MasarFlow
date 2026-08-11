@@ -26,7 +26,7 @@ export function Sidebar() {
       <button
         onClick={() => setPage("run")}
         title="MasarFlow Launcher"
-        className="app-no-drag group relative mb-2 flex h-11 w-11 items-center justify-center rounded-xl transition-colors hover:bg-accent/60"
+        className="app-no-drag group relative mb-2 flex h-11 w-11 items-center justify-center rounded-lg transition-colors hover:bg-accent/60"
       >
         <Logo size={32} />
       </button>
@@ -35,7 +35,7 @@ export function Sidebar() {
           key={p}
           onClick={() => setPage(p)}
           className={cn(
-            "group relative flex h-11 w-11 items-center justify-center rounded-xl transition-colors duration-150",
+            "group relative flex h-11 w-11 items-center justify-center rounded-lg transition-colors duration-150",
             page === p
               ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
               : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
