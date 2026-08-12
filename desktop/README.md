@@ -74,6 +74,28 @@ Copy the portable exe anywhere inside the MasarFlow repo tree (e.g.
 `release/MasarFlow.exe`); it finds the workspace by walking up from its own
 location, so a plain desktop shortcut works out of the box.
 
+### Windows SmartScreen ("Windows protected your PC")
+
+The packaged executables are **not code-signed**, so Windows SmartScreen shows
+"Windows protected your PC" the first time they run — on every release
+(including the older 0.1.2.x installers). This is expected for unsigned apps;
+running from source (`npm start`) never warns because it uses Electron's own
+signed binary.
+
+To run a downloaded installer or portable exe:
+
+- Click **More info → Run anyway** on the SmartScreen dialog, or
+- Right-click the file → **Properties → General → Unblock → OK**, then run it.
+
+On Windows 11 with **Smart App Control** enabled the dialog offers no
+"Run anyway": unblock the file via Properties first, or turn Smart App
+Control off (Windows Security → App & browser control).
+
+The only way to remove the warning entirely is a code-signing certificate
+(OV/EV). electron-builder signs automatically when `CSC_LINK` and
+`CSC_KEY_PASSWORD` are set, so future builds can produce signed installers
+without further changes.
+
 ## Smoke tests
 
 The main process includes two env-gated harnesses useful for CI:
