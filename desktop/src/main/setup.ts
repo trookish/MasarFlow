@@ -23,8 +23,8 @@ const MIN_PYTHON = 3.11;
 /**
  * Packages the Python service imports at boot (python-service/app/main.py →
  * embeddings.py, job_queue.py). Everything else in requirements/base.txt is
- * lazily imported or marker-skipped on some Python versions (e.g.
- * tree-sitter-languages has no 3.13 wheels), so it never blocks startup.
+ * lazily imported (tree-sitter-language-pack ships cp310-abi3 wheels, so it
+ * installs on every Python 3.10+ anyway), so it never blocks startup.
  */
 const BOOT_REQUIRED = [
   "fastapi",
