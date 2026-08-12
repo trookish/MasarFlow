@@ -1,8 +1,8 @@
 import { app } from "electron";
-import type { UpdateInfo } from "@shared/types";
+import type { LatestRelease, UpdateInfo } from "@shared/types";
 
 /** The GitHub repository the update check targets. */
-const REPO = "trookish/MasarFlow";
+export const REPO = "trookish/MasarFlow";
 
 /** Parse "v0.1.3.1" / "0.1.3-1" into comparable numeric segments. */
 function normalizeVersion(v: string): number[] {
@@ -36,29 +36,55 @@ async function fetchJson(url: string): Promise<unknown> {
   return res.json();
 }
 
+let releaseCache: { at: number; release: LatestRelease } | null = null;
+const RELEASE_CACHE_TTL_MS = 5 * 60_000;
+
+/**
+ * Latest published MasarFlow release, cached for a few minutes (the setup
+ * version check and the update checker both hit it on startup, and GitHub's
+ * unauthenticated API is rate-limited).
+ */
+export async function fetchLatestRelease(): Promise<LatestRelease> {
+  if (releaseCache && Date.now() - releaseCache.at < RELEASE_CACHE_TTL_MS) {
+    return releaseCache.release;
+  }
+  const release = (await fetchJson(
+    `https://api.github.com/repos/${REPO}/releases/latest`,
+  )) as {
+    tag_name?: string;
+    name?: string;
+    body?: string;
+    html_url?: string;
+    published_at?: string;
+  };
+  const tag = String(release.tag_name ?? "");
+  const result: LatestRelease = {
+    version: tag.replace(/^v/i, ""),
+    tag,
+    name: String(release.name ?? (tag || "Latest release")),
+    notes: String(release.body ?? ""),
+    url: String(release.html_url ?? "") || `https://github.com/${REPO}/releases`,
+    publishedAt: release.published_at ?? null,
+  };
+  releaseCache = { at: Date.now(), release: result };
+  return result;
+}
+
 /** Compare the installed launcher version against GitHub releases and commits. */
 export async function checkForUpdates(): Promise<UpdateInfo> {
   const currentVersion = app.getVersion();
   try {
     const [release, commits] = (await Promise.all([
-      fetchJson(`https://api.github.com/repos/${REPO}/releases/latest`),
+      fetchLatestRelease(),
       fetchJson(`https://api.github.com/repos/${REPO}/commits?per_page=1`),
     ])) as [
-      {
-        tag_name?: string;
-        name?: string;
-        body?: string;
-        html_url?: string;
-        published_at?: string;
-      },
+      LatestRelease,
       Array<{
         sha?: string;
         commit?: { message?: string; author?: { date?: string } };
       }>,
     ];
 
-    const latestTag = String(release.tag_name ?? "");
-    const latestVersion = latestTag.replace(/^v/i, "");
     const head = commits[0];
     const latestCommit = head
       ? {
@@ -70,14 +96,13 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
 
     return {
       currentVersion,
-      latestVersion,
-      latestTag,
-      updateAvailable: isNewerVersion(latestVersion, currentVersion),
-      releaseUrl:
-        String(release.html_url ?? "") || `https://github.com/${REPO}/releases`,
-      releaseName: String(release.name ?? (latestTag || "Latest release")),
-      releaseNotes: String(release.body ?? ""),
-      publishedAt: release.published_at ?? null,
+      latestVersion: release.version,
+      latestTag: release.tag,
+      updateAvailable: isNewerVersion(release.version, currentVersion),
+      releaseUrl: release.url,
+      releaseName: release.name,
+      releaseNotes: release.notes,
+      publishedAt: release.publishedAt,
       latestCommit,
     };
   } catch (e) {

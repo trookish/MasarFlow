@@ -21,8 +21,10 @@ desktop/
 
 - **Setup** — checks Node.js 20+, npm, Python 3.11+, `node_modules`,
   `.env.local`, and the Python venv; installs whatever is missing (`npm
-  install`, venv + pip) with live output in the terminal panel. Runs
-  automatically on first launch for a target directory.
+  install`, venv + pip) with live output in the terminal panel. Also
+  compares the installed project version against the latest GitHub release
+  and can update the project in place (`git pull` + dependency reinstall).
+  Runs automatically on first launch for a target directory.
 - **Run** — Development (`npm run dev:full`) and Production (`npm run build`
   → `npm start`) modes with a pill-tab switch, live status chip, port health
   indicators (:3000 app / :8000 Python AI), open-in-browser, and Stop, which

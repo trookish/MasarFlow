@@ -232,6 +232,7 @@ function registerIpc(): void {
   // ── setup / initialization ──────────────────────────────────────────────
   ipcMain.handle("setup:check", () => setupEngine.check(currentTargetDir()));
   ipcMain.handle("setup:run", () => setupEngine.run(currentTargetDir()));
+  ipcMain.handle("setup:update", () => setupEngine.update(currentTargetDir()));
 
   // ── env / configuration ─────────────────────────────────────────────────
   ipcMain.handle("env:read", () => readEnv(currentTargetDir()));

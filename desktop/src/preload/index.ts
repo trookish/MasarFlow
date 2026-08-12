@@ -5,6 +5,7 @@ import type {
   EnvData,
   EnvField,
   GithubCloneResult,
+  ProjectUpdateResult,
   SaveEnvResult,
   ServerStatus,
   SessionExitPayload,
@@ -59,6 +60,7 @@ const api = {
   setup: {
     check: (): Promise<SetupState> => ipcRenderer.invoke("setup:check"),
     run: (): Promise<SetupState> => ipcRenderer.invoke("setup:run"),
+    update: (): Promise<ProjectUpdateResult> => ipcRenderer.invoke("setup:update"),
     onState: (cb: (state: SetupState) => void): Unsubscribe => {
       const listener = (_e: IpcRendererEvent, s: SetupState): void => cb(s);
       ipcRenderer.on("setup:state", listener);

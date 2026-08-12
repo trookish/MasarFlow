@@ -25,7 +25,7 @@ export function maybeRunSelfTest(): void {
 
     const engine = createSetupEngine(() => {});
     engine.init(targetDir);
-    const state = engine.check(targetDir);
+    const state = await engine.check(targetDir);
     log(
       `SELFTEST: setup initialized=${state.initialized} steps=${state.steps
         .map((s) => `${s.key}:${s.status}`)

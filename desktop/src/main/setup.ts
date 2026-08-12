@@ -3,7 +3,9 @@ import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type {
+  ProjectUpdateResult,
   SessionExitPayload,
+  SessionInfo,
   SetupState,
   SetupStep,
   SetupStepKey,
@@ -11,6 +13,7 @@ import type {
 } from "@shared/types";
 import { ptyManager } from "./pty";
 import { settings } from "./settings";
+import { fetchLatestRelease, isNewerVersion } from "./updates";
 
 // Node 22.6+ — the OpenCode workspace-tool installer uses Node's built-in
 // TypeScript support (older versions still run, minus those tools).
@@ -51,6 +54,7 @@ function pythonDepsOk(pyDir: string, venvPython: string): boolean {
 
 interface PythonInfo {
   file: string;
+  /** Interpreter-selector prefix validated with `--version` (e.g. ["-3"] for the `py` launcher). */
   args: string[];
 }
 
@@ -148,9 +152,12 @@ function checkNpm(): SetupStep {
 }
 
 function checkPython(): { step: SetupStep; python: PythonInfo | null } {
+  // [file, interpreter-selector args] — the same prefix is re-used later when
+  // creating the venv, so the interpreter that was validated is the one that
+  // builds the venv (e.g. `py -3` must stay `py -3 -m venv`, not `py -m venv`).
   const candidates: Array<[string, string[]]> = [
-    ["python", ["--version"]],
-    ["py", ["-3", "--version"]],
+    ["python", []],
+    ["py", ["-3"]],
   ];
   const step: SetupStep = {
     key: "python",
@@ -158,8 +165,8 @@ function checkPython(): { step: SetupStep; python: PythonInfo | null } {
     description: "Powers the local AI sidecar (embeddings, semantic search, RAG).",
     status: "missing",
   };
-  for (const [file, args] of candidates) {
-    const { code, out } = tryCommand(file, args);
+  for (const [file, versionArgs] of candidates) {
+    const { code, out } = tryCommand(file, [...versionArgs, "--version"]);
     const m = /Python (\d+)\.(\d+)/.exec(out);
     if (code === 0 && m) {
       const major = parseInt(m[1], 10);
@@ -167,7 +174,7 @@ function checkPython(): { step: SetupStep; python: PythonInfo | null } {
       if (major * 100 + minor >= MIN_PYTHON * 100) {
         step.status = "pass";
         step.detail = `Found ${out}`;
-        return { step, python: { file, args: ["-m"] } };
+        return { step, python: { file, args: versionArgs } };
       }
       step.status = "fail";
       step.detail = `Found ${out} — MasarFlow needs Python 3.11+.`;
@@ -205,6 +212,53 @@ function checkProject(targetDir: string): SetupStep {
   } catch {
     step.status = "fail";
     step.detail = "Invalid package.json — this doesn't look like the MasarFlow project.";
+  }
+  return step;
+}
+
+/**
+ * Compares the installed project version (package.json) against the latest
+ * GitHub release. Never blocks initialization — an available update is
+ * surfaced to the user, but the project stays runnable in the meantime
+ * (and an offline check just passes with a note).
+ */
+async function checkVersion(targetDir: string): Promise<SetupStep> {
+  const step: SetupStep = {
+    key: "version",
+    label: "MasarFlow version",
+    description: "Installed version vs. the latest GitHub release.",
+    status: "missing",
+  };
+  const pkg = join(targetDir, "package.json");
+  if (!existsSync(pkg)) {
+    step.detail = "Install the MasarFlow project first.";
+    return step;
+  }
+  let installed = "";
+  try {
+    installed = String((JSON.parse(readFileSync(pkg, "utf8")) as { version?: unknown }).version ?? "");
+  } catch {
+    installed = "";
+  }
+  if (!installed) {
+    step.status = "pass";
+    step.detail = "Version unknown — the project's package.json has no version field.";
+    return step;
+  }
+  let latest: Awaited<ReturnType<typeof fetchLatestRelease>>;
+  try {
+    latest = await fetchLatestRelease();
+  } catch {
+    step.status = "pass";
+    step.detail = `v${installed} installed — couldn't reach GitHub, so no update check.`;
+    return step;
+  }
+  if (isNewerVersion(latest.version, installed)) {
+    step.status = "missing";
+    step.detail = `v${installed} installed, v${latest.version} available — use "Update project" below.`;
+  } else {
+    step.status = "pass";
+    step.detail = `v${installed} installed — up to date.`;
   }
   return step;
 }
@@ -272,19 +326,23 @@ function checkVenv(targetDir: string): SetupStep {
   return step;
 }
 
-function checkAll(targetDir: string): CheckResults {
+async function checkAll(targetDir: string): Promise<CheckResults> {
   const project = checkProject(targetDir);
+  const version = await checkVersion(targetDir);
   const node = checkNode();
   const npm = checkNpm();
   const { step: python, python: pyInfo } = checkPython();
   const deps = checkDeps(targetDir);
   const envfile = checkEnvFile(targetDir);
   const venv = checkVenv(targetDir);
-  return { steps: [project, node, npm, python, deps, envfile, venv], python: pyInfo };
+  return { steps: [project, version, node, npm, python, deps, envfile, venv], python: pyInfo };
 }
 
 function buildState(targetDir: string, steps: SetupStep[]): SetupState {
-  return { targetDir, initialized: steps.every((s) => s.status === "pass"), steps };
+  // The version step is informational: an available update must not make the
+  // project look "not initialized" — running stays possible either way.
+  const gate = steps.filter((s) => s.key !== "version");
+  return { targetDir, initialized: gate.every((s) => s.status === "pass"), steps };
 }
 
 /**
@@ -340,8 +398,8 @@ class SetupEngine {
   }
 
   /** Fast checks; no installs. */
-  check(targetDir: string): SetupState {
-    const res = checkAll(targetDir);
+  async check(targetDir: string): Promise<SetupState> {
+    const res = await checkAll(targetDir);
     const state = applyPersistedInitialized(
       buildState(targetDir, res.steps),
       targetDir,
@@ -350,6 +408,67 @@ class SetupEngine {
     this.state = state;
     this.emit(state);
     return this.getState();
+  }
+
+  /**
+   * Pull the latest MasarFlow code from GitHub (git pull --ff-only), then
+   * re-install dependencies so the update's package.json is honored.
+   */
+  async update(targetDir: string): Promise<ProjectUpdateResult> {
+    if (this.busy) return { ok: false, error: "Another setup operation is already running." };
+    this.busy = true;
+    try {
+      if (!existsSync(join(targetDir, ".git"))) {
+        return {
+          ok: false,
+          error:
+            "This copy isn't a git clone (no .git folder) — to update, browse to a git clone or re-clone the project from GitHub.",
+        };
+      }
+      const gitCheck = spawnSync("git", ["--version"], { encoding: "utf8", timeout: 10_000 });
+      if (gitCheck.status !== 0) {
+        return {
+          ok: false,
+          error: "git is not installed. Install git from https://git-scm.com and try again.",
+        };
+      }
+
+      const pullOk = await this.runInstallSession(targetDir, {
+        label: "Update MasarFlow project",
+        kind: "setup",
+        command: "git pull --ff-only",
+        file: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
+        args: process.platform === "win32" ? ["/c", "git", "pull", "--ff-only"] : ["-lc", "git pull --ff-only"],
+        cwd: targetDir,
+      });
+      if (!pullOk) {
+        return { ok: false, error: "git pull failed — see the terminal output above." };
+      }
+
+      const depsOk = await this.runInstallSession(targetDir, {
+        label: "Install updated dependencies",
+        kind: "setup",
+        command: "npm install",
+        file: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
+        args: process.platform === "win32" ? ["/c", "npm install"] : ["-lc", "npm install"],
+        cwd: targetDir,
+      });
+      if (!depsOk) {
+        return { ok: false, error: "npm install after the update failed — see the terminal output above." };
+      }
+
+      const res = await checkAll(targetDir);
+      this.state = applyPersistedInitialized(
+        buildState(targetDir, res.steps),
+        targetDir,
+        (d) => this.persistedFor(d),
+      );
+      if (this.state.initialized) this.persist(targetDir);
+      this.emit(this.state);
+      return { ok: true };
+    } finally {
+      this.busy = false;
+    }
   }
 
   /** Run the full initialization: checks + installs for every missing step. */
@@ -367,7 +486,7 @@ class SetupEngine {
   }
 
   private async ensure(targetDir: string): Promise<SetupState> {
-    let res = checkAll(targetDir);
+    let res = await checkAll(targetDir);
     let state = buildState(targetDir, res.steps);
     this.emit(state);
 
@@ -400,7 +519,7 @@ class SetupEngine {
         ok = await this.ensureVenv(targetDir, res.python);
       }
 
-      res = checkAll(targetDir);
+      res = await checkAll(targetDir);
       state = applyPersistedInitialized(
         buildState(targetDir, res.steps),
         targetDir,
@@ -424,22 +543,23 @@ class SetupEngine {
       const venvOk = await this.runInstallSession(targetDir, {
         label: "Create Python venv",
         kind: "setup",
-        command: "python -m venv .venv",
+        command: `${python.file} ${python.args.join(" ")} -m venv .venv`.trim(),
         file: python.file,
-        args: [...python.args, "venv", ".venv"],
+        args: [...python.args, "-m", "venv", ".venv"],
         cwd: pyDir,
       });
       if (!venvOk || !existsSync(venvPython)) return false;
     }
     // Always (re)install the requirements: pip is a no-op when they are
     // already satisfied, and this repairs venvs that exist but are missing
-    // packages (e.g. a stale venv without uvicorn).
+    // packages (e.g. a stale venv without uvicorn). Upgrading pip first
+    // avoids broken installs from outdated pip inside the fresh venv.
     const installOk = await this.runInstallSession(targetDir, {
       label: "Verify Python requirements",
       kind: "setup",
-      command: "pip install -r requirements/base.txt",
+      command: "pip install --upgrade pip -r requirements/base.txt",
       file: venvPython,
-      args: ["-m", "pip", "install", "-r", "requirements/base.txt"],
+      args: ["-m", "pip", "install", "--upgrade", "pip", "-r", "requirements/base.txt"],
       cwd: pyDir,
     });
     if (!installOk) return false;
@@ -462,7 +582,15 @@ class SetupEngine {
 
   private runInstallSession(targetDir: string, req: StartSessionRequest): Promise<boolean> {
     return new Promise((resolvePromise) => {
-      const info = ptyManager.start({ ...req, cwd: req.cwd || targetDir });
+      let info: SessionInfo;
+      try {
+        info = ptyManager.start({ ...req, cwd: req.cwd || targetDir });
+      } catch {
+        // A crash at spawn (e.g. node-pty failure) must fail the step now,
+        // not leave the setup stuck on a 30-minute timeout.
+        resolvePromise(false);
+        return;
+      }
       const timer = setTimeout(() => {
         cleanup();
         resolvePromise(false);

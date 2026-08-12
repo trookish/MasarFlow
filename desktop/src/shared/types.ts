@@ -34,6 +34,7 @@ export interface SessionExitPayload {
 
 export type SetupStepKey =
   | "project"
+  | "version"
   | "node"
   | "npm"
   | "python"
@@ -55,6 +56,12 @@ export interface SetupState {
   targetDir: string;
   initialized: boolean;
   steps: SetupStep[];
+}
+
+/** Result of pulling the latest MasarFlow project code from GitHub. */
+export interface ProjectUpdateResult {
+  ok: boolean;
+  error?: string;
 }
 
 export type EnvFieldKind = "text" | "url" | "port" | "boolean" | "secret" | "path" | "ms";
@@ -98,6 +105,17 @@ export interface UpdateCommitInfo {
   sha: string;
   message: string;
   date: string;
+}
+
+/** Latest published release of the MasarFlow repo (what the setup version check compares against). */
+export interface LatestRelease {
+  /** Release version (tag without the v prefix). */
+  version: string;
+  tag: string;
+  name: string;
+  notes: string;
+  url: string;
+  publishedAt: string | null;
 }
 
 /** Result of a GitHub update check (releases + commits). */

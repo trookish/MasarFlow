@@ -1,6 +1,6 @@
 {
   "name": "masarflow-launcher",
-  "version": "0.1.3-2",
+  "version": "0.1.3-3",
   "description": "Desktop launcher for MasarFlow — initialize, run, configure, test, and watch the workspace.",
   "main": "./out/main/index.js",
   "private": true,

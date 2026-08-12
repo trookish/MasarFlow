@@ -1,6 +1,7 @@
 import {
   CheckCircle2,
   Circle,
+  Download,
   FolderOpen,
   GitBranch,
   Loader2,
@@ -48,6 +49,7 @@ export function SetupPage() {
   const welcomeBack = useApp((s) => s.settings?.hasLaunchedBefore ?? false);
   const [busy, setBusy] = useState(false);
   const [cloning, setCloning] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const [cloneError, setCloneError] = useState<string | null>(null);
   const [repoUrl, setRepoUrl] = useState("");
 
@@ -70,6 +72,17 @@ export function SetupPage() {
       await window.masarFlow.setup.run();
     } finally {
       setBusy(false);
+    }
+  };
+
+  const updateProject = async (): Promise<void> => {
+    setCloneError(null);
+    setUpdating(true);
+    try {
+      const res = await window.masarFlow.setup.update();
+      if (!res.ok) setCloneError(res.error ?? "Update failed — see the terminal output above.");
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -126,6 +139,8 @@ export function SetupPage() {
   const anyMissing = steps.some((s) => s.status === "missing" || s.status === "pending");
   const initialized = setup?.initialized ?? false;
   const projectMissing = steps.some((s) => s.key === "project" && s.status === "fail");
+  const versionStep = steps.find((s) => s.key === "version");
+  const updateAvailable = versionStep?.status === "missing";
 
   return (
     <div className="scrollbar-thin h-full overflow-y-auto">
@@ -165,6 +180,42 @@ export function SetupPage() {
             </div>
           </div>
         ) : null}
+
+        {updateAvailable && (
+          <Card className="border-node-lore/40">
+            <CardContent className="space-y-4">
+              <div className="flex items-start gap-3">
+                <Download className="mt-0.5 h-4 w-4 shrink-0 text-node-lore" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">MasarFlow update available</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {versionStep?.detail ??
+                      "A newer version of MasarFlow is available on GitHub."}
+                  </p>
+                </div>
+              </div>
+              {cloneError && <p className="text-xs text-destructive">{cloneError}</p>}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => void updateProject()}
+                  disabled={updating || busy || cloning}
+                >
+                  {updating ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5" />
+                  )}
+                  {updating ? "Updating…" : "Update project"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Pulls the latest code from GitHub (git pull) and re-installs dependencies.
+                Progress streams to the terminal panel below.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {projectMissing && (
           <Card>
@@ -221,6 +272,16 @@ export function SetupPage() {
                 <span className="font-mono text-xs text-muted-foreground">{setup?.targetDir}</span>
               </div>
               <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void browseForProject()}
+                  disabled={busy || updating || cloning}
+                  title="Browse to a folder that contains the MasarFlow project"
+                >
+                  <FolderOpen className="h-3.5 w-3.5" />
+                  Browse…
+                </Button>
                 <Button variant="outline" size="sm" onClick={check} disabled={busy}>
                   <RefreshCw className={cn("h-3.5 w-3.5", busy && "animate-spin")} />
                   Re-check
@@ -240,8 +301,16 @@ export function SetupPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{step.label}</span>
-                      <Badge variant={STATUS_BADGE[step.status].variant}>
-                        {STATUS_BADGE[step.status].label}
+                      <Badge
+                        variant={
+                          step.key === "version" && step.status === "missing"
+                            ? "warning"
+                            : STATUS_BADGE[step.status].variant
+                        }
+                      >
+                        {step.key === "version" && step.status === "missing"
+                          ? "Update available"
+                          : STATUS_BADGE[step.status].label}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">{step.description}</p>
