@@ -17,10 +17,26 @@ import logging
 logger = logging.getLogger("masarflow.code_analysis")
 
 
+def _language_binding():
+    """Resolve the tree-sitter language module. Prefers the legacy
+    tree-sitter-languages package but accepts the maintained
+    tree-sitter-language-pack successor (the only one with wheels for
+    Python 3.12+). Both expose the same ``get_parser()`` API."""
+    try:
+        import tree_sitter_languages  # noqa: F401
+
+        return "tree_sitter_languages"
+    except ImportError:
+        import tree_sitter_language_pack  # noqa: F401
+
+        return "tree_sitter_language_pack"
+
+
 def is_available() -> bool:
     try:
         import tree_sitter  # noqa: F401
-        import tree_sitter_languages  # noqa: F401
+
+        _language_binding()
         return True
     except ImportError:
         return False
