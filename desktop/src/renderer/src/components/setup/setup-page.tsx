@@ -266,12 +266,14 @@ export function SetupPage() {
 
         <Card>
           <CardContent className="p-0">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <div className="flex items-center gap-2">
-                <FolderOpen className="h-4 w-4 text-primary" />
-                <span className="font-mono text-xs text-muted-foreground">{setup?.targetDir}</span>
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-border px-4 py-3">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <FolderOpen className="h-4 w-4 shrink-0 text-primary" />
+                <span className="truncate font-mono text-xs text-muted-foreground" title={setup?.targetDir}>
+                  {setup?.targetDir}
+                </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                 <Button
                   variant="outline"
                   size="sm"
