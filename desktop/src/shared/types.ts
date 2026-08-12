@@ -93,6 +93,29 @@ export interface GithubCloneResult {
   error?: string;
 }
 
+/** Latest commit on the MasarFlow repo's default branch. */
+export interface UpdateCommitInfo {
+  sha: string;
+  message: string;
+  date: string;
+}
+
+/** Result of a GitHub update check (releases + commits). */
+export interface UpdateInfo {
+  /** Installed launcher version (app.getVersion()). */
+  currentVersion: string;
+  /** Latest published release version (tag without the v prefix). */
+  latestVersion: string;
+  latestTag: string;
+  updateAvailable: boolean;
+  releaseUrl: string;
+  releaseName: string;
+  releaseNotes: string;
+  publishedAt: string | null;
+  latestCommit: UpdateCommitInfo | null;
+  error?: string;
+}
+
 export type ThemeMode = "light" | "dark" | "amoled" | "system";
 export type AccentMode = "solid" | "gradient";
 export type LogoColorMode = "original" | "accent" | "custom";
@@ -126,6 +149,8 @@ export interface AppSettings {
   bannerGlowColor: string;
   autoOpenBrowser: boolean;
   fontSize: number;
+  /** Check GitHub for updates automatically when the launcher starts. */
+  autoCheckUpdates: boolean;
 }
 
 export interface ServerStatus {

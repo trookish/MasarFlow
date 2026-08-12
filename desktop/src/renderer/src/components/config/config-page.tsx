@@ -1,8 +1,11 @@
 import {
   Check,
+  CheckCircle2,
+  ExternalLink,
   FolderOpen,
   Minus,
   Plus,
+  RefreshCw,
   RotateCcw,
   Save,
   Trash2,
@@ -887,6 +890,124 @@ function AppSettingsCard() {
   );
 }
 
+function UpdatesCard() {
+  const updateInfo = useApp((s) => s.updateInfo);
+  const setUpdateInfo = useApp((s) => s.setUpdateInfo);
+  const settings = useApp((s) => s.settings);
+  const patch = useApp((s) => s.patchSettings);
+  const [checking, setChecking] = useState(false);
+
+  const check = async (): Promise<void> => {
+    setChecking(true);
+    try {
+      setUpdateInfo(await window.masarFlow.updates.check());
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle>Updates</CardTitle>
+          <Button size="sm" onClick={check} disabled={checking}>
+            <RefreshCw className={cn("h-3.5 w-3.5", checking && "animate-spin")} />
+            {checking ? "Checking…" : "Check for updates"}
+          </Button>
+        </div>
+        <CardDescription>
+          Compares this launcher against MasarFlow releases and commits on GitHub.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium">Check for updates on startup</p>
+            <p className="text-[11px] text-muted-foreground">
+              Run an update check automatically when the launcher opens.
+            </p>
+          </div>
+          <Switch
+            checked={settings?.autoCheckUpdates ?? true}
+            onCheckedChange={(c) => void patch({ autoCheckUpdates: c })}
+          />
+        </div>
+        {updateInfo ? (
+          <div className="space-y-2 text-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-muted-foreground">Installed</span>
+              <span className="font-mono font-semibold">{updateInfo.currentVersion}</span>
+              <span className="text-muted-foreground">→</span>
+              <span className="text-muted-foreground">Latest</span>
+              <span className="font-mono font-semibold">
+                {updateInfo.latestVersion || "unknown"}
+              </span>
+              {updateInfo.updateAvailable ? (
+                <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+                  Update available
+                </span>
+              ) : updateInfo.error ? (
+                <span className="ml-auto rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning">
+                  Check failed
+                </span>
+              ) : (
+                <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-node-lore/15 px-2 py-0.5 text-xs font-medium text-node-lore">
+                  <CheckCircle2 className="h-3 w-3" /> Up to date
+                </span>
+              )}
+            </div>
+            {updateInfo.error ? (
+              <p className="text-xs text-warning">{updateInfo.error}</p>
+            ) : null}
+            {updateInfo.latestCommit ? (
+              <div className="rounded-md border border-border/60 bg-muted/30 p-2.5">
+                <p className="text-[11px] font-medium text-muted-foreground">
+                  Latest commit on main
+                </p>
+                <p className="mt-1 truncate font-mono text-xs">
+                  <span className="text-primary">{updateInfo.latestCommit.sha}</span>{" "}
+                  {updateInfo.latestCommit.message}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {new Date(updateInfo.latestCommit.date).toLocaleString()}
+                </p>
+              </div>
+            ) : null}
+            {updateInfo.releaseNotes ? (
+              <div className="scrollbar-thin max-h-44 overflow-y-auto rounded-md border border-border/60 bg-muted/30 p-2.5">
+                <p className="mb-1 text-[11px] font-medium text-muted-foreground">
+                  {updateInfo.releaseName}
+                  {updateInfo.publishedAt
+                    ? ` · ${new Date(updateInfo.publishedAt).toLocaleDateString()}`
+                    : ""}
+                </p>
+                <pre className="whitespace-pre-wrap font-sans text-xs leading-relaxed">
+                  {updateInfo.releaseNotes}
+                </pre>
+              </div>
+            ) : null}
+            {updateInfo.releaseUrl ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void window.masarFlow.updates.openRelease(updateInfo.releaseUrl)}
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Open release page
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            No update check run yet — click “Check for updates”.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ConfigPage() {
   const settings = useApp((s) => s.settings);
   useEffect(() => {
@@ -905,6 +1026,7 @@ export function ConfigPage() {
         <AppearanceCard />
         <EnvFormCard />
         <AppSettingsCard />
+        <UpdatesCard />
         <AdvancedCard />
       </div>
     </div>

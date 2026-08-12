@@ -21,6 +21,7 @@ export default function App() {
   const setEnv = useApp((s) => s.setEnv);
   const setBanner = useApp((s) => s.setBanner);
   const setMaximized = useApp((s) => s.setMaximized);
+  const setUpdateInfo = useApp((s) => s.setUpdateInfo);
 
   useEffect(() => {
     void (async () => {
@@ -39,6 +40,10 @@ export default function App() {
       setSessions(sessions);
       setEnv(env.fields);
       setBanner(banner);
+      // Auto-check for updates on startup (toggleable in Configuration → Updates).
+      if (settings.autoCheckUpdates) {
+        void window.masarFlow.updates.check().then(setUpdateInfo);
+      }
       // First launch: remember it for the next time ("Welcome back"), and
       // land on the setup page until everything is installed.
       if (!settings.hasLaunchedBefore) void window.masarFlow.settings.markLaunched();

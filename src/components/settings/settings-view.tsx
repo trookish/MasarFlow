@@ -36,6 +36,7 @@ import {
   Minus,
   Plus,
   Pencil,
+  ExternalLink,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -68,6 +69,8 @@ import type { Project } from "@/lib/db/schema";
 import { resetData } from "@/lib/db/data";
 import { seedDemoProject } from "@/lib/db/demo-seed";
 import { useProjectConfirmStore } from "@/lib/stores/project-confirm";
+import { useUpdatesStore } from "@/lib/stores/updates";
+import { UpdateDialog } from "@/components/shell/update-dialog";
 import {
   ProjectFields,
   type ProjectFieldValues,
@@ -93,7 +96,7 @@ import { cn } from "@/lib/utils/cn";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type GlobalSection = "appearance" | "project" | "data" | "ai-service" | "agent";
-type Section = GlobalSection | PageKey;
+type Section = GlobalSection | PageKey | "updates";
 
 interface NavEntry {
   id: Section;
@@ -167,6 +170,7 @@ const NAV: NavGroup[] = [
   {
     label: "System",
     items: [
+      { id: "updates", label: "Updates", icon: RefreshCw },
       { id: "sync", label: "Sync Panel", icon: RefreshCw },
       { id: "watcher", label: "Project Watcher", icon: Eye },
       { id: "search", label: "Semantic Search", icon: Search },
@@ -1713,6 +1717,100 @@ function SearchSection() {
   );
 }
 
+function UpdatesSection() {
+  const info = useUpdatesStore((s) => s.info);
+  const state = useUpdatesStore((s) => s.state);
+  const lastCheckedAt = useUpdatesStore((s) => s.lastCheckedAt);
+  const autoCheck = useUpdatesStore((s) => s.autoCheck);
+  const setAutoCheck = useUpdatesStore((s) => s.setAutoCheck);
+  const check = useUpdatesStore((s) => s.check);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  return (
+    <>
+      <SectionPanel
+        title="Updates"
+        description="Compare this app against MasarFlow releases and commits on GitHub."
+      >
+        <SettingRow
+          label="Check for updates on startup"
+          description="Automatically run an update check when the app opens; the topbar shows a dot when a newer release exists."
+        >
+          <Toggle value={autoCheck} onChange={setAutoCheck} />
+        </SettingRow>
+        <SettingRow
+          label="Check for updates"
+          description={
+            lastCheckedAt
+              ? `Last checked ${new Date(lastCheckedAt).toLocaleString()}.`
+              : "Fetches the latest release and commit from the MasarFlow GitHub repository."
+          }
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void check()}
+            disabled={state === "checking"}
+          >
+            <RefreshCw
+              className={cn(
+                "h-3.5 w-3.5",
+                state === "checking" && "animate-spin",
+              )}
+            />
+            {state === "checking" ? "Checking…" : "Check now"}
+          </Button>
+        </SettingRow>
+        {info ? (
+          <SettingRow
+            label="Latest release"
+            description={
+              info.error
+                ? `Check failed — ${info.error}`
+                : info.updateAvailable
+                  ? `v${info.latestVersion} is available — you're on v${info.currentVersion}.`
+                  : `You're on the latest release (v${info.currentVersion}).`
+            }
+          >
+            {info.releaseUrl ? (
+              <a href={info.releaseUrl} target="_blank" rel="noreferrer">
+                <Button variant="outline" size="sm">
+                  <ExternalLink className="h-3.5 w-3.5" /> View on GitHub
+                </Button>
+              </a>
+            ) : (
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                  info.updateAvailable
+                    ? "bg-primary/15 text-primary"
+                    : "bg-success/15 text-success",
+                )}
+              >
+                {info.updateAvailable ? "Update available" : "Up to date"}
+              </span>
+            )}
+          </SettingRow>
+        ) : null}
+        <SettingRow
+          label="Release notes"
+          description="Read the latest release's changes and downloads."
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setDialogOpen(true)}
+          >
+            <ScrollText className="h-3.5 w-3.5" /> Details
+          </Button>
+        </SettingRow>
+      </SectionPanel>
+
+      <UpdateDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+    </>
+  );
+}
+
 function PluginsSection() {
   const { plugins, update, reset } = usePageSettings();
   const set = <K extends keyof AllPageSettings["plugins"]>(
@@ -1840,6 +1938,7 @@ const SECTION_COMPONENTS: Record<Section, () => React.ReactElement> = {
   sync: SyncSection,
   watcher: WatcherSection,
   search: SearchSection,
+  updates: UpdatesSection,
   canvas: CanvasSection,
   plugins: PluginsSection,
 };

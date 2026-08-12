@@ -1,9 +1,10 @@
-import { ExternalLink, Monitor, Moon, SquareTerminal, Sun } from "lucide-react";
-import { useEffect } from "react";
+import { ExternalLink, Monitor, Moon, RefreshCw, SquareTerminal, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
 import { THEME_MODES, applyAppearance } from "@/lib/theme";
 import { useApp } from "@/lib/store";
 import { cn } from "@/lib/cn";
 import { TitlebarControls } from "./titlebar-controls";
+import { UpdateDialog } from "./update-dialog";
 
 function StatusChip() {
   const setup = useApp((s) => s.setup);
@@ -44,10 +45,26 @@ export function Topbar() {
   const settings = useApp((s) => s.settings);
   const setSettings = useApp((s) => s.setSettings);
   const server = useApp((s) => s.server);
+  const updateInfo = useApp((s) => s.updateInfo);
+  const setUpdateInfo = useApp((s) => s.setUpdateInfo);
+  const [updateOpen, setUpdateOpen] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   useEffect(() => {
     if (settings) applyAppearance(settings);
   }, [settings]);
+
+  const openUpdates = async (): Promise<void> => {
+    setUpdateOpen(true);
+    if (!updateInfo && !checking) {
+      setChecking(true);
+      try {
+        setUpdateInfo(await window.masarFlow.updates.check());
+      } finally {
+        setChecking(false);
+      }
+    }
+  };
 
   const cycleTheme = () => {
     if (!settings) return;
@@ -81,6 +98,16 @@ export function Topbar() {
 
       <div className="ml-auto flex items-center gap-1">
         <button
+          onClick={() => void openUpdates()}
+          title="Check for updates"
+          className="app-no-drag relative flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+        >
+          <RefreshCw className={cn("h-4 w-4", checking && "animate-spin")} />
+          {updateInfo?.updateAvailable ? (
+            <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
+          ) : null}
+        </button>
+        <button
           onClick={cycleTheme}
           title={`Theme: ${settings?.theme ?? "dark"}`}
           className="app-no-drag flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
@@ -108,6 +135,7 @@ export function Topbar() {
         <div className="mx-1 h-5 w-px bg-border" />
         <TitlebarControls />
       </div>
+      {updateOpen && <UpdateDialog onClose={() => setUpdateOpen(false)} />}
     </header>
   );
 }

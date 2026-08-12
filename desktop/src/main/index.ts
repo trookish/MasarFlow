@@ -17,6 +17,7 @@ import { settings } from "./settings";
 import { startStatusPolling } from "./server-status";
 import { maybeRunSelfTest } from "./selftest";
 import { startGuiTest } from "./guitest";
+import { checkForUpdates } from "./updates";
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -287,6 +288,11 @@ function registerIpc(): void {
   ipcMain.handle("shell:open-external", (_e, url: string) => {
     if (/^https?:\/\//.test(url)) return shell.openExternal(url);
     return shell.openPath(url);
+  });
+  ipcMain.handle("updates:check", () => checkForUpdates());
+  ipcMain.handle("updates:open-release", (_e, url: string) => {
+    if (/^https:\/\/github\.com\//.test(url)) return shell.openExternal(url);
+    return undefined;
   });
   ipcMain.handle("dialog:choose-directory", async () => {
     if (!mainWindow) return null;

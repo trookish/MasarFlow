@@ -6,6 +6,7 @@ import type {
   SessionInfo,
   SetupState,
   TestRunResult,
+  UpdateInfo,
 } from "@shared/types";
 
 export type Page = "run" | "setup" | "config" | "testing";
@@ -44,6 +45,9 @@ interface AppStore {
 
   testResults: Record<string, TestRunResult>;
   setTestResult: (r: TestRunResult) => void;
+
+  updateInfo: UpdateInfo | null;
+  setUpdateInfo: (i: UpdateInfo | null) => void;
 
   maximized: boolean;
   setMaximized: (m: boolean) => void;
@@ -100,6 +104,9 @@ export const useApp = create<AppStore>()((set) => ({
 
   maximized: false,
   setMaximized: (maximized) => set({ maximized }),
+
+  updateInfo: null,
+  setUpdateInfo: (updateInfo) => set({ updateInfo }),
 }));
 
 /** Open the terminal and focus a session (creating a shell tab when needed). */

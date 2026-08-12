@@ -13,6 +13,7 @@ import { useGlobalHotkeys } from "@/lib/hooks/use-hotkeys";
 import { usePythonHealth } from "@/lib/hooks/use-python-health";
 import { useProjectStore } from "@/lib/stores/project";
 import { useActiveProject } from "@/lib/hooks/use-project";
+import { useUpdatesStore } from "@/lib/stores/updates";
 import { projectsRepo } from "@/lib/db/repos";
 import {
   startPeriodicEmbeddingSync,
@@ -78,6 +79,15 @@ export default function WorkspaceLayout({
       () => useProjectStore.getState().activeProjectId,
     );
     return () => stopPeriodicEmbeddingSync();
+  }, []);
+
+  // Auto-check for updates on startup (toggleable in Settings → Updates).
+  // Silently fills the store so the topbar shows a dot when a newer release
+  // exists; the manual button opens the details dialog.
+  useEffect(() => {
+    if (useUpdatesStore.getState().autoCheck) {
+      void useUpdatesStore.getState().check();
+    }
   }, []);
 
   // Hard boot gate: Python is a required runtime. Hold the shell until the

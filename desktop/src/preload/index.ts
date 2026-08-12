@@ -12,6 +12,7 @@ import type {
   SessionOutputPayload,
   SetupState,
   StartSessionRequest,
+  UpdateInfo,
 } from "@shared/types";
 
 type Unsubscribe = () => void;
@@ -107,6 +108,10 @@ const api = {
   github: {
     repoUrl: (): Promise<string> => ipcRenderer.invoke("github:repo-url"),
     clone: (parent: string): Promise<GithubCloneResult> => ipcRenderer.invoke("github:clone", parent),
+  },
+  updates: {
+    check: (): Promise<UpdateInfo> => ipcRenderer.invoke("updates:check"),
+    openRelease: (url: string): Promise<void> => ipcRenderer.invoke("updates:open-release", url),
   },
   clipboard: {
     writeText: (text: string): Promise<void> => ipcRenderer.invoke("clipboard:write-text", text),

@@ -1,13 +1,17 @@
 "use client";
 
-import { Search, Command as CommandIcon, Keyboard, PanelLeft } from "lucide-react";
+import { useState } from "react";
+import { Search, Command as CommandIcon, Keyboard, PanelLeft, RefreshCw } from "lucide-react";
 import { useUIStore } from "@/lib/stores/ui";
 import { ProjectSwitcher } from "./project-switcher";
 import { ThemeToggle } from "./theme-toggle";
 import { PomodoroWidget, DailyNoteButton } from "./plugin-widgets";
+import { UpdateDialog } from "./update-dialog";
+import { useUpdatesStore } from "@/lib/stores/updates";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { Tooltip } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils/cn";
 
 export function Topbar() {
   const setSearchOpen = useUIStore((s) => s.setSearchOpen);
@@ -15,6 +19,15 @@ export function Topbar() {
   const setShortcutsOpen = useUIStore((s) => s.setShortcutsOpen);
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const [updateOpen, setUpdateOpen] = useState(false);
+  const updateInfo = useUpdatesStore((s) => s.info);
+  const updateState = useUpdatesStore((s) => s.state);
+  const checkUpdates = useUpdatesStore((s) => s.check);
+
+  async function openUpdates() {
+    setUpdateOpen(true);
+    if (updateState !== "checking") void checkUpdates();
+  }
 
   return (
     <header className="relative z-40 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur">
@@ -44,6 +57,25 @@ export function Topbar() {
       <div className="ml-auto flex items-center gap-1">
         <PomodoroWidget />
         <DailyNoteButton />
+        <Tooltip label="Check for updates" side="bottom">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Check for updates"
+            onClick={() => void openUpdates()}
+            className="relative"
+          >
+            <RefreshCw
+              className={cn(
+                "h-4 w-4",
+                updateState === "checking" && "animate-spin",
+              )}
+            />
+            {updateInfo?.updateAvailable ? (
+              <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-primary" />
+            ) : null}
+          </Button>
+        </Tooltip>
         <Tooltip label="Command palette (⌘K)" side="bottom">
           <Button
             variant="ghost"
@@ -66,6 +98,7 @@ export function Topbar() {
         </Tooltip>
         <ThemeToggle />
       </div>
+      <UpdateDialog open={updateOpen} onOpenChange={setUpdateOpen} />
     </header>
   );
 }

@@ -79,6 +79,7 @@ function defaultSettings(): AppSettings {
     bannerGlowColor: ACCENTS[0],
     autoOpenBrowser: true,
     fontSize: 13,
+    autoCheckUpdates: true,
   };
 }
 
