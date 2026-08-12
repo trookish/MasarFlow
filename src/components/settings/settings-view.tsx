@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useLiveQuery } from "dexie-react-hooks";
 import {
   Moon,
   Sun,
@@ -34,6 +35,7 @@ import {
   Gauge,
   Minus,
   Plus,
+  Pencil,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -61,14 +63,20 @@ import {
   type AgentSettingsState,
 } from "@/lib/stores/agent-settings";
 import { DEFAULT_AGENT_CONFIG } from "@/lib/ai/agent";
-import { projectsRepo } from "@/lib/db/repos";
+import { projectsRepo, categoriesRepo } from "@/lib/db/repos";
 import type { Project } from "@/lib/db/schema";
 import { resetData } from "@/lib/db/data";
 import { seedDemoProject } from "@/lib/db/demo-seed";
+import { useProjectConfirmStore } from "@/lib/stores/project-confirm";
 import {
   ProjectFields,
   type ProjectFieldValues,
 } from "@/components/shell/project-fields";
+import { NewProjectDialog } from "@/components/shell/new-project-dialog";
+import {
+  RemoveProjectDialog,
+  removeProjectQuietly,
+} from "@/components/shell/remove-project-dialog";
 import { GradientEditorDialog } from "@/components/settings/gradient-editor-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -247,11 +255,13 @@ function SectionPanel({
   title,
   description,
   onReset,
+  actions,
   children,
 }: {
   title: string;
   description?: string;
   onReset?: () => void;
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -265,16 +275,19 @@ function SectionPanel({
             </p>
           )}
         </div>
-        {onReset && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onReset}
-            className="shrink-0 text-xs text-muted-foreground"
-          >
-            <RotateCcw className="h-3 w-3" /> Reset defaults
-          </Button>
-        )}
+        <div className="flex shrink-0 items-center gap-1">
+          {actions}
+          {onReset && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onReset}
+              className="shrink-0 text-xs text-muted-foreground"
+            >
+              <RotateCcw className="h-3 w-3" /> Reset defaults
+            </Button>
+          )}
+        </div>
       </div>
       <Card>
         <CardContent className="divide-y-0 p-4">{children}</CardContent>
@@ -661,20 +674,78 @@ function RangeField({
 
 function ProjectSection() {
   const project = useActiveProject();
+  const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
+  const [editing, setEditing] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
   return (
-    <SectionPanel
-      title="Active Project"
-      description="Edit the active project's identity, description, and tags."
-    >
-      {project ? (
-        <ProjectForm key={project.id} project={project} />
-      ) : (
-        <p className="py-4 text-center text-xs text-muted-foreground">
-          No active project selected.
-        </p>
-      )}
-    </SectionPanel>
+    <>
+      <SectionPanel
+        title="Active Project"
+        description="Edit the active project's identity, description, and tags."
+        actions={
+          project ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Edit project in dialog"
+                title="Edit project"
+                onClick={() => setEditing(true)}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Delete project"
+                title="Delete project"
+                onClick={() => void handleRemove(project)}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </>
+          ) : undefined
+        }
+      >
+        {project ? (
+          <ProjectForm key={project.id} project={project} />
+        ) : (
+          <p className="py-4 text-center text-xs text-muted-foreground">
+            No active project selected.
+          </p>
+        )}
+      </SectionPanel>
+
+      <NewProjectDialog
+        key={project?.id ?? "create"}
+        open={editing && Boolean(project)}
+        project={project ?? null}
+        onOpenChange={(open) => {
+          if (!open) setEditing(false);
+        }}
+        onCreated={() => setEditing(false)}
+      />
+
+      <RemoveProjectDialog
+        open={removing && Boolean(project)}
+        project={project ?? null}
+        onOpenChange={(open) => {
+          if (!open) setRemoving(false);
+        }}
+        onRemoved={() => {
+          setActiveProjectId(null);
+          setRemoving(false);
+        }}
+      />
+    </>
   );
+
+  async function handleRemove(p: Project) {
+    const removed = await removeProjectQuietly(p);
+    if (!removed) setRemoving(true);
+  }
 }
 
 function DataSection() {
@@ -682,6 +753,12 @@ function DataSection() {
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
   const [confirmReset, setConfirmReset] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const skipDeleteConfirm = useProjectConfirmStore(
+    (s) => s.skipProjectDeleteConfirm,
+  );
+  const setSkipDeleteConfirm = useProjectConfirmStore(
+    (s) => s.setSkipProjectDeleteConfirm,
+  );
 
   async function loadDemo() {
     setSeeding(true);
@@ -713,6 +790,15 @@ function DataSection() {
             <Sparkles className="h-3.5 w-3.5" />{" "}
             {seeding ? "Loading…" : "Load demo projects"}
           </Button>
+        </SettingRow>
+        <SettingRow
+          label="Confirm before deleting projects"
+          description="Show a confirmation dialog when removing a project from the switcher or settings. Off = projects delete immediately."
+        >
+          <Toggle
+            value={!skipDeleteConfirm}
+            onChange={(v) => setSkipDeleteConfirm(!v)}
+          />
         </SettingRow>
         <SettingRow
           label="Reset"
@@ -1825,6 +1911,14 @@ function ProjectForm({ project }: { project: Project }) {
     bannerBrightness: project.bannerBrightness,
   });
   const [saved, setSaved] = useState(false);
+  const projectCategories = useLiveQuery(
+    () => categoriesRepo.listByProject(project.id),
+    [project.id],
+  );
+
+  async function addCategory(name: string) {
+    await categoriesRepo.ensure(project.id, name);
+  }
 
   function save() {
     const trimmed = fields.name.trim();
@@ -1850,6 +1944,8 @@ function ProjectForm({ project }: { project: Project }) {
       <ProjectFields
         value={fields}
         onChange={(patch) => setFields((f) => ({ ...f, ...patch }))}
+        categories={(projectCategories ?? []).map((c) => c.name)}
+        onAddCategory={addCategory}
       />
       <div className="flex items-center justify-end gap-3">
         {saved ? (

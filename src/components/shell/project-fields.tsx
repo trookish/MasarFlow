@@ -1,60 +1,43 @@
 "use client";
 
 import { useRef, useState } from "react";
-import {
-  Box,
-  Rocket,
-  Layers,
-  Globe,
-  CodeXml,
-  Zap,
-  Palette,
-  Gamepad2,
-  Database,
-  Bot,
-  Cloud,
-  Smartphone,
-  FlaskConical,
-  BookOpen,
-  Shield,
-  Wrench,
-  Upload,
-  ImagePlus,
-  Trash2,
-  type LucideIcon,
-} from "lucide-react";
+import { Upload, ImagePlus, Trash2 } from "lucide-react";
+import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 import { cn } from "@/lib/utils/cn";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { TagInput } from "@/components/brain/tag-input";
+import { IconPicker } from "./icon-picker";
+import { CategoryPicker } from "./category-picker";
 
-/** Curated lucide icons offered in the project icon picker. */
-export const PROJECT_ICONS: {
-  name: string;
-  label: string;
-  icon: LucideIcon;
-}[] = [
-  { name: "box", label: "Box", icon: Box },
-  { name: "rocket", label: "Rocket", icon: Rocket },
-  { name: "layers", label: "Layers", icon: Layers },
-  { name: "globe", label: "Globe", icon: Globe },
-  { name: "code", label: "Code", icon: CodeXml },
-  { name: "zap", label: "Zap", icon: Zap },
-  { name: "palette", label: "Palette", icon: Palette },
-  { name: "gamepad", label: "Gamepad", icon: Gamepad2 },
-  { name: "database", label: "Database", icon: Database },
-  { name: "bot", label: "Bot", icon: Bot },
-  { name: "cloud", label: "Cloud", icon: Cloud },
-  { name: "smartphone", label: "Smartphone", icon: Smartphone },
-  { name: "flask", label: "Flask", icon: FlaskConical },
-  { name: "book", label: "Book", icon: BookOpen },
-  { name: "shield", label: "Shield", icon: Shield },
-  { name: "wrench", label: "Wrench", icon: Wrench },
-];
+/**
+ * Legacy curated icon names → Lucide kebab-case names. Stored icons from
+ * before the full-library picker are mapped so existing projects keep theirs.
+ */
+export const LEGACY_ICON_MAP: Record<string, string> = {
+  box: "box",
+  rocket: "rocket",
+  layers: "layers",
+  globe: "globe",
+  code: "code-xml",
+  zap: "zap",
+  palette: "palette",
+  gamepad: "gamepad-2",
+  database: "database",
+  bot: "bot",
+  cloud: "cloud",
+  smartphone: "smartphone",
+  flask: "flask-conical",
+  book: "book-open",
+  shield: "shield",
+  wrench: "wrench",
+};
 
-const PROJECT_ICON_MAP: Record<string, LucideIcon> = Object.fromEntries(
-  PROJECT_ICONS.map((p) => [p.name, p.icon]),
-);
+/** Resolve any stored icon value to a valid Lucide icon name. */
+export function projectIconName(icon?: string): string {
+  if (!icon) return "box";
+  return LEGACY_ICON_MAP[icon] ?? icon;
+}
 
 /** Accent swatches for projects (name → hex). "violet" matches the schema default. */
 export const PROJECT_ACCENTS: { name: string; color: string }[] = [
@@ -76,19 +59,13 @@ const PROJECT_ACCENT_MAP: Record<string, string> = Object.fromEntries(
   PROJECT_ACCENTS.map((p) => [p.name, p.color]),
 );
 
+/** Resolve a project accent to a hex color. Raw hex passes through untouched. */
 export function projectAccentColor(accent?: string): string {
-  return (accent && PROJECT_ACCENT_MAP[accent]) || PROJECT_ACCENT_MAP.violet;
+  if (!accent) return PROJECT_ACCENT_MAP.violet;
+  const trimmed = accent.trim();
+  if (/^#[0-9a-fA-F]{3,8}$/.test(trimmed)) return trimmed;
+  return PROJECT_ACCENT_MAP[accent] ?? PROJECT_ACCENT_MAP.violet;
 }
-
-export const PROJECT_CATEGORIES: { value: string; label: string }[] = [
-  { value: "web-app", label: "Web app" },
-  { value: "mobile", label: "Mobile app" },
-  { value: "game", label: "Game" },
-  { value: "cli-tool", label: "CLI / tool" },
-  { value: "library", label: "Library / package" },
-  { value: "data", label: "Data / research" },
-  { value: "other", label: "Other" },
-];
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
@@ -223,7 +200,6 @@ export function ProjectIcon({
   size = "sm",
   className,
 }: ProjectIconProps) {
-  const Icon = (icon && PROJECT_ICON_MAP[icon]) || Box;
   const color = projectAccentColor(accent);
   if (iconImage) {
     return (
@@ -253,7 +229,10 @@ export function ProjectIcon({
       )}
       style={{ backgroundColor: `${color}1f`, color }}
     >
-      <Icon className={size === "sm" ? "h-3.5 w-3.5" : "h-5 w-5"} />
+      <DynamicIcon
+        name={projectIconName(icon) as IconName}
+        className={size === "sm" ? "h-3.5 w-3.5" : "h-5 w-5"}
+      />
     </span>
   );
 }
@@ -284,6 +263,10 @@ export const BANNER_MODES: {
 interface ProjectFieldsProps {
   value: ProjectFieldValues;
   onChange: (patch: Partial<ProjectFieldValues>) => void;
+  /** Category names already saved on this project ("" = none yet). */
+  categories?: string[];
+  /** Persist a brand-new category for this project. */
+  onAddCategory?: (name: string) => void | Promise<void>;
 }
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -294,9 +277,61 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Native color picker + hex text input, kept in sync.
+function ColorField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (hex: string) => void;
+}) {
+  const [text, setText] = useState(value);
+  const [prevValue, setPrevValue] = useState(value);
+  if (prevValue !== value) {
+    setPrevValue(value);
+    setText(value);
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="color"
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setText(e.target.value);
+        }}
+        aria-label="Color picker"
+        className="h-7 w-9 cursor-pointer rounded-md border border-border bg-transparent p-0.5"
+      />
+      <Input
+        value={text}
+        onChange={(e) => {
+          const v = e.target.value;
+          setText(v);
+          if (/^#[0-9a-fA-F]{6}$/.test(v)) onChange(v);
+        }}
+        onBlur={() => setText(value)}
+        placeholder="#7c5cfc"
+        className="h-7 w-24 font-mono text-xs"
+      />
+    </div>
+  );
+}
+
 /** Shared creation/editing fields for a project. */
-export function ProjectFields({ value, onChange }: ProjectFieldsProps) {
+export function ProjectFields({
+  value,
+  onChange,
+  categories = [],
+  onAddCategory,
+}: ProjectFieldsProps) {
   const usingCustomIcon = Boolean(value.iconImage);
+
+  async function handleAddCategory(name: string) {
+    if (onAddCategory) await onAddCategory(name);
+    onChange({ category: name });
+  }
+
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
@@ -312,28 +347,19 @@ export function ProjectFields({ value, onChange }: ProjectFieldsProps) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <FieldLabel>Icon</FieldLabel>
-          <div className="grid grid-cols-8 gap-1">
-            {PROJECT_ICONS.map((p) => {
-              const active = !usingCustomIcon && value.icon === p.name;
-              return (
-                <button
-                  key={p.name}
-                  type="button"
-                  title={p.label}
-                  aria-label={`${p.label} icon`}
-                  onClick={() => onChange({ icon: p.name, iconImage: "" })}
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
-                    active && "border-primary bg-primary/15 text-primary",
-                  )}
-                >
-                  <p.icon className="h-4 w-4" />
-                </button>
-              );
-            })}
+          <div className="flex items-center gap-2">
+            <IconPicker
+              value={projectIconName(value.icon)}
+              onSelect={(icon) => onChange({ icon, iconImage: "" })}
+            />
+            {usingCustomIcon ? (
+              <span className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
+                Custom image
+              </span>
+            ) : null}
           </div>
           <p className="text-[11px] text-muted-foreground">
-            Pick an icon or upload a custom image below.
+            Search the full Lucide library or upload a custom image below.
           </p>
           <ImagePicker
             value={value.iconImage}
@@ -362,8 +388,12 @@ export function ProjectFields({ value, onChange }: ProjectFieldsProps) {
             ))}
           </div>
           <p className="text-[11px] text-muted-foreground">
-            Used across the app to tint this project&apos;s identity.
+            Pick a preset or enter any custom color.
           </p>
+          <ColorField
+            value={projectAccentColor(value.accent)}
+            onChange={(hex) => onChange({ accent: hex })}
+          />
         </div>
       </div>
 
@@ -380,18 +410,17 @@ export function ProjectFields({ value, onChange }: ProjectFieldsProps) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <FieldLabel>Category</FieldLabel>
-          <select
+          <CategoryPicker
+            options={categories}
             value={value.category}
-            onChange={(e) => onChange({ category: e.target.value })}
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none"
-          >
-            <option value="">No category</option>
-            {PROJECT_CATEGORIES.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
+            onChange={(category) => onChange({ category })}
+            onCreate={(name) => handleAddCategory(name)}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            {categories.length === 0
+              ? "No categories yet — add the project's first one."
+              : "Pick a saved category or add a new one."}
+          </p>
         </div>
 
         <div className="space-y-1.5">
@@ -507,8 +536,7 @@ export function ProjectPreview({ value }: { value: ProjectFieldValues }) {
       </div>
       {value.category ? (
         <span className="ml-auto rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
-          {PROJECT_CATEGORIES.find((c) => c.value === value.category)?.label ??
-            value.category}
+          {value.category}
         </span>
       ) : null}
     </div>

@@ -26,7 +26,6 @@ import {
   assigneeSchema,
   noteTypeSchema,
   specStatusSchema,
-  standardCategorySchema,
   type EntityKind,
   type Spec,
   type Task,
@@ -540,12 +539,11 @@ export async function executeWorkspaceTool(
         const title = s("title");
         const rule = s("rule") ?? "";
         if (!title) return fail("title is required");
-        const cat = standardCategorySchema.safeParse(a.category);
         const standard = await standardsRepo.create({
           projectId,
           title,
           rule,
-          category: cat.success ? cat.data : "other",
+          category: s("category") || "other",
           examples: arr("examples") ?? [],
           enforced: bool("enforced") ?? true,
           pattern: s("pattern") ?? "",
@@ -565,8 +563,7 @@ export async function executeWorkspaceTool(
         const existing = await standardsRepo.get(id);
         if (!own(existing)) return fail("Standard not found");
         const patch: Partial<Standard> = {};
-        const cat = standardCategorySchema.safeParse(a.category);
-        if (cat.success) patch.category = cat.data;
+        if (raw("category") !== undefined) patch.category = raw("category") ?? "";
         if (s("title")) patch.title = s("title");
         if (raw("rule") !== undefined) patch.rule = raw("rule");
         if (arr("examples")) patch.examples = arr("examples");

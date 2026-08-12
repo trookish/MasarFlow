@@ -1,6 +1,8 @@
 import Dexie, { type EntityTable } from "dexie";
+import { uuid, now } from "@/lib/utils/ids";
 import type {
   Project,
+  ProjectCategory,
   Folder,
   Note,
   NoteTemplate,
@@ -44,6 +46,7 @@ import type {
  */
 export class MasarFlowDB extends Dexie {
   projects!: EntityTable<Project, "id">;
+  projectCategories!: EntityTable<ProjectCategory, "id">;
   folders!: EntityTable<Folder, "id">;
   notes!: EntityTable<Note, "id">;
   noteTemplates!: EntityTable<NoteTemplate, "id">;
@@ -197,6 +200,34 @@ export class MasarFlowDB extends Dexie {
     this.version(9).stores({
       aiUndo: "id, projectId, chatMessageId, createdAt",
     });
+    // v10: per-project categories (additive + backfill). Existing projects
+    // with a legacy category value get it migrated into the new table so the
+    // picker still shows it, with the legacy preset codes expanded to labels.
+    this.version(10)
+      .stores({
+        projectCategories: "id, projectId",
+      })
+      .upgrade(async (tx) => {
+        const legacyLabels: Record<string, string> = {
+          "web-app": "Web app",
+          mobile: "Mobile app",
+          game: "Game",
+          "cli-tool": "CLI / tool",
+          library: "Library / package",
+          data: "Data / research",
+          other: "Other",
+        };
+        const projects = await tx.table("projects").toArray();
+        for (const p of projects) {
+          const raw = (p as { category?: unknown }).category;
+          const name = typeof raw === "string" && raw ? raw : "";
+          if (!name) continue;
+          const label = legacyLabels[name] ?? name;
+          await tx
+            .table("projectCategories")
+            .add({ id: uuid(), projectId: p.id, name: label, createdAt: now() });
+        }
+      });
   }
 }
 

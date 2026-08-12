@@ -1,4 +1,5 @@
 export { projectsRepo } from "./projects";
+export { categoriesRepo } from "./categories";
 export { foldersRepo } from "./folders";
 export { notesRepo } from "./notes";
 export { noteTemplatesRepo } from "./noteTemplates";

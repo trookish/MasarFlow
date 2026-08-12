@@ -14,6 +14,7 @@ function useDropdown(): DropdownContext {
   if (!ctx) throw new Error("DropdownMenu components must be used together");
   return ctx;
 }
+export { useDropdown };
 
 export function DropdownMenu({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(false);

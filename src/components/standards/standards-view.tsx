@@ -67,6 +67,10 @@ export function StandardsView() {
       ),
     [standards],
   );
+  const usedCategories = useMemo(
+    () => [...new Set(standards.map((s) => s.category))],
+    [standards],
+  );
   const selected = sorted.find((s) => s.id === selectedId) ?? null;
 
   function select(id: string | null) {
@@ -184,6 +188,7 @@ export function StandardsView() {
                 key={selected.id}
                 standard={selected}
                 showLineNumbers={showLineNumbers}
+                usedCategories={usedCategories}
                 onDelete={deleteStandard}
               />
             ) : (

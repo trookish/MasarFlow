@@ -5,8 +5,8 @@ import {
 } from "@/lib/ai/workspace-tool-defs";
 import {
   NOTE_TYPES,
+  STANDARD_CATEGORIES,
   specStatusSchema,
-  standardCategorySchema,
   taskStatusSchema,
   taskPrioritySchema,
   assigneeSchema,
@@ -32,9 +32,6 @@ describe("workspace-tool-defs parity with db/schema", () => {
     expect(enumValues("create_spec", "status")).toEqual([
       ...specStatusSchema.options,
     ]);
-    expect(enumValues("create_standard", "category")).toEqual([
-      ...standardCategorySchema.options,
-    ]);
     expect(enumValues("create_task", "status")).toEqual([
       ...taskStatusSchema.options,
     ]);
@@ -44,6 +41,16 @@ describe("workspace-tool-defs parity with db/schema", () => {
     expect(enumValues("create_task", "assignee")).toEqual([
       ...assigneeSchema.options,
     ]);
+  });
+
+  it("lists the suggested standard categories in the tool description", () => {
+    const def = WORKSPACE_TOOLS.find((t) => t.name === "create_standard");
+    expect(def).toBeDefined();
+    const category = (
+      def!.parameters as { properties?: Record<string, { description?: string }> }
+    ).properties?.category;
+    expect(category?.description).toContain(STANDARD_CATEGORIES[0]);
+    expect(category?.description).toContain(STANDARD_CATEGORIES.at(-1));
   });
 
   it("has unique tool names and consistent name lists", () => {

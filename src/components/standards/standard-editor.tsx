@@ -3,11 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Trash2, Plus, X, ShieldCheck, ShieldOff } from "lucide-react";
 import { standardsRepo } from "@/lib/db/repos";
-import {
-  type Standard,
-  type StandardCategory,
-  standardCategorySchema,
-} from "@/lib/db/schema";
+import { STANDARD_CATEGORIES, type Standard } from "@/lib/db/schema";
 import { isValidPattern } from "@/lib/enforce";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -15,12 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-export const STANDARD_CATEGORIES = standardCategorySchema.options;
 
 type StandardForm = Pick<
   Standard,
@@ -38,19 +34,35 @@ function toForm(s: Standard): StandardForm {
   };
 }
 
+/** Base suggestions + categories already used in this project. */
+function optionList(
+  usedCategories: string[],
+  custom: string[],
+): string[] {
+  return [...new Set([...STANDARD_CATEGORIES, ...usedCategories, ...custom])];
+}
+
 export function StandardEditor({
   standard,
   onDelete,
   showLineNumbers = false,
+  usedCategories = [],
 }: {
   standard: Standard;
   onDelete: () => void;
   showLineNumbers?: boolean;
+  /** Categories already used by other standards in this project. */
+  usedCategories?: string[];
 }) {
   const standardId = standard.id;
   const [form, setForm] = useState<StandardForm>(() => toForm(standard));
   const savedJson = useRef(JSON.stringify(form));
   const latest = useRef(form);
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [categoryDraft, setCategoryDraft] = useState("");
+  // Categories added in this session (before the debounced save lands).
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const categories = optionList(usedCategories, customCategories);
 
   useEffect(() => {
     latest.current = form;
@@ -88,20 +100,57 @@ export function StandardEditor({
         <DropdownMenu>
           <DropdownMenuTrigger>
             <Button variant="outline" size="sm">
-              <span className="capitalize">{form.category}</span>
+              <span className="max-w-28 truncate capitalize">{form.category}</span>
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="max-h-72 overflow-y-auto">
-            {STANDARD_CATEGORIES.map((c) => (
+          <DropdownMenuContent align="end" className="max-h-80 w-56 overflow-y-auto">
+            <DropdownMenuLabel>Category</DropdownMenuLabel>
+            {categories.map((c) => (
               <DropdownMenuItem
                 key={c}
                 active={c === form.category}
-                onSelect={() => set({ category: c as StandardCategory })}
+                onSelect={() => set({ category: c })}
               >
-                <span className="capitalize">{c}</span>
+                <span className="truncate capitalize">{c}</span>
               </DropdownMenuItem>
             ))}
+            <DropdownMenuSeparator />
+            {addingCategory ? (
+              <div className="p-1">
+                <Input
+                  autoFocus
+                  value={categoryDraft}
+                  onChange={(e) => setCategoryDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const name = categoryDraft.trim();
+                      if (name) {
+                        setCustomCategories((c) =>
+                          c.includes(name) ? c : [...c, name],
+                        );
+                        set({ category: name });
+                        setCategoryDraft("");
+                        setAddingCategory(false);
+                      }
+                    }
+                  }}
+                  placeholder="Category name…"
+                  className="h-8 text-sm"
+                />
+                <p className="mt-1 px-1 text-[11px] text-muted-foreground">
+                  Press Enter to add and select.
+                </p>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAddingCategory(true)}
+                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add category
+              </button>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
         <Button

@@ -36,6 +36,7 @@ const SPEC_STATUSES = [
   "implementing",
   "shipped",
 ] as const;
+/** Suggested standard categories — the stored value is free-form (users add their own). */
 const STANDARD_CATEGORIES = [
   "naming",
   "structure",
@@ -305,7 +306,9 @@ export const WORKSPACE_TOOLS: WorkspaceToolDef[] = [
     parameters: {
       type: "object",
       properties: {
-        category: enumOf(STANDARD_CATEGORIES, "Filter by category."),
+        category: str(
+          `Filter by category (any string; suggestions: ${STANDARD_CATEGORIES.join(", ")}).`,
+        ),
       },
     },
   },
@@ -326,7 +329,9 @@ export const WORKSPACE_TOOLS: WorkspaceToolDef[] = [
       properties: {
         title: str("Standard title."),
         rule: str("The rule text."),
-        category: enumOf(STANDARD_CATEGORIES, "Category (default: other)."),
+        category: str(
+          `Category (default: other; any string, suggestions: ${STANDARD_CATEGORIES.join(", ")}).`,
+        ),
         examples: strArr("Good/bad examples."),
         enforced: {
           type: "boolean",
@@ -346,7 +351,7 @@ export const WORKSPACE_TOOLS: WorkspaceToolDef[] = [
         id: str("Standard id."),
         title: str("New title."),
         rule: str("New rule."),
-        category: enumOf(STANDARD_CATEGORIES, "New category."),
+        category: str(`New category (any string).`),
         examples: strArr("Replacement examples."),
         enforced: { type: "boolean", description: "Machine-enforced." },
         pattern: str("New forbidden regex."),

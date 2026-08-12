@@ -34,7 +34,12 @@ export const specStatusSchema = z.enum([
 ]);
 export type SpecStatus = z.infer<typeof specStatusSchema>;
 
-export const standardCategorySchema = z.enum([
+/**
+ * Suggested standard categories — kept as documentation for the UI and AI
+ * tool descriptions. The stored value itself is free-form so users can add
+ * their own categories.
+ */
+export const STANDARD_CATEGORIES = [
   "naming",
   "structure",
   "comments",
@@ -51,8 +56,8 @@ export const standardCategorySchema = z.enum([
   "unity",
   "networking",
   "other",
-]);
-export type StandardCategory = z.infer<typeof standardCategorySchema>;
+] as const;
+export type StandardCategory = string;
 
 export const taskStatusSchema = z.enum([
   "backlog",
@@ -122,6 +127,19 @@ export const projectSchema = z.object({
 export type Project = z.infer<typeof projectSchema>;
 
 /**
+ * Per-project category names. New projects start with none — categories are
+ * added by the user via the "Add category" picker (demo projects seed their
+ * own). The project row's `category` holds the selected one of these.
+ */
+export const projectCategorySchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  name: z.string(),
+  createdAt: z.number(),
+});
+export type ProjectCategory = z.infer<typeof projectCategorySchema>;
+
+/**
  * Folders organize notes into a tree. Not in the original 18-table list but
  * required to back the Brain folder tree; kept intentionally lightweight.
  */
@@ -188,7 +206,7 @@ export type Spec = z.infer<typeof specSchema>;
 export const standardSchema = z.object({
   id: z.string(),
   projectId: z.string(),
-  category: standardCategorySchema.default("other"),
+  category: z.string().default("other"),
   title: z.string(),
   rule: z.string().default(""),
   examples: z.array(z.string()).default([]),

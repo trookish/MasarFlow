@@ -20,6 +20,7 @@
 import { db } from "@/lib/db";
 import {
   projectsRepo,
+  categoriesRepo,
   foldersRepo,
   notesRepo,
   noteTemplatesRepo,
@@ -119,9 +120,11 @@ async function seedPulseProject(): Promise<string> {
     archScore: 78,
     techDebt: 15,
     accent: "sky",
+    category: "Web app",
     createdAt: ago(30 * DAY),
     updatedAt: ago(3 * HOUR),
   });
+  await categoriesRepo.ensure(project.id, "Web app");
   return project.id;
 }
 
@@ -875,9 +878,11 @@ async function seedCoreProject(): Promise<string> {
     archScore: 84,
     techDebt: 22,
     accent: "amber",
+    category: "Game",
     createdAt: ago(40 * DAY),
     updatedAt: ago(2 * HOUR),
   });
+  await categoriesRepo.ensure(project.id, "Game");
   return project.id;
 }
 
@@ -2364,9 +2369,11 @@ async function seedDraftDeckProject(): Promise<string> {
     archScore: 72,
     techDebt: 28,
     accent: "emerald",
+    category: "Desktop app",
     createdAt: ago(26 * DAY),
     updatedAt: ago(4 * HOUR),
   });
+  await categoriesRepo.ensure(project.id, "Desktop app");
   return project.id;
 }
 

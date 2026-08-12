@@ -3,6 +3,7 @@ import type { Project } from "@/lib/db/schema";
 import { uuid, now, slugify } from "@/lib/utils/ids";
 
 const PROJECT_TABLES = [
+  db.projectCategories,
   db.folders,
   db.notes,
   db.noteTemplates,
