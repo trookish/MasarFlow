@@ -1,8 +1,10 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 import type {
   AppSettings,
+  DirectoryPickResult,
   EnvData,
   EnvField,
+  GithubCloneResult,
   SaveEnvResult,
   ServerStatus,
   SessionExitPayload,
@@ -19,6 +21,7 @@ const api = {
     start: (req: StartSessionRequest): Promise<SessionInfo> => ipcRenderer.invoke("session:start", req),
     list: (): Promise<SessionInfo[]> => ipcRenderer.invoke("session:list"),
     buffer: (id: string): Promise<string> => ipcRenderer.invoke("session:buffer", id),
+    clearBuffer: (id: string): void => ipcRenderer.send("session:clear-buffer", id),
     input: (id: string, data: string): void => ipcRenderer.send("session:input", { id, data }),
     resize: (id: string, cols: number, rows: number): void =>
       ipcRenderer.send("session:resize", { id, cols, rows }),
@@ -97,8 +100,17 @@ const api = {
   },
   shell: {
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke("shell:open-external", url),
-    chooseDirectory: (): Promise<{ path: string; ok: boolean } | null> =>
+    chooseDirectory: (): Promise<DirectoryPickResult | null> =>
       ipcRenderer.invoke("dialog:choose-directory"),
+    chooseFolder: (): Promise<string | null> => ipcRenderer.invoke("dialog:choose-folder"),
+  },
+  github: {
+    repoUrl: (): Promise<string> => ipcRenderer.invoke("github:repo-url"),
+    clone: (parent: string): Promise<GithubCloneResult> => ipcRenderer.invoke("github:clone", parent),
+  },
+  clipboard: {
+    writeText: (text: string): Promise<void> => ipcRenderer.invoke("clipboard:write-text", text),
+    readText: (): Promise<string> => ipcRenderer.invoke("clipboard:read-text"),
   },
   ui: {
     onNavigate: (cb: (page: string) => void): Unsubscribe => {

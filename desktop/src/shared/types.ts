@@ -32,7 +32,14 @@ export interface SessionExitPayload {
   exitCode: number | null;
 }
 
-export type SetupStepKey = "node" | "npm" | "python" | "deps" | "envfile" | "venv";
+export type SetupStepKey =
+  | "project"
+  | "node"
+  | "npm"
+  | "python"
+  | "deps"
+  | "envfile"
+  | "venv";
 
 export type StepStatus = "pass" | "fail" | "missing" | "running" | "pending";
 
@@ -68,6 +75,21 @@ export interface EnvData {
 
 export interface SaveEnvResult {
   ok: boolean;
+  error?: string;
+}
+
+export interface DirectoryPickResult {
+  path: string;
+  ok: boolean;
+  reason?: string;
+}
+
+export interface GithubCloneResult {
+  ok: boolean;
+  /** The folder the project lives in (chosen parent + /MasarFlow). */
+  dest?: string;
+  /** Set when a clone session was actually started (absent = already present). */
+  sessionId?: string;
   error?: string;
 }
 

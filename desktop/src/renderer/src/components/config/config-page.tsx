@@ -808,17 +808,22 @@ function AppSettingsCard() {
   const patch = useApp((s) => s.patchSettings);
   const setSetup = useApp((s) => s.setSetup);
   const setEnv = useApp((s) => s.setEnv);
+  const [browseError, setBrowseError] = useState<string | null>(null);
 
   if (!settings) return null;
 
   const browse = async (): Promise<void> => {
+    setBrowseError(null);
     const res = await window.masarFlow.shell.chooseDirectory();
-    if (res?.ok) {
+    if (!res) return;
+    if (res.ok) {
       await patch({ targetDir: res.path });
       const state = await window.masarFlow.setup.check();
       setSetup(state);
       const envData = await window.masarFlow.env.read();
       setEnv(envData.fields);
+    } else {
+      setBrowseError(res.reason ?? "That folder isn't the MasarFlow project.");
     }
   };
 
@@ -842,6 +847,9 @@ function AppSettingsCard() {
               Browse…
             </Button>
           </div>
+          {browseError && (
+            <p className="mt-1.5 text-xs text-destructive">{browseError}</p>
+          )}
         </div>
 
         <div className="flex items-center justify-between">

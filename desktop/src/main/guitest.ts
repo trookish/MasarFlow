@@ -1,4 +1,4 @@
-import { app, type BrowserWindow } from "electron";
+import { app, clipboard, type BrowserWindow } from "electron";
 import { appendFileSync } from "node:fs";
 
 /**
@@ -46,6 +46,67 @@ export function startGuiTest(win: BrowserWindow): void {
     })()`);
   };
 
+  /**
+   * Terminal smoke test: open a shell session, right-click the xterm surface,
+   * and confirm the copy/paste context menu renders with the right items.
+   */
+  const terminalMenuCheck = async (): Promise<string> => {
+    const started = await win.webContents.executeJavaScript(`(() => {
+      const b = document.querySelector('[title="New shell (cmd)"]');
+      if (!b) return false;
+      b.click();
+      return true;
+    })()`);
+    if (!started) return "terminalMenuCheck: no new-shell button";
+
+    const deadline = Date.now() + 30_000;
+    let xtermReady = false;
+    while (Date.now() < deadline) {
+      xtermReady = await win.webContents.executeJavaScript(
+        `!!document.querySelector('.xterm') && !!document.querySelector('.xterm .xterm-rows')`,
+      );
+      if (xtermReady) break;
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    if (!xtermReady) return "terminalMenuCheck: xterm never appeared";
+
+    await new Promise((r) => setTimeout(r, 800));
+    const menu = await win.webContents.executeJavaScript(`(() => {
+      const el = document.querySelector('.xterm');
+      const rect = el.getBoundingClientRect();
+      const evt = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        clientX: rect.left + 60,
+        clientY: rect.top + 40,
+      });
+      el.dispatchEvent(evt);
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const items = [...document.querySelectorAll('[role="menuitem"]')].map((m) => m.textContent.trim());
+          const menuEl = document.querySelector('[role="menu"]');
+          const visible = !!menuEl && menuEl.getBoundingClientRect().width > 0;
+          resolve(JSON.stringify({ visible, items }));
+        }, 300);
+      });
+    })()`);
+
+    // Click "Copy all" → renderer must read xterm's full buffer and write it
+    // to the OS clipboard through preload → main IPC.
+    const clickedCopyAll = await win.webContents.executeJavaScript(`(() => {
+      const b = [...document.querySelectorAll('[role="menuitem"]')].find((x) => x.textContent.includes('Copy all'));
+      if (!b) return false;
+      b.click();
+      return true;
+    })()`);
+    await new Promise((r) => setTimeout(r, 600));
+    const copied = clipboard.readText();
+    const pasteRoundTrip = await win.webContents.executeJavaScript(
+      `window.masarFlow.clipboard.readText().then((t) => t.length)`,
+    );
+    return `terminalMenuCheck: ${menu} copyAllClicked=${clickedCopyAll} clipboardChars=${copied.length} pasteReadChars=${pasteRoundTrip}`;
+  };
+
   const waitPort = async (port: number, timeoutMs: number): Promise<boolean> => {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
@@ -70,6 +131,8 @@ export function startGuiTest(win: BrowserWindow): void {
       void (async () => {
         const d1 = await dump("initial");
         log(`GUI-1: ${d1}`);
+        const tmenu = await terminalMenuCheck();
+        log(`GUI-TERMINAL: ${tmenu}`);
         if (!deep) return finish(0);
 
         const clicked = await clickButton("Start development");

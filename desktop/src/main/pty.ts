@@ -53,6 +53,12 @@ class PtyManager extends EventEmitter<SessionEvents> {
     return this.sessions.get(id)?.buffer ?? "";
   }
 
+  /** Drop the re-attach ring buffer (terminal "Clear" must stick). */
+  clearBuffer(id: string): void {
+    const s = this.sessions.get(id);
+    if (s) s.buffer = "";
+  }
+
   /** Kill every managed session (app quit / new run session). */
   killAll(): void {
     for (const id of [...this.sessions.keys()]) this.kill(id);

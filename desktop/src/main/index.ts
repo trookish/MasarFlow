@@ -1,4 +1,5 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, shell, Tray } from "electron";
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, shell, Tray } from "electron";
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join, join as pathJoin } from "node:path";
 import type {
@@ -20,6 +21,28 @@ import { startGuiTest } from "./guitest";
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let quitting = false;
+
+/** The official MasarFlow repository — where a first-time setup gets the project. */
+const MASARFLOW_REPO_URL =
+  process.env.MASARFLOW_REPO_URL?.trim() || "https://github.com/trookish/MasarFlow.git";
+
+/** Does this folder contain a MasarFlow project (package.json named "masarflow")? */
+function isMasarFlowProject(dir: string): { ok: boolean; reason?: string } {
+  const pkg = join(dir, "package.json");
+  if (!existsSync(pkg)) {
+    return { ok: false, reason: "No package.json in this folder — it doesn't look like a MasarFlow project." };
+  }
+  try {
+    const name = (JSON.parse(readFileSync(pkg, "utf8")) as { name?: string }).name;
+    if (name === "masarflow") return { ok: true };
+    return {
+      ok: false,
+      reason: `"${name ?? "unknown"}" is not the MasarFlow project — MasarFlow requires the official project from GitHub.`,
+    };
+  } catch {
+    return { ok: false, reason: "Invalid package.json — this doesn't look like the MasarFlow project." };
+  }
+}
 
 function send(channel: string, payload: unknown): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -182,6 +205,7 @@ function registerIpc(): void {
   });
   ipcMain.handle("session:list", () => ptyManager.list());
   ipcMain.handle("session:buffer", (_e, id: string) => ptyManager.buffer(id));
+  ipcMain.on("session:clear-buffer", (_e, id: string) => ptyManager.clearBuffer(id));
   ipcMain.on("session:input", (_e, payload: { id: string; data: string }) => {
     ptyManager.write(payload.id, payload.data);
   });
@@ -253,6 +277,12 @@ function registerIpc(): void {
   ipcMain.on("window:close", () => mainWindow?.close());
   ipcMain.handle("window:is-maximized", () => mainWindow?.isMaximized() ?? false);
 
+  // ── clipboard (terminal copy/paste — reliable from the main process) ────
+  ipcMain.handle("clipboard:write-text", (_e, text: string) => {
+    clipboard.writeText(String(text ?? ""));
+  });
+  ipcMain.handle("clipboard:read-text", () => clipboard.readText());
+
   // ── misc ────────────────────────────────────────────────────────────────
   ipcMain.handle("shell:open-external", (_e, url: string) => {
     if (/^https?:\/\//.test(url)) return shell.openExternal(url);
@@ -267,8 +297,53 @@ function registerIpc(): void {
     });
     if (res.canceled || res.filePaths.length === 0) return null;
     const dir = res.filePaths[0];
-    if (!existsSync(join(dir, "package.json"))) return { path: dir, ok: false };
-    return { path: dir, ok: true };
+    const check = isMasarFlowProject(dir);
+    return { path: dir, ok: check.ok, ...(check.reason ? { reason: check.reason } : {}) };
+  });
+
+  // Unvalidated folder picker — used to choose where to clone the project.
+  ipcMain.handle("dialog:choose-folder", async () => {
+    if (!mainWindow) return null;
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: "Choose where to clone the MasarFlow project",
+      properties: ["openDirectory", "createDirectory"],
+    });
+    if (res.canceled || res.filePaths.length === 0) return null;
+    return res.filePaths[0];
+  });
+
+  // ── github (first-time setup: get the MasarFlow project) ────────────────
+  ipcMain.handle("github:repo-url", () => MASARFLOW_REPO_URL);
+
+  ipcMain.handle("github:clone", (_e, parent: string) => {
+    if (typeof parent !== "string" || !parent.trim()) {
+      return { ok: false, error: "No destination folder chosen." };
+    }
+    const gitCheck = spawnSync("git", ["--version"], { encoding: "utf8", timeout: 10_000 });
+    if (gitCheck.status !== 0) {
+      return {
+        ok: false,
+        error: "git is not installed. Install git from https://git-scm.com and try again.",
+      };
+    }
+    const dest = join(parent, "MasarFlow");
+    const existing = isMasarFlowProject(dest);
+    if (existing.ok) {
+      // Already cloned — just point the launcher at it.
+      return { ok: true, dest };
+    }
+    const session = ptyManager.start({
+      label: "git clone MasarFlow",
+      kind: "setup",
+      command: `git clone ${MASARFLOW_REPO_URL} ${dest}`,
+      file: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
+      args:
+        process.platform === "win32"
+          ? ["/c", "git", "clone", "--progress", MASARFLOW_REPO_URL, dest]
+          : ["-lc", `git clone --progress ${MASARFLOW_REPO_URL} ${dest}`],
+      cwd: parent,
+    });
+    return { ok: true, dest, sessionId: session.id };
   });
 }
 

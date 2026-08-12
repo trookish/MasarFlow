@@ -2,6 +2,7 @@
   "name": "masarflow",
   "version": "0.1.2.3",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --webpack",
     "dev:full": "node scripts/start.mjs --dev",

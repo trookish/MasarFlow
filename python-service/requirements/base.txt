@@ -8,8 +8,11 @@ httpx>=0.27
 # Phase 2 — Intelligence tier (core). Heavy optional models (whisper/torch,
 # OCR, CLIP) live in requirements/extra.txt and are installed on demand.
 networkx>=3.2
-tree-sitter>=0.23
-tree-sitter-languages>=1.10
+# tree-sitter-languages ships no Python 3.13 wheels yet; the AST analysis it
+# powers (code_analysis.py) is lazily imported and degrades gracefully, so it
+# is skipped on 3.13 instead of failing the whole install.
+tree-sitter>=0.23; python_version < "3.13"
+tree-sitter-languages>=1.10; python_version < "3.13"
 trafilatura>=1.12
 pypdf>=4.8
 python-docx>=1.1

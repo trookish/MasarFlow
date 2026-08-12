@@ -17,6 +17,38 @@ import { settings } from "./settings";
 const MIN_NODE = 22;
 const MIN_PYTHON = 3.11;
 
+/**
+ * Packages the Python service imports at boot (python-service/app/main.py →
+ * embeddings.py, job_queue.py). Everything else in requirements/base.txt is
+ * lazily imported or marker-skipped on some Python versions (e.g.
+ * tree-sitter-languages has no 3.13 wheels), so it never blocks startup.
+ */
+const BOOT_REQUIRED = [
+  "fastapi",
+  "uvicorn",
+  "pydantic",
+  "httpx",
+  "chromadb",
+  "sentence-transformers",
+];
+
+/** Verify the venv has every boot-critical package installed (fast, no heavy imports). */
+function pythonDepsOk(pyDir: string, venvPython: string): boolean {
+  try {
+    for (const name of BOOT_REQUIRED) {
+      const res = spawnSync(
+        venvPython,
+        ["-c", "import importlib.metadata as im, sys; im.distribution(sys.argv[1])", name],
+        { cwd: pyDir, encoding: "utf8", timeout: 30_000 },
+      );
+      if (res.status !== 0) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 interface PythonInfo {
   file: string;
   args: string[];
@@ -27,14 +59,35 @@ interface CheckResults {
   python: PythonInfo | null;
 }
 
+/**
+ * Quote a single argument for the Windows cmd.exe command line. Arguments
+ * that are already "safe" (no spaces or shell metacharacters) pass through
+ * unquoted; everything else is wrapped in quotes with embedded `"` doubled
+ * (cmd.exe's escaping rule — it has no backslash escapes).
+ */
+function cmdQuote(arg: string): string {
+  return /^[A-Za-z0-9_./:=+@%,\-]+$/.test(arg)
+    ? arg
+    : `"${arg.replace(/"/g, '""')}"`;
+}
+
 function tryCommand(file: string, args: string[]): { code: number; out: string } {
   try {
-    const res = spawnSync(file, args, {
-      encoding: "utf8",
-      timeout: 15_000,
-      // .cmd/.bat shims cannot be spawned directly by CreateProcess — go through cmd.
-      shell: file.endsWith(".cmd") || file.endsWith(".bat"),
-    });
+    // .cmd/.bat shims cannot be spawned directly by CreateProcess — go through
+    // cmd. Passing args with shell:true is deprecated (DEP0190) and unsafe
+    // (arguments get concatenated unescaped), so build a single, properly
+    // quoted command line instead.
+    const useShell = file.endsWith(".cmd") || file.endsWith(".bat");
+    const res = useShell
+      ? spawnSync(`${file} ${args.map(cmdQuote).join(" ")}`, {
+          encoding: "utf8",
+          timeout: 15_000,
+          shell: true,
+        })
+      : spawnSync(file, args, {
+          encoding: "utf8",
+          timeout: 15_000,
+        });
     return { code: res.status ?? -1, out: `${res.stdout ?? ""}${res.stderr ?? ""}`.trim() };
   } catch {
     return { code: -1, out: "" };
@@ -126,6 +179,36 @@ function checkPython(): { step: SetupStep; python: PythonInfo | null } {
   return { step, python: null };
 }
 
+function checkProject(targetDir: string): SetupStep {
+  const step: SetupStep = {
+    key: "project",
+    label: "MasarFlow project",
+    description: "The MasarFlow project files (cloned from GitHub).",
+    status: "missing",
+  };
+  const pkg = join(targetDir, "package.json");
+  if (!existsSync(pkg)) {
+    step.status = "fail";
+    step.detail =
+      "This folder is not a MasarFlow project. Clone the official repo from GitHub on this page, or browse to a folder that already contains it.";
+    return step;
+  }
+  try {
+    const name = (JSON.parse(readFileSync(pkg, "utf8")) as { name?: string }).name;
+    if (name === "masarflow") {
+      step.status = "pass";
+      step.detail = "MasarFlow project found.";
+    } else {
+      step.status = "fail";
+      step.detail = `"${name ?? "unknown"}" is not the MasarFlow project — MasarFlow requires the official project from GitHub.`;
+    }
+  } catch {
+    step.status = "fail";
+    step.detail = "Invalid package.json — this doesn't look like the MasarFlow project.";
+  }
+  return step;
+}
+
 function checkDeps(targetDir: string): SetupStep {
   const step: SetupStep = {
     key: "deps",
@@ -168,16 +251,21 @@ function checkVenv(targetDir: string): SetupStep {
     description: "python-service/.venv with the AI requirements installed.",
     status: "missing",
   };
+  const pyDir = join(targetDir, "python-service");
   const venvPython = join(
-    targetDir,
-    "python-service",
+    pyDir,
     ".venv",
     process.platform === "win32" ? "Scripts" : "bin",
     process.platform === "win32" ? "python.exe" : "python",
   );
   if (existsSync(venvPython)) {
-    step.status = "pass";
-    step.detail = ".venv present.";
+    if (pythonDepsOk(pyDir, venvPython)) {
+      step.status = "pass";
+      step.detail = ".venv present, requirements verified.";
+    } else {
+      step.status = "missing";
+      step.detail = ".venv present but requirements are missing — initialization will reinstall them.";
+    }
   } else {
     step.detail = "Create the venv and install requirements (pip install -r requirements/base.txt).";
   }
@@ -185,17 +273,32 @@ function checkVenv(targetDir: string): SetupStep {
 }
 
 function checkAll(targetDir: string): CheckResults {
+  const project = checkProject(targetDir);
   const node = checkNode();
   const npm = checkNpm();
   const { step: python, python: pyInfo } = checkPython();
   const deps = checkDeps(targetDir);
   const envfile = checkEnvFile(targetDir);
   const venv = checkVenv(targetDir);
-  return { steps: [node, npm, python, deps, envfile, venv], python: pyInfo };
+  return { steps: [project, node, npm, python, deps, envfile, venv], python: pyInfo };
 }
 
 function buildState(targetDir: string, steps: SetupStep[]): SetupState {
   return { targetDir, initialized: steps.every((s) => s.status === "pass"), steps };
+}
+
+/**
+ * A previously-initialized project stays "initialized" on fast checks — but
+ * only while the steps initialization actually installs (deps, venv) are
+ * genuinely satisfied. A stale override would mask a broken venv (e.g. one
+ * missing uvicorn) and show "all requirements satisfied" when it isn't.
+ */
+function applyPersistedInitialized(state: SetupState, targetDir: string, persistedFor: (d: string) => boolean): SetupState {
+  if (state.initialized || !persistedFor(targetDir)) return state;
+  if (state.steps.some((s) => s.status === "fail")) return state;
+  const installable = ["deps", "venv"];
+  const allOk = installable.every((key) => state.steps.some((s) => s.key === key && s.status === "pass"));
+  return allOk ? { ...state, initialized: true } : state;
 }
 
 class SetupEngine {
@@ -239,8 +342,11 @@ class SetupEngine {
   /** Fast checks; no installs. */
   check(targetDir: string): SetupState {
     const res = checkAll(targetDir);
-    const state = buildState(targetDir, res.steps);
-    if (!state.initialized && this.persistedFor(targetDir)) state.initialized = true;
+    const state = applyPersistedInitialized(
+      buildState(targetDir, res.steps),
+      targetDir,
+      (d) => this.persistedFor(d),
+    );
     this.state = state;
     this.emit(state);
     return this.getState();
@@ -295,8 +401,11 @@ class SetupEngine {
       }
 
       res = checkAll(targetDir);
-      state = buildState(targetDir, res.steps);
-      if (!state.initialized && this.persistedFor(targetDir)) state.initialized = true;
+      state = applyPersistedInitialized(
+        buildState(targetDir, res.steps),
+        targetDir,
+        (d) => this.persistedFor(d),
+      );
       const next = state.steps.find((s) => s.key === key);
       if (next && !ok) {
         next.status = "fail";
@@ -311,23 +420,33 @@ class SetupEngine {
     const pyDir = join(targetDir, "python-service");
     const venvBin = process.platform === "win32" ? "Scripts" : "bin";
     const venvPython = join(pyDir, ".venv", venvBin, process.platform === "win32" ? "python.exe" : "python");
-    const venvOk = await this.runInstallSession(targetDir, {
-      label: "Create Python venv",
-      kind: "setup",
-      command: "python -m venv .venv",
-      file: python.file,
-      args: [...python.args, "venv", ".venv"],
-      cwd: pyDir,
-    });
-    if (!venvOk || !existsSync(venvPython)) return false;
-    return this.runInstallSession(targetDir, {
-      label: "Install Python requirements",
+    if (!existsSync(venvPython)) {
+      const venvOk = await this.runInstallSession(targetDir, {
+        label: "Create Python venv",
+        kind: "setup",
+        command: "python -m venv .venv",
+        file: python.file,
+        args: [...python.args, "venv", ".venv"],
+        cwd: pyDir,
+      });
+      if (!venvOk || !existsSync(venvPython)) return false;
+    }
+    // Always (re)install the requirements: pip is a no-op when they are
+    // already satisfied, and this repairs venvs that exist but are missing
+    // packages (e.g. a stale venv without uvicorn).
+    const installOk = await this.runInstallSession(targetDir, {
+      label: "Verify Python requirements",
       kind: "setup",
       command: "pip install -r requirements/base.txt",
       file: venvPython,
       args: ["-m", "pip", "install", "-r", "requirements/base.txt"],
       cwd: pyDir,
     });
+    if (!installOk) return false;
+    if (!pythonDepsOk(pyDir, venvPython)) {
+      return false;
+    }
+    return true;
   }
 
   private createEnvFile(targetDir: string): boolean {

@@ -60,10 +60,12 @@ function resolveOpencodeBin() {
       path.join(appDataRoot, "opencode-ai", "bin", "opencode.exe"),
     );
     try {
+      // `cmd /c` (shell:false) instead of shell:true — avoids the DEP0190
+      // deprecation warning while still resolving npm.cmd on Windows.
       const npmRoot = execFileSync(
-        process.platform === "win32" ? "npm.cmd" : "npm",
-        ["root", "-g"],
-        { encoding: "utf8", shell: process.platform === "win32" },
+        process.platform === "win32" ? "cmd.exe" : "npm",
+        process.platform === "win32" ? ["/d", "/s", "/c", "npm root -g"] : ["root", "-g"],
+        { encoding: "utf8" },
       ).trim();
       candidates.push(path.join(npmRoot, "opencode-ai", "bin", "opencode.exe"));
     } catch {}
@@ -79,6 +81,108 @@ function resolveOpencodeBin() {
     if (exe && existsSync(exe)) return exe;
   }
   return process.platform === "win32" ? "opencode.cmd" : "opencode";
+}
+
+/** Is `cmd` an executable we can actually run (absolute path or on PATH)? */
+function commandExists(cmd) {
+  if (!cmd) return false;
+  const isPath = path.isAbsolute(cmd) || cmd.includes("/") || cmd.includes("\\");
+  if (isPath) return existsSync(cmd);
+  try {
+    const probe = execFileSync(process.platform === "win32" ? "where" : "which", [cmd], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 10_000,
+    });
+    return probe.trim().length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Packages the Python service imports at boot (python-service/app/main.py →
+ * embeddings.py, job_queue.py). Everything else in requirements/base.txt is
+ * lazily imported or marker-skipped on some Python versions, so it must never
+ * block startup — pip either installs it or resolves it via markers.
+ */
+const BOOT_REQUIRED = [
+  "fastapi",
+  "uvicorn",
+  "pydantic",
+  "httpx",
+  "chromadb",
+  "sentence-transformers",
+];
+
+/**
+ * Check that every boot-critical package is actually installed in the venv.
+ * Fast (importlib.metadata only — no heavy imports). Returns the names of the
+ * missing packages.
+ */
+function missingRequirements() {
+  const missing = [];
+  for (const name of BOOT_REQUIRED) {
+    try {
+      execFileSync(venvPython, ["-c", "import importlib.metadata as im, sys; im.distribution(sys.argv[1])", name], {
+        cwd: pyDir,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: 60_000,
+      });
+    } catch {
+      missing.push(name);
+    }
+  }
+  return missing;
+}
+
+/**
+ * Install (idempotent) and verify every required Python package. Fails with a
+ * clear, actionable message when something is still missing.
+ */
+async function ensurePythonDeps() {
+  if (!existsSync(venvPython)) {
+    console.log("[setup] creating python-service/.venv …");
+    await run("python", ["-m", "venv", ".venv"], { cwd: pyDir });
+  }
+  console.log("[setup] verifying Python requirements (pip install is a no-op when satisfied) …");
+  try {
+    await run(
+      venvPython,
+      ["-m", "pip", "install", "-q", "--disable-pip-version-check", "-r", "requirements/base.txt"],
+      { cwd: pyDir },
+    );
+  } catch (e) {
+    console.error(`[setup] pip install failed: ${e.message}`);
+    console.error(
+      `[setup]   Fix the error above, then rerun: ${venvPython} -m pip install -r ${path.join(pyDir, "requirements", "base.txt")}`,
+    );
+    process.exit(1);
+  }
+
+  let missing = missingRequirements();
+  if (missing.length) {
+    console.error(`[setup] still missing: ${missing.join(", ")} — retrying the install once …`);
+    try {
+      await run(
+        venvPython,
+        ["-m", "pip", "install", "-q", "--disable-pip-version-check", "-r", "requirements/base.txt"],
+        { cwd: pyDir },
+      );
+    } catch (e) {
+      console.error(`[setup] pip install failed on retry: ${e.message}`);
+    }
+    missing = missingRequirements();
+  }
+  if (missing.length) {
+    console.error(`[setup] FAILED: the Python service is missing required packages: ${missing.join(", ")}`);
+    console.error(`[setup]   Install them manually with:`);
+    console.error(`[setup]     ${venvPython} -m pip install -r ${path.join(pyDir, "requirements", "base.txt")}`);
+    console.error(`[setup]   then restart MasarFlow.`);
+    process.exit(1);
+  }
+  console.log("[setup] python service ready.");
 }
 
 /**
@@ -105,6 +209,16 @@ async function startOpencode(bridgeEnv) {
     return null;
   }
   const bin = resolveOpencodeBin();
+  if (!commandExists(bin)) {
+    // OpenCode is an OPTIONAL dependency: without it the agentic chat is
+    // disabled, but MasarFlow itself must keep running normally.
+    console.warn(
+      `[opencode] binary "${bin}" not found — AI agent chat is disabled. ` +
+        "Install it with `npm install -g opencode-ai` (or set OPENCODE_BIN) to enable it. " +
+        "All other features keep working.",
+    );
+    return null;
+  }
   const requestedPort = Number(OPENCODE_PORT) || 4096;
   const port = await findFreePort(requestedPort);
   if (port !== requestedPort) {
@@ -145,9 +259,9 @@ async function startOpencode(bridgeEnv) {
   const baseUrl = `http://127.0.0.1:${port}`;
   // Wait up to ~30s for health so Next boots with a live chat backend.
   for (let i = 0; i < 60; i++) {
-    if (child.exitCode !== null) {
-      console.error(
-        "[opencode] server exited during startup — chat will show availability errors.",
+    if (child.exitCode !== null || child.spawnFailed) {
+      console.warn(
+        "[opencode] server failed to start — chat will show availability errors, everything else keeps running.",
       );
       return null;
     }
@@ -247,26 +361,16 @@ function run(cmd, args, opts = {}) {
   });
 }
 
-async function ensureVenv() {
-  if (existsSync(venvPython)) return;
-  console.log("[setup] creating python-service/.venv …");
-  await run("python", ["-m", "venv", ".venv"], { cwd: pyDir });
-  console.log("[setup] installing requirements/base.txt …");
-  await run(
-    venvPython,
-    ["-m", "pip", "install", "-r", "requirements/base.txt"],
-    {
-      cwd: pyDir,
-    },
-  );
-  console.log("[setup] python service ready.");
-}
-
 function startProcess(label, cmd, args, opts = {}) {
   const child = spawn(cmd, args, {
     stdio: ["ignore", "pipe", "pipe"],
     shell: false,
     ...opts,
+  });
+  // A failed spawn (e.g. missing binary) must never crash the whole app.
+  child.on("error", (err) => {
+    child.spawnFailed = true;
+    console.error(`[${label}] failed to start: ${err.message}`);
   });
   const prefix = `[${label}] `;
   for (const stream of [child.stdout, child.stderr]) {
@@ -283,7 +387,7 @@ function startProcess(label, cmd, args, opts = {}) {
 }
 
 async function main() {
-  await ensureVenv();
+  await ensurePythonDeps();
 
   if (process.argv.includes("--setup-only")) {
     console.log("[start] venv ready (--setup-only).");
@@ -299,6 +403,23 @@ async function main() {
   }
 
   const isDev = process.argv.includes("--dev");
+  if (!isDev) {
+    // Production mode needs a completed `next build`. A missing or torn
+    // .next (e.g. after an interrupted build, or a build that ran while the
+    // dev server was writing to the same .next) fails inside next start with
+    // a cryptic ENOENT — catch it here with a clear message instead.
+    const buildId = path.join(root, ".next", "BUILD_ID");
+    const prerenderManifest = path.join(root, ".next", "prerender-manifest.json");
+    if (!existsSync(buildId) || !existsSync(prerenderManifest)) {
+      console.error(
+        "[start] no production build found in .next — the last `npm run build` did not complete.",
+      );
+      console.error("[start]   Run `npm run build` and make sure no other MasarFlow server is running");
+      console.error("[start]   (stop the app first — a running dev/prod server locks the .next folder),");
+      console.error("[start]   then run `npm start` again.");
+      process.exit(1);
+    }
+  }
   const nextArgs = isDev
     ? ["dev", "--webpack"]
     : process.env.PORT
@@ -328,12 +449,20 @@ async function main() {
   // first page load (spawn skipped when a server is already reachable). The
   // workspace functions are installed as opencode custom tools FIRST — a
   // running server only registers tools that existed when it started.
+  // OpenCode is OPTIONAL: when the binary is missing we skip the tool install
+  // and the server start, and the app runs without the agentic chat.
   let bridgeEnv = { secret: "", url: "" };
-  try {
-    const installed = await installOpencodeTools();
-    bridgeEnv = { secret: installed.secret, url: installed.bridgeUrl };
-  } catch (e) {
-    console.warn(`[tools] ${e.message}`);
+  if (commandExists(resolveOpencodeBin())) {
+    try {
+      const installed = await installOpencodeTools();
+      bridgeEnv = { secret: installed.secret, url: installed.bridgeUrl };
+    } catch (e) {
+      console.warn(`[tools] ${e.message}`);
+    }
+  } else {
+    console.warn(
+      "[tools] opencode not found — skipping workspace-tool install (AI agent chat disabled).",
+    );
   }
   const opencode = await startOpencode(bridgeEnv);
   const nextEnv = {
@@ -394,8 +523,15 @@ async function main() {
   const exited = new Promise((resolve) => {
     nextChild.on("exit", (code) => resolve({ who: "next", code }));
     pyChild.on("exit", (code) => resolve({ who: "py", code }));
+    // The OpenCode server is OPTIONAL — when it exits on its own, MasarFlow
+    // keeps running (the chat UI reports it as unavailable).
     if (opencode?.child) {
-      opencode.child.on("exit", (code) => resolve({ who: "opencode", code }));
+      opencode.child.on("exit", (code) => {
+        console.warn(
+          `[opencode] server exited (code ${code}) — AI agent chat is now unavailable. ` +
+            "The web app and Python service keep running.",
+        );
+      });
     }
   });
   const { who, code } = await exited;

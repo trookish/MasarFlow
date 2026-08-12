@@ -2,6 +2,7 @@ import {
   CheckCircle2,
   Circle,
   FolderOpen,
+  GitBranch,
   Loader2,
   Play,
   RefreshCw,
@@ -9,6 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
+import { useEffect } from "react";
 import { useApp } from "@/lib/store";
 import type { StepStatus } from "@shared/types";
 import { cn } from "@/lib/cn";
@@ -41,8 +43,17 @@ const STATUS_BADGE: Record<StepStatus, { label: string; variant: "success" | "de
 export function SetupPage() {
   const setup = useApp((s) => s.setup);
   const setPage = useApp((s) => s.setPage);
+  const patch = useApp((s) => s.patchSettings);
+  const setSetup = useApp((s) => s.setSetup);
   const welcomeBack = useApp((s) => s.settings?.hasLaunchedBefore ?? false);
   const [busy, setBusy] = useState(false);
+  const [cloning, setCloning] = useState(false);
+  const [cloneError, setCloneError] = useState<string | null>(null);
+  const [repoUrl, setRepoUrl] = useState("");
+
+  useEffect(() => {
+    void window.masarFlow.github.repoUrl().then(setRepoUrl);
+  }, []);
 
   const check = async (): Promise<void> => {
     setBusy(true);
@@ -62,10 +73,59 @@ export function SetupPage() {
     }
   };
 
+  const applyTargetDir = async (dir: string): Promise<void> => {
+    await patch({ targetDir: dir });
+    const state = await window.masarFlow.setup.check();
+    setSetup(state);
+  };
+
+  const browseForProject = async (): Promise<void> => {
+    setCloneError(null);
+    const res = await window.masarFlow.shell.chooseDirectory();
+    if (!res) return;
+    if (res.ok) {
+      await applyTargetDir(res.path);
+    } else {
+      setCloneError(res.reason ?? "That folder isn't the MasarFlow project.");
+    }
+  };
+
+  const cloneFromGithub = async (): Promise<void> => {
+    setCloneError(null);
+    const parent = await window.masarFlow.shell.chooseFolder();
+    if (!parent) return;
+    const res = await window.masarFlow.github.clone(parent);
+    if (!res.ok) {
+      setCloneError(res.error ?? "Clone failed to start.");
+      return;
+    }
+    if (res.sessionId) {
+      setCloning(true);
+      try {
+        const exitCode = await new Promise<number | null>((resolve) => {
+          const off = window.masarFlow.session.onExit((p) => {
+            if (p.id === res.sessionId) {
+              off();
+              resolve(p.exitCode);
+            }
+          });
+        });
+        if (exitCode !== 0) {
+          setCloneError("Clone failed — see the terminal panel for details.");
+          return;
+        }
+      } finally {
+        setCloning(false);
+      }
+    }
+    if (res.dest) await applyTargetDir(res.dest);
+  };
+
   const steps = setup?.steps ?? [];
   const anyFail = steps.some((s) => s.status === "fail");
   const anyMissing = steps.some((s) => s.status === "missing" || s.status === "pending");
   const initialized = setup?.initialized ?? false;
+  const projectMissing = steps.some((s) => s.key === "project" && s.status === "fail");
 
   return (
     <div className="scrollbar-thin h-full overflow-y-auto">
@@ -105,6 +165,53 @@ export function SetupPage() {
             </div>
           </div>
         ) : null}
+
+        {projectMissing && (
+          <Card>
+            <CardContent className="space-y-4">
+              <div className="flex items-start gap-3">
+                <GitBranch className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">Get the MasarFlow project from GitHub</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    MasarFlow needs its project files to run. Clone the official repository, or
+                    browse to a folder that already contains the MasarFlow project.
+                  </p>
+                </div>
+              </div>
+              {cloneError && <p className="text-xs text-destructive">{cloneError}</p>}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void browseForProject()}
+                  disabled={cloning}
+                >
+                  <FolderOpen className="h-3.5 w-3.5" />
+                  Browse for an existing project
+                </Button>
+                <Button size="sm" onClick={() => void cloneFromGithub()} disabled={cloning}>
+                  {cloning ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <GitBranch className="h-3.5 w-3.5" />
+                  )}
+                  {cloning ? "Cloning…" : "Clone from GitHub"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Cloning streams to the terminal panel below and takes a moment
+                {repoUrl && (
+                  <>
+                    {" "}
+                    — from <code className="font-mono">{repoUrl}</code>
+                  </>
+                )}
+                .
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardContent className="p-0">
