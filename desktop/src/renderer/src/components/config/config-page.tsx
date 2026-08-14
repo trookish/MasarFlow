@@ -19,6 +19,7 @@ import type {
   GradientStop,
   LogoBgMode,
   LogoColorMode,
+  TaskbarDirection,
 } from "@shared/types";
 import {
   ACCENTS,
@@ -353,8 +354,8 @@ function AppearanceCard() {
   };
 
   const resetAppearance = (): void => {
-    const { theme, accentMode, accent, accent2, gradientStops, gradientAngle, radius, fontScale, logoColorMode, logoColor, logoBgMode, logoBgColor, bannerColorMode, bannerColor, bannerGlowMode, bannerGlowColor } = APPEARANCE_DEFAULTS;
-    apply({ theme, accentMode, accent, accent2, gradientStops, gradientAngle, radius, fontScale, logoColorMode, logoColor, logoBgMode, logoBgColor, bannerColorMode, bannerColor, bannerGlowMode, bannerGlowColor });
+    const { theme, accentMode, accent, accent2, gradientStops, gradientAngle, radius, fontScale, logoColorMode, logoColor, logoBgMode, logoBgColor, bannerColorMode, bannerColor, bannerGlowMode, bannerGlowColor, taskbarDirection, taskbarCollapsed } = APPEARANCE_DEFAULTS;
+    apply({ theme, accentMode, accent, accent2, gradientStops, gradientAngle, radius, fontScale, logoColorMode, logoColor, logoBgMode, logoBgColor, bannerColorMode, bannerColor, bannerGlowMode, bannerGlowColor, taskbarDirection, taskbarCollapsed });
   };
 
   return (
@@ -498,6 +499,21 @@ function AppearanceCard() {
             step={0.0625}
             value={settings.radius}
             onChange={(radius) => apply({ radius })}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Taskbar direction"
+          description="Left docks the nav rail on the left edge, Right mirrors it to the right edge, and Bottom floats it as a dock at the bottom center."
+        >
+          <Segmented<TaskbarDirection>
+            value={settings.taskbarDirection}
+            options={[
+              { value: "left", label: "Left" },
+              { value: "bottom", label: "Bottom" },
+              { value: "right", label: "Right" },
+            ]}
+            onChange={(taskbarDirection) => apply({ taskbarDirection })}
           />
         </SettingRow>
 

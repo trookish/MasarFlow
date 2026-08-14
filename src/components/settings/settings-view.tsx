@@ -37,6 +37,7 @@ import {
   Plus,
   Pencil,
   ExternalLink,
+  PanelLeft,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -49,6 +50,7 @@ import {
   type LogoColorMode,
   type LogoBgMode,
 } from "@/lib/stores/theme";
+import { useUIStore } from "@/lib/stores/ui";
 import { MasarFlowLogo } from "@/components/shell/logo";
 import { useProjectStore } from "@/lib/stores/project";
 import { useActiveProject, useActiveProjectId } from "@/lib/hooks/use-project";
@@ -95,7 +97,13 @@ import { cn } from "@/lib/utils/cn";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type GlobalSection = "appearance" | "project" | "data" | "ai-service" | "agent";
+type GlobalSection =
+  | "appearance"
+  | "interface"
+  | "project"
+  | "data"
+  | "ai-service"
+  | "agent";
 type Section = GlobalSection | PageKey | "updates";
 
 interface NavEntry {
@@ -116,6 +124,7 @@ const NAV: NavGroup[] = [
     label: "Global",
     items: [
       { id: "appearance", label: "Appearance", icon: Sun },
+      { id: "interface", label: "Interface", icon: PanelLeft },
       { id: "project", label: "Active Project", icon: Database },
       { id: "data", label: "Data", icon: Database },
     ],
@@ -676,6 +685,34 @@ function RangeField({
   );
 }
 
+function InterfaceSection() {
+  const taskbarDirection = useUIStore((s) => s.taskbarDirection);
+  const setTaskbarDirection = useUIStore((s) => s.setTaskbarDirection);
+
+  return (
+    <SectionPanel
+      title="Interface"
+      description="Placement and behavior of the navigation taskbar."
+      onReset={() => setTaskbarDirection("bottom")}
+    >
+      <SettingRow
+        label="Taskbar direction"
+        description="Left docks the nav rail on the left edge, Right mirrors it to the right edge, and Bottom turns it into a floating dock — click a group to pop its pages up above it."
+      >
+        <SegmentedControl
+          value={taskbarDirection}
+          options={[
+            { value: "left", label: "Left" },
+            { value: "bottom", label: "Bottom" },
+            { value: "right", label: "Right" },
+          ]}
+          onChange={setTaskbarDirection}
+        />
+      </SettingRow>
+    </SectionPanel>
+  );
+}
+
 function ProjectSection() {
   const project = useActiveProject();
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
@@ -911,6 +948,7 @@ function BrainSection() {
             { value: "notes", label: "Notes" },
             { value: "canvas", label: "Canvas" },
             { value: "templates", label: "Templates" },
+            { value: "graph", label: "Graph" },
           ]}
           onChange={(v) => set("defaultView", v)}
         />
@@ -1918,6 +1956,7 @@ function CanvasSection() {
 
 const SECTION_COMPONENTS: Record<Section, () => React.ReactElement> = {
   appearance: AppearanceSection,
+  interface: InterfaceSection,
   project: ProjectSection,
   data: DataSection,
   dashboard: DashboardSection,

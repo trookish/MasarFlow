@@ -426,6 +426,12 @@ export const canvasNodeSchema = z.object({
   /** Free-form payload: { text } | { noteId } | { url } | { src } */
   data: z.record(z.string(), z.unknown()).default({}),
   color: z.string().default(""),
+  /**
+   * Grouping: the canvas node this node lives inside (React Flow parentId).
+   * Children store positions relative to their parent. Not indexed — added
+   * without a Dexie version bump.
+   */
+  parentId: z.string().nullable().optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
 });

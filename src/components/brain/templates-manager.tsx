@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ColumnResizer, useColumnWidth } from "./column-resizer";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -21,6 +23,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
 
+function formatWhen(ts: number): string {
+  const diff = Date.now() - ts;
+  const mins = Math.round(diff / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return new Date(ts).toLocaleDateString();
+}
+
 export function TemplatesManager() {
   const projectId = useActiveProjectId();
   const templates = useLiveQuery(
@@ -28,7 +40,11 @@ export function TemplatesManager() {
     [projectId],
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const list = templates ?? [];
+  const [pendingDelete, setPendingDelete] = useState<NoteTemplate | null>(null);
+  const [listColWidth, setListColWidth] = useColumnWidth("templates", 288);
+  const list = [...(templates ?? [])].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
   const selected = list.find((t) => t.id === selectedId) ?? null;
 
   async function createTemplate() {
@@ -48,7 +64,10 @@ export function TemplatesManager() {
 
   return (
     <div className="flex h-full">
-      <div className="flex w-72 shrink-0 flex-col border-r border-border">
+      <div
+        className="flex shrink-0 flex-col border-r border-border"
+        style={{ width: listColWidth }}
+      >
         <div className="flex items-center justify-between border-b border-border p-2">
           <span className="px-1 text-sm font-medium">Templates</span>
           <Button
@@ -72,7 +91,7 @@ export function TemplatesManager() {
                 type="button"
                 onClick={() => setSelectedId(t.id)}
                 className={cn(
-                  "mb-1 flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left",
+                  "group mb-1 flex w-full items-center gap-2 rounded-md border px-3 py-2 text-left",
                   t.id === selectedId
                     ? "border-border bg-accent"
                     : "border-transparent hover:bg-accent/50",
@@ -84,25 +103,55 @@ export function TemplatesManager() {
                     NOTE_TYPE_DOT[t.type],
                   )}
                 />
-                <span className="flex-1 truncate text-sm">{t.name}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm">{t.name}</span>
+                  <span className="block text-[10px] text-muted-foreground">
+                    {formatWhen(t.updatedAt)}
+                  </span>
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Delete ${t.name}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPendingDelete(t);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setPendingDelete(t);
+                    }
+                  }}
+                  className="hidden shrink-0 rounded p-1 text-muted-foreground hover:bg-background hover:text-destructive group-hover:block"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </span>
               </button>
             ))
           )}
         </ScrollArea>
       </div>
+      <ColumnResizer
+        onDelta={(dx) =>
+          setListColWidth((w) => Math.min(520, Math.max(200, w + dx)))
+        }
+      />
 
       <div className="min-w-0 flex-1">
         {selected ? (
           <TemplateForm
             key={selected.id}
             template={selected}
-            onDelete={() => deleteTemplate(selected.id)}
+            onDelete={() => setPendingDelete(selected)}
           />
         ) : (
           <EmptyState
             icon={LayoutTemplate}
             title="No template selected"
             description="Templates give new notes a head start. Use {{title}} as a placeholder."
+            className="h-full"
             action={
               <Button onClick={createTemplate} disabled={!projectId}>
                 <Plus className="h-4 w-4" /> New template
@@ -111,6 +160,21 @@ export function TemplatesManager() {
           />
         )}
       </div>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(v) => !v && setPendingDelete(null)}
+        title="Delete template?"
+        description={
+          pendingDelete
+            ? `"${pendingDelete.name}" will be removed. Existing notes keep their content.`
+            : undefined
+        }
+        onConfirm={() => {
+          if (pendingDelete) void deleteTemplate(pendingDelete.id);
+          setPendingDelete(null);
+        }}
+      />
     </div>
   );
 }
@@ -126,23 +190,49 @@ function TemplateForm({
   const [description, setDescription] = useState(template.description);
   const [type, setType] = useState<NoteType>(template.type);
   const [body, setBody] = useState(template.body);
-  const first = useRef(true);
+  const loaded = useRef(template);
+  const latest = useRef({ name, description, type, body });
 
+  // Debounced autosave.
   useEffect(() => {
-    if (first.current) {
-      first.current = false;
+    latest.current = { name, description, type, body };
+    const l = loaded.current;
+    if (
+      name === l.name &&
+      description === l.description &&
+      type === l.type &&
+      body === l.body
+    ) {
       return;
     }
-    const handle = setTimeout(() => {
-      void noteTemplatesRepo.update(template.id, {
+    const handle = setTimeout(async () => {
+      await noteTemplatesRepo.update(template.id, {
         name,
         description,
         type,
         body,
       });
+      loaded.current = { ...loaded.current, name, description, type, body };
     }, 400);
     return () => clearTimeout(handle);
   }, [name, description, type, body, template.id]);
+
+  // Flush on unmount so edits made right before switching templates (or
+  // navigating away) are never dropped by the debounce.
+  useEffect(() => {
+    return () => {
+      const l = loaded.current;
+      const cur = latest.current;
+      if (
+        cur.name !== l.name ||
+        cur.description !== l.description ||
+        cur.type !== l.type ||
+        cur.body !== l.body
+      ) {
+        void noteTemplatesRepo.update(template.id, cur);
+      }
+    };
+  }, [template.id]);
 
   return (
     <div className="flex h-full flex-col">

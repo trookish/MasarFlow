@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense } from "react";
+import { KnowledgeGraph } from "@/components/brain/knowledge-graph";
 
 export default function BrainGraphPage() {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace("/knowledge?categories=note");
-  }, [router]);
-  return null;
+  // KnowledgeGraph reads ?categories= via useSearchParams, which requires a
+  // Suspense boundary during prerender. Notes are shown by default — the
+  // category toggles expose specs, tasks, systems, and commits.
+  return (
+    <Suspense fallback={null}>
+      <KnowledgeGraph initialCategories={["note"]} />
+    </Suspense>
+  );
 }

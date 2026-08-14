@@ -41,6 +41,18 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="MasarFlow Local AI Service", lifespan=lifespan)
 
 
+@app.get("/")
+async def root():
+    # The service is intentionally not browsable; this route exists so that
+    # liveness probes (and humans) hitting the base URL get a useful answer
+    # instead of a 404 in the access log.
+    return {
+        "service": "MasarFlow Local AI Service",
+        "health": "/health",
+        "docs": "/docs",
+    }
+
+
 @app.get("/health")
 async def health():
     ollama_available = False

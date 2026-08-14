@@ -56,6 +56,10 @@ interface CanvasContextMenuProps {
   onAlign: (mode: AlignMode) => void;
   onDistribute: (axis: "h" | "v") => void;
   onAutoGrid: () => void;
+  /** Wrap the current selection in a group. */
+  onGroupSelection: () => void;
+  /** Detach children from a group and remove it. */
+  onUngroup: (groupId: string) => void;
 }
 
 export type AlignMode =
@@ -86,6 +90,8 @@ export function CanvasContextMenu({
   onAlign,
   onDistribute,
   onAutoGrid,
+  onGroupSelection,
+  onUngroup,
 }: CanvasContextMenuProps) {
   const handleClose = useCallback(() => onClose(), [onClose]);
 
@@ -127,7 +133,7 @@ export function CanvasContextMenu({
           <LayoutGrid className="h-4 w-4" /> Auto-arrange grid
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onSelect={() => onAddGroup()}>
+        <ContextMenuItem onSelect={onGroupSelection}>
           <Box className="h-4 w-4" /> Group selection
         </ContextMenuItem>
       </ContextMenu>
@@ -152,6 +158,14 @@ export function CanvasContextMenu({
           <Trash2 className="h-4 w-4" /> Delete
         </ContextMenuItem>
         <ContextMenuSeparator />
+        {targetNode.type === "group" ? (
+          <>
+            <ContextMenuItem onSelect={() => onUngroup(targetNode.id)}>
+              <Box className="h-4 w-4" /> Ungroup
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+          </>
+        ) : null}
         <ContextMenuItem onSelect={() => onToggleLock(targetNode.id)}>
           {locked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
           {locked ? "Unlock" : "Lock"}

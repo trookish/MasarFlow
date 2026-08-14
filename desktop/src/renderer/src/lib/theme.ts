@@ -5,6 +5,7 @@ import type {
   GradientStop,
   LogoBgMode,
   LogoColorMode,
+  TaskbarDirection,
   ThemeMode,
 } from "@shared/types";
 import { contrastText } from "./cn";
@@ -87,6 +88,8 @@ export const APPEARANCE_DEFAULTS = {
   bannerColor: "#dedede",
   bannerGlowMode: "accent" as BannerGlowMode,
   bannerGlowColor: "#dedede",
+  taskbarDirection: "bottom" as TaskbarDirection,
+  taskbarCollapsed: false,
 };
 
 // ─── Gradient helpers ───────────────────────────────────────────────────────

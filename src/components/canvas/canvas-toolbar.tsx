@@ -5,18 +5,14 @@ import { useRouter } from "next/navigation";
 import {
   ChevronsUpDown,
   Plus,
-  Type,
-  FileText,
   LayoutTemplate,
   Download,
   Upload,
   Grid3x3,
   Settings2,
-  Globe,
-  Box,
 } from "lucide-react";
 import { canvasRepo } from "@/lib/db/repos";
-import type { Canvas, Note } from "@/lib/db/schema";
+import type { Canvas } from "@/lib/db/schema";
 import {
   toCanvasFile,
   fromCanvasFile,
@@ -66,32 +62,28 @@ async function exportCanvasFile(
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Floating Milanote-style header: canvas switcher on the left, file ops and
+ * display settings on the right. Card creation moved to the click-to-add
+ * palette and the left quick-add rail so the board stays clean.
+ */
 export function CanvasToolbar({
   projectId,
   canvases,
   canvasId,
   currentName,
-  onAddText,
-  onAddNote,
-  onAddGroup,
   onAddWeb,
-  projectNotes,
 }: {
   projectId: string | null;
   canvases: Canvas[];
   canvasId: string | null;
   currentName: string;
-  onAddText: () => void;
-  onAddNote: (noteId: string, title: string, excerpt: string) => void;
-  onAddGroup: () => void;
-  onAddWeb: (url: string) => void;
-  projectNotes: Note[];
+  /** Opens the board's "Add link" dialog. */
+  onAddWeb: () => void;
 }) {
   const router = useRouter();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [importing, setImporting] = React.useState(false);
-  const [webUrl, setWebUrl] = React.useState("");
-  const [webDialogOpen, setWebDialogOpen] = React.useState(false);
   const { canvas: settings, update } = usePageSettings();
 
   async function newCanvas() {
@@ -131,13 +123,13 @@ export function CanvasToolbar({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
+    <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 rounded-xl border border-border bg-card/85 p-1.5 shadow-lg backdrop-blur">
       {/* Canvas switcher */}
       <DropdownMenu>
         <DropdownMenuTrigger>
           <button
             type="button"
-            className="flex h-8 items-center gap-2 rounded-md border border-border bg-card px-2.5 text-sm hover:bg-accent"
+            className="flex h-8 items-center gap-2 rounded-lg px-2.5 text-sm font-medium hover:bg-accent"
           >
             <LayoutTemplate className="h-3.5 w-3.5 text-primary" />
             <span className="max-w-[12rem] truncate">{currentName}</span>
@@ -163,107 +155,29 @@ export function CanvasToolbar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Add objects */}
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={onAddText}>
-          <Type className="h-3.5 w-3.5" /> Text
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Button variant="outline" size="sm">
-              <FileText className="h-3.5 w-3.5" /> Note
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            className="max-h-72 w-60 overflow-y-auto"
-          >
-            <DropdownMenuLabel>Add note card</DropdownMenuLabel>
-            {projectNotes.length === 0 ? (
-              <div className="px-2 py-2 text-xs text-muted-foreground">
-                No notes yet.
-              </div>
-            ) : (
-              projectNotes.map((n) => (
-                <DropdownMenuItem
-                  key={n.id}
-                  onSelect={() => onAddNote(n.id, n.title, n.excerpt)}
-                >
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="truncate">{n.title}</span>
-                </DropdownMenuItem>
-              ))
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button variant="outline" size="sm" onClick={onAddGroup}>
-          <Box className="h-3.5 w-3.5" /> Group
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setWebDialogOpen(true)}
-        >
-          <Globe className="h-3.5 w-3.5" /> Web
-        </Button>
-      </div>
+      <div className="mx-0.5 h-5 w-px bg-border" />
 
-      {/* Web URL dialog */}
-      {webDialogOpen && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-background/60 backdrop-blur-sm"
-          onClick={() => setWebDialogOpen(false)}
-        >
-          <div
-            className="w-96 rounded-lg border border-border bg-popover p-4 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="mb-3 text-sm font-semibold">Add web page card</h3>
-            <input
-              type="url"
-              placeholder="https://example.com"
-              value={webUrl}
-              onChange={(e) => setWebUrl(e.target.value)}
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && webUrl.trim()) {
-                  onAddWeb(webUrl.trim());
-                  setWebUrl("");
-                  setWebDialogOpen(false);
-                }
-              }}
-              className="mb-3 w-full rounded-md border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary"
-            />
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setWebDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                disabled={!webUrl.trim()}
-                onClick={() => {
-                  onAddWeb(webUrl.trim());
-                  setWebUrl("");
-                  setWebDialogOpen(false);
-                }}
-              >
-                Add
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Link card (image/file/text/note live on the left rail + palette) */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onAddWeb}
+        title="Add a web page card"
+      >
+        <span className="mr-1 text-muted-foreground">+</span> Link
+      </Button>
 
-      {/* Right cluster: file ops + settings */}
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-1">
         <Button
           variant="ghost"
           size="sm"
           disabled={!canvasId || importing}
-          onClick={() => void exportCanvasFile(canvasId!, {
-            name: currentName,
-            description: "",
-          })}
+          onClick={() =>
+            void exportCanvasFile(canvasId!, {
+              name: currentName,
+              description: "",
+            })
+          }
           title="Export as .canvas file"
         >
           <Download className="h-3.5 w-3.5" /> Export
@@ -364,7 +278,12 @@ function SettingToggle({
       onClick={() => onChange(!checked)}
       className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-accent"
     >
-      <Icon className={cn("h-4 w-4", checked ? "text-primary" : "text-muted-foreground")} />
+      <Icon
+        className={cn(
+          "h-4 w-4",
+          checked ? "text-primary" : "text-muted-foreground",
+        )}
+      />
       <span className="flex-1">{label}</span>
       <span
         className={cn(

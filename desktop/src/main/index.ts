@@ -10,7 +10,7 @@ import type {
   SetupState,
   StartSessionRequest,
 } from "@shared/types";
-import { saveEnv, servicePorts, readEnv, serializeFields } from "./env";
+import { saveEnv, readEnv, serializeFields, effectivePorts, clearRunPorts } from "./env";
 import { ptyManager } from "./pty";
 import { currentTargetDir, createSetupEngine } from "./setup";
 import { settings } from "./settings";
@@ -101,10 +101,13 @@ function buildProject(): SessionInfo | null {
 
 function stopRun(): void {
   ptyManager.killKind("run");
+  // The force-killed start.mjs never runs its exit hooks — drop the stale
+  // ports file so the chips fall back to the configured ports.
+  clearRunPorts(currentTargetDir());
 }
 
 function maybeOpenApp(): void {
-  const { appPort } = servicePorts(currentTargetDir());
+  const { appPort } = effectivePorts(currentTargetDir());
   void shell.openExternal(`http://127.0.0.1:${appPort}`);
 }
 
@@ -385,7 +388,7 @@ if (!gotLock) {
     createTray();
 
     const stopPolling = startStatusPolling(
-      () => servicePorts(currentTargetDir()),
+      () => effectivePorts(currentTargetDir()),
       (status) => {
         lastStatus = status;
         send("server:status", status);

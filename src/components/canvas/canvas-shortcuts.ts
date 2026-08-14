@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 /**
  * Canvas-local keyboard shortcuts.
@@ -36,41 +36,49 @@ function isInCodeMirror(target: EventTarget | null): boolean {
 }
 
 export function useCanvasShortcuts(handlers: CanvasShortcutHandlers): void {
+  // Latest handlers in a ref so the listener attaches once instead of being
+  // torn down and re-attached on every render.
+  const handlersRef = useRef(handlers);
+  useEffect(() => {
+    handlersRef.current = handlers;
+  });
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       // Never intercept when typing in inputs, textareas, or CodeMirror.
       if (isEditableTarget(e.target) || isInCodeMirror(e.target)) return;
 
+      const h = handlersRef.current;
       const mod = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
 
       // Ctrl/Cmd+N → new text card
       if (mod && key === "n") {
         e.preventDefault();
-        handlers.onNewText();
+        h.onNewText();
         return;
       }
       // Ctrl/Cmd+D → duplicate selected
       if (mod && key === "d") {
         e.preventDefault();
-        handlers.onDuplicate();
+        h.onDuplicate();
         return;
       }
       // Ctrl/Cmd+G → group selected
       if (mod && key === "g") {
         e.preventDefault();
-        handlers.onGroup();
+        h.onGroup();
         return;
       }
       // Ctrl/Cmd+A → select all
       if (mod && key === "a") {
         e.preventDefault();
-        handlers.onSelectAll();
+        h.onSelectAll();
         return;
       }
     }
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handlers]);
+  }, []);
 }

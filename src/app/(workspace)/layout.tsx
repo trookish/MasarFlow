@@ -12,7 +12,9 @@ import { PythonRequiredScreen } from "@/components/shell/python-required-screen"
 import { useGlobalHotkeys } from "@/lib/hooks/use-hotkeys";
 import { usePythonHealth } from "@/lib/hooks/use-python-health";
 import { useProjectStore } from "@/lib/stores/project";
+import { useUIStore } from "@/lib/stores/ui";
 import { useActiveProject } from "@/lib/hooks/use-project";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import { useUpdatesStore } from "@/lib/stores/updates";
 import { projectsRepo } from "@/lib/db/repos";
 import {
@@ -26,7 +28,9 @@ export default function WorkspaceLayout({
   children: React.ReactNode;
 }) {
   useGlobalHotkeys();
+  const mounted = useMounted();
   const { state: pythonState } = usePythonHealth();
+  const taskbarDirection = useUIStore((s) => s.taskbarDirection);
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
   const activeProject = useActiveProject();
@@ -96,9 +100,13 @@ export default function WorkspaceLayout({
     return <PythonRequiredScreen />;
   }
 
+  // Hydration-safe: server + first client render put the sidebar on the
+  // left; the "right" direction moves it after mount.
+  const sidebarOnLeft = !mounted || taskbarDirection !== "right";
+
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+      {sidebarOnLeft && <Sidebar />}
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
         <main className="relative min-h-0 flex-1 overflow-hidden">
@@ -115,6 +123,7 @@ export default function WorkspaceLayout({
           <div className="relative z-10 h-full">{children}</div>
         </main>
       </div>
+      {!sidebarOnLeft && <Sidebar />}
       <CommandPalette />
       <GlobalSearch />
       <ShortcutsDialog />

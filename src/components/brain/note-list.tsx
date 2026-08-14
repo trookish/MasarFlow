@@ -8,6 +8,7 @@ interface NoteListProps {
   notes: Note[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  emptyLabel?: string;
 }
 
 function formatWhen(ts: number): string {
@@ -20,11 +21,16 @@ function formatWhen(ts: number): string {
   return new Date(ts).toLocaleDateString();
 }
 
-export function NoteList({ notes, selectedId, onSelect }: NoteListProps) {
+export function NoteList({
+  notes,
+  selectedId,
+  onSelect,
+  emptyLabel = "No notes here yet.",
+}: NoteListProps) {
   if (notes.length === 0) {
     return (
       <div className="px-4 py-10 text-center text-xs text-muted-foreground">
-        No notes here yet.
+        {emptyLabel}
       </div>
     );
   }

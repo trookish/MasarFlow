@@ -16,12 +16,21 @@ function TextNodeComponent({
   data,
   selected,
 }: NodeProps<TextNodeType>) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(Boolean(data.newCard));
   const containerRef = useRef<HTMLDivElement>(null);
   const text = data.text ?? "";
   const shadow = data.shadow !== false;
   const lodThreshold = usePageSettings((s) => s.canvas.lodThreshold);
   const lowDetail = useIsLowDetail(lodThreshold);
+
+  // Freshly created cards open in edit mode; clear the one-shot flag once
+  // it has been consumed.
+  useEffect(() => {
+    if (data.newCard) {
+      data.onDataChange?.(id, { ...data, newCard: undefined });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.newCard]);
 
   useEffect(() => {
     if (!editing) return;

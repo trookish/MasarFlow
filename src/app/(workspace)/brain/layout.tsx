@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PenTool, LayoutTemplate, Network } from "lucide-react";
+import { PenTool, LayoutTemplate, Files, Network } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
 const TABS = [
   { label: "Notes", href: "/brain", icon: PenTool },
   { label: "Canvas", href: "/brain/canvas", icon: LayoutTemplate },
-  { label: "Templates", href: "/brain/templates", icon: LayoutTemplate },
+  { label: "Templates", href: "/brain/templates", icon: Files },
   { label: "Graph", href: "/brain/graph", icon: Network },
 ];
 

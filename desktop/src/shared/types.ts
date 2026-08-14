@@ -139,6 +139,7 @@ export type AccentMode = "solid" | "gradient";
 export type LogoColorMode = "original" | "accent" | "custom";
 export type LogoBgMode = "none" | "white" | "accent" | "custom";
 export type BannerGlowMode = "accent" | "custom";
+export type TaskbarDirection = "left" | "bottom" | "right";
 
 export interface GradientStop {
   color: string;
@@ -165,6 +166,10 @@ export interface AppSettings {
   bannerColor: string;
   bannerGlowMode: BannerGlowMode;
   bannerGlowColor: string;
+  /** Where the nav rail sits: left/right edge, or a floating bottom dock. */
+  taskbarDirection: TaskbarDirection;
+  /** Taskbar hidden (collapsed) — the topbar toggle / Ctrl+B brings it back. */
+  taskbarCollapsed: boolean;
   autoOpenBrowser: boolean;
   fontSize: number;
   /** Check GitHub for updates automatically when the launcher starts. */

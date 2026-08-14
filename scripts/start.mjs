@@ -11,7 +11,13 @@
  */
 import { execFileSync, spawn } from "node:child_process";
 import { createRequire } from "node:module";
-import { existsSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,9 +30,47 @@ const require = createRequire(path.join(root, "package.json"));
 
 const PYTHON_PORT = process.env.PYTHON_PORT ?? "8000";
 const OPENCODE_PORT = process.env.OPENCODE_PORT ?? "4096";
+const DEFAULT_APP_PORT = 3000;
 const venvBin = process.platform === "win32" ? "Scripts" : "bin";
 const venvPythonExe = process.platform === "win32" ? "python.exe" : "python";
 const venvPython = path.join(pyDir, ".venv", venvBin, venvPythonExe);
+
+/** Where the launcher looks for the ports we actually bound (gitignored). */
+const PORTS_FILE = path.join(root, ".masarflow", "run-ports.json");
+
+function writePortsFile(appPort, pyPort, opencodePort) {
+  try {
+    mkdirSync(path.dirname(PORTS_FILE), { recursive: true });
+    writeFileSync(
+      PORTS_FILE,
+      JSON.stringify(
+        {
+          pid: process.pid,
+          app: appPort,
+          python: pyPort,
+          opencode: opencodePort,
+          startedAt: Date.now(),
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+  } catch {
+    // best effort — the launcher falls back to the configured ports
+  }
+}
+
+/** Delete the ports file only when this run wrote it (pid match). */
+function clearPortsFile() {
+  try {
+    if (!existsSync(PORTS_FILE)) return;
+    const data = JSON.parse(readFileSync(PORTS_FILE, "utf8"));
+    if (data?.pid === process.pid) unlinkSync(PORTS_FILE);
+  } catch {
+    // best effort
+  }
+}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -146,7 +190,16 @@ async function ensurePythonDeps() {
     console.log("[setup] creating python-service/.venv …");
     await run("python", ["-m", "venv", ".venv"], { cwd: pyDir });
   }
-  console.log("[setup] verifying Python requirements (pip install is a no-op when satisfied) …");
+  // Fast path: check what's missing first — pip install (even a satisfied
+  // no-op) still resolves the index and costs seconds on every boot.
+  let missing = missingRequirements();
+  if (!missing.length) {
+    console.log("[setup] python service ready.");
+    return;
+  }
+  console.log(
+    `[setup] installing missing Python requirements: ${missing.join(", ")} …`,
+  );
   try {
     await run(
       venvPython,
@@ -154,14 +207,13 @@ async function ensurePythonDeps() {
       { cwd: pyDir },
     );
   } catch (e) {
-    console.error(`[setup] pip install failed: ${e.message}`);
-    console.error(
-      `[setup]   Fix the error above, then rerun: ${venvPython} -m pip install -r ${path.join(pyDir, "requirements", "base.txt")}`,
+    throw new Error(
+      `pip install failed: ${e.message} — fix the error, then rerun: ` +
+        `${venvPython} -m pip install -r ${path.join(pyDir, "requirements", "base.txt")}`,
     );
-    process.exit(1);
   }
 
-  let missing = missingRequirements();
+  missing = missingRequirements();
   if (missing.length) {
     console.error(`[setup] still missing: ${missing.join(", ")} — retrying the install once …`);
     try {
@@ -176,21 +228,22 @@ async function ensurePythonDeps() {
     missing = missingRequirements();
   }
   if (missing.length) {
-    console.error(`[setup] FAILED: the Python service is missing required packages: ${missing.join(", ")}`);
-    console.error(`[setup]   Install them manually with:`);
-    console.error(`[setup]     ${venvPython} -m pip install -r ${path.join(pyDir, "requirements", "base.txt")}`);
-    console.error(`[setup]   then restart MasarFlow.`);
-    process.exit(1);
+    throw new Error(
+      `FAILED: the Python service is missing required packages: ${missing.join(", ")} — ` +
+        `install them manually with: ${venvPython} -m pip install -r ` +
+        `${path.join(pyDir, "requirements", "base.txt")} — then restart MasarFlow.`,
+    );
   }
   console.log("[setup] python service ready.");
 }
 
 /**
  * Spawn `opencode serve` on the first free port at or above the requested one
- * and wait until /global/health responds. Returns the child, or null when the
- * server is already running / spawning is disabled / health never came up.
+ * — WITHOUT waiting for it to become healthy, so the Next compile can start
+ * immediately. Returns the child, or null when the server is already running
+ * / spawning is disabled.
  */
-async function startOpencode(bridgeEnv) {
+async function prepareOpencode(bridgeEnv) {
   const requestedUrl = process.env.OPENCODE_BASE_URL?.trim();
   if (requestedUrl) {
     const health = await fetchJson(
@@ -256,24 +309,30 @@ async function startOpencode(bridgeEnv) {
       : ["serve", "--hostname", "127.0.0.1", "--port", String(port)],
     { cwd: root, env },
   );
-  const baseUrl = `http://127.0.0.1:${port}`;
-  // Wait up to ~30s for health so Next boots with a live chat backend.
+  return { child, baseUrl: `http://127.0.0.1:${port}` };
+}
+
+/**
+ * Wait (up to ~30s) for a prepared opencode server to report healthy, then
+ * verify the workspace tools are registered. Runs detached from the launcher
+ * boot path — it must never block the Next compile or the Python service.
+ */
+async function waitForOpencode({ child, baseUrl }) {
   for (let i = 0; i < 60; i++) {
     if (child.exitCode !== null || child.spawnFailed) {
       console.warn(
         "[opencode] server failed to start — chat will show availability errors, everything else keeps running.",
       );
-      return null;
+      return;
     }
     if ((await fetchJson(`${baseUrl}/global/health`, 1000))?.healthy) {
       console.log(`[opencode] ready at ${baseUrl}.`);
       await verifyWorkspaceTools(baseUrl);
-      return { child, baseUrl };
+      return;
     }
     await sleep(500);
   }
   console.warn("[opencode] health check timed out — continuing without it.");
-  return { child, baseUrl };
 }
 
 /**
@@ -322,15 +381,75 @@ async function verifyWorkspaceTools(baseUrl) {
   }
 }
 
-/** Is something already bound to this loopback port? */
+/** Is a process with this pid still alive? */
+function isPidAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Next dev/build hold an exclusive lockfile at .next/lock while they run. A
+ * stale dev server from a previous force-killed run keeps holding it, and a
+ * new `next dev` then refuses to start ("Another next dev server is already
+ * running") — the launcher's terminal dies with no way to recover. When the
+ * lock's owner is still alive, stop it first so dev can always come up.
+ */
+function releaseNextLock() {
+  // Next 16 dev keeps its lock at .next/dev/lock; older builds used .next/lock.
+  const lockPath = [
+    path.join(root, ".next", "dev", "lock"),
+    path.join(root, ".next", "lock"),
+  ].find((p) => existsSync(p));
+  if (!lockPath) return Promise.resolve();
+  let info = null;
+  try {
+    info = JSON.parse(readFileSync(lockPath, "utf8"));
+  } catch {
+    // unreadable lock — Next's own retry/exit message takes over
+  }
+  const pid = typeof info?.pid === "number" ? info.pid : null;
+  if (!pid || !isPidAlive(pid)) {
+    // The OS released the lock with its process — nothing to do.
+    return Promise.resolve();
+  }
+  console.error(
+    `[next] another server is already running for this project (pid ${pid}) ` +
+      "— stopping it so this run can take over. " +
+      "(Only one dev server can run per project.)",
+  );
+  try {
+    if (process.platform === "win32") {
+      execFileSync("taskkill", ["/pid", String(pid), "/T", "/F"], {
+        stdio: "ignore",
+      });
+    } else {
+      process.kill(pid, "SIGTERM");
+    }
+  } catch {
+    // fall through — the lock will fail and Next surfaces its own error
+  }
+  // Give the killed process a moment to release the native lock.
+  return sleep(700);
+}
+
+/** Is something already bound to this port (IPv4 or IPv6)? */
 function isPortInUse(port) {
-  return new Promise((resolvePromise) => {
-    const probe = net.createServer();
-    probe.once("error", () => resolvePromise(true));
-    probe.listen(port, "127.0.0.1", () => {
-      probe.close(() => resolvePromise(false));
+  // Next dev/start binds `::` (IPv6 any) while uvicorn binds 127.0.0.1 —
+  // probe both families or a stale v6-only listener slips past and the child
+  // dies with EADDRINUSE at spawn time.
+  const probe = (host) =>
+    new Promise((resolvePromise) => {
+      const s = net.createServer();
+      s.once("error", () => resolvePromise(true));
+      s.listen(port, host, () => {
+        s.close(() => resolvePromise(false));
+      });
     });
-  });
+  return (async () => (await probe("::")) || (await probe("127.0.0.1")))();
 }
 
 /**
@@ -387,9 +506,8 @@ function startProcess(label, cmd, args, opts = {}) {
 }
 
 async function main() {
-  await ensurePythonDeps();
-
   if (process.argv.includes("--setup-only")) {
+    await ensurePythonDeps();
     console.log("[start] venv ready (--setup-only).");
     return;
   }
@@ -420,12 +538,8 @@ async function main() {
       process.exit(1);
     }
   }
-  const nextArgs = isDev
-    ? ["dev", "--webpack"]
-    : process.env.PORT
-      ? ["start", "-p", String(process.env.PORT)]
-      : ["start"];
-  if (isDev && process.env.PORT) {
+  const nextArgs = isDev ? ["dev"] : ["start"];
+  if (process.env.PORT) {
     nextArgs.push("-p", String(process.env.PORT));
   }
 
@@ -445,12 +559,33 @@ async function main() {
     );
   }
 
-  // Bring up the OpenCode agent backend before Next so the chat works on the
-  // first page load (spawn skipped when a server is already reachable). The
-  // workspace functions are installed as opencode custom tools FIRST — a
-  // running server only registers tools that existed when it started.
-  // OpenCode is OPTIONAL: when the binary is missing we skip the tool install
-  // and the server start, and the app runs without the agentic chat.
+  // Next dev refuses to start while another dev/build server for this project
+  // holds .next/lock (e.g. a stale server from a force-killed previous run).
+  // Release it first so the launcher never dies on "another server running".
+  if (isDev) await releaseNextLock();
+
+  // Same shift strategy for the app port: a stale Next process from a
+  // previous force-killed run must never wedge startup. Next dev prompts
+  // interactively on a busy port, which would hang the launcher's terminal
+  // with no way to answer — so resolve a free port up front and pass it
+  // explicitly (dev and prod), then publish it for the launcher below.
+  const requestedAppPort = Number(process.env.PORT) || DEFAULT_APP_PORT;
+  const appPort = await findFreePort(requestedAppPort);
+  if (appPort !== requestedAppPort) {
+    console.error(
+      `[start] port ${requestedAppPort} is occupied — running Next on ${appPort} instead. ` +
+        "(A reboot clears stale Windows socket entries.)",
+    );
+  }
+  nextArgs.push("-p", String(appPort));
+
+  // Fast pre-flight: install the workspace tools and spawn the opencode
+  // server WITHOUT waiting for it to report healthy. The slow parts (tool
+  // compilation, health polling) are pushed to waitForOpencode below, which
+  // runs detached while Next compiles. A running server only registers tools
+  // that existed when it started, so the install must still precede the
+  // spawn. OpenCode is OPTIONAL: when the binary is missing we skip the tool
+  // install and the server start, and the app runs without the agentic chat.
   let bridgeEnv = { secret: "", url: "" };
   if (commandExists(resolveOpencodeBin())) {
     try {
@@ -464,9 +599,13 @@ async function main() {
       "[tools] opencode not found — skipping workspace-tool install (AI agent chat disabled).",
     );
   }
-  const opencode = await startOpencode(bridgeEnv);
+  const opencode = await prepareOpencode(bridgeEnv);
+  const opencodePort = opencode?.baseUrl
+    ? Number(new URL(opencode.baseUrl).port) || null
+    : null;
   const nextEnv = {
     ...process.env,
+    PORT: String(appPort),
     PYTHON_SERVICE_URL: `http://127.0.0.1:${pyPort}`,
     PYTHON_PORT: String(pyPort),
   };
@@ -474,12 +613,30 @@ async function main() {
   if (bridgeEnv.url) nextEnv.MASARFLOW_BRIDGE_URL = bridgeEnv.url;
   if (opencode?.baseUrl) nextEnv.OPENCODE_BASE_URL = opencode.baseUrl;
 
+  // Publish the ports we actually bound so the desktop launcher's status
+  // chips and browser-open button follow any shift instead of polling the
+  // configured (possibly squatted) ports.
+  writePortsFile(appPort, pyPort, opencodePort);
+
+  // Spawn Next FIRST — its compile is the long pole, so it must overlap the
+  // Python setup and the opencode warm-up instead of starting after them.
   const nextChild = startProcess(
     "next",
     process.execPath,
     [nextCli, ...nextArgs],
     { cwd: root, env: nextEnv },
   );
+
+  // uvicorn needs the venv ready; check/install it while Next compiles.
+  try {
+    await ensurePythonDeps();
+  } catch (e) {
+    console.error(`[setup] ${e.message}`);
+    try {
+      nextChild.kill("SIGKILL");
+    } catch {}
+    process.exit(1);
+  }
 
   const pyArgs = [
     "-m",
@@ -502,6 +659,7 @@ async function main() {
   const pyChild = startProcess("py", venvPython, pyArgs, { cwd: root });
 
   const cleanup = (signal) => {
+    clearPortsFile();
     for (const c of [
       nextChild,
       pyChild,
@@ -519,6 +677,7 @@ async function main() {
   };
   process.on("SIGINT", () => cleanup("SIGINT"));
   process.on("SIGTERM", () => cleanup("SIGTERM"));
+  process.on("exit", () => clearPortsFile());
 
   const exited = new Promise((resolve) => {
     nextChild.on("exit", (code) => resolve({ who: "next", code }));
@@ -534,6 +693,14 @@ async function main() {
       });
     }
   });
+  // Detached: opencode readiness + workspace-tool verification must never
+  // delay the boot path — it logs while the app is already serving.
+  if (opencode) {
+    waitForOpencode(opencode).catch((e) => {
+      console.warn(`[opencode] readiness check failed: ${e.message}`);
+    });
+  }
+
   const { who, code } = await exited;
   console.error(`[start] ${who} exited (code ${code}) — shutting down.`);
   cleanup("SIGKILL");

@@ -18,6 +18,8 @@ export interface BaseNodeData {
 
 export interface TextNodeData extends BaseNodeData {
   text: string;
+  /** Set on creation so the card opens in edit mode, then cleared. */
+  newCard?: boolean;
 }
 
 export interface NoteNodeData extends BaseNodeData {

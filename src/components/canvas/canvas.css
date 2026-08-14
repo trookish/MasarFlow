@@ -1,0 +1,93 @@
+/* Milanote-inspired canvas polish.
+   Scoped under .masarflow-canvas so it never leaks into other pages. */
+
+.masarflow-canvas .react-flow__handle {
+  width: 12px !important;
+  height: 12px !important;
+  background: var(--background) !important;
+  border: 2px solid var(--primary) !important;
+  opacity: 0;
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+
+.masarflow-canvas .react-flow__node:hover .react-flow__handle,
+.masarflow-canvas .react-flow__handle:hover {
+  opacity: 1;
+}
+
+.masarflow-canvas .react-flow__handle:hover {
+  transform: scale(1.25);
+  background: var(--primary) !important;
+}
+
+.masarflow-canvas .react-flow__edge-path {
+  transition: stroke 0.12s ease;
+}
+
+.masarflow-canvas .react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--primary) !important;
+}
+
+.masarflow-canvas .react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--primary) !important;
+  stroke-width: 2 !important;
+}
+
+/* Soft, floating cards */
+.masarflow-canvas .react-flow__node {
+  border-radius: 10px;
+}
+
+/* Palette pop-in */
+@keyframes mf-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.mf-pop {
+  animation: mf-pop 0.12s ease-out;
+}
+
+/* Keep the minimap unobtrusive */
+.masarflow-canvas .react-flow__minimap {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--card);
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.masarflow-canvas .react-flow__minimap:hover {
+  opacity: 1;
+}
+
+/* Minimal zoom controls */
+.masarflow-canvas .react-flow__controls {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgb(0 0 0 / 0.08));
+}
+
+.masarflow-canvas .react-flow__controls-button {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  fill: var(--foreground);
+}
+
+.masarflow-canvas .react-flow__controls-button:hover {
+  background: var(--accent);
+}
+
+.masarflow-canvas .react-flow__controls-button svg {
+  fill: currentColor;
+}

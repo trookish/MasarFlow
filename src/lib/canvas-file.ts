@@ -45,6 +45,8 @@ export interface ObsidianCanvasNode {
   background?: string;
   /** group background image path */
   backgroundImage?: string;
+  /** Nodes contained by this group (Obsidian grouping). */
+  children?: string[];
   /** MasarFlow-only payload, preserved across round trips. */
   masarflow?: Record<string, unknown>;
 }
@@ -86,6 +88,7 @@ export interface CanvasNodeInput {
   height: number;
   data: Record<string, unknown>;
   color: string;
+  parentId?: string | null;
 }
 
 export interface CanvasEdgeInput {
@@ -146,57 +149,86 @@ export function toCanvasFile(
   edges: CanvasEdge[],
   viewport?: { x: number; y: number; zoom: number },
 ): ObsidianCanvasFile {
+  // Grouped nodes store relative positions; Obsidian expects absolute ones
+  // with a `children` list on the group.
+  const posById = new Map(nodes.map((n) => [n.id, { x: n.x, y: n.y }]));
+  const childrenByParent = new Map<string, string[]>();
+  for (const n of nodes) {
+    if (n.parentId) {
+      const list = childrenByParent.get(n.parentId) ?? [];
+      list.push(n.id);
+      childrenByParent.set(n.parentId, list);
+    }
+  }
+  const absPos = (n: CanvasNode) => {
+    if (!n.parentId) return { x: n.x, y: n.y };
+    const p = posById.get(n.parentId);
+    return p ? { x: n.x + p.x, y: n.y + p.y } : { x: n.x, y: n.y };
+  };
+
   const outNodes: ObsidianCanvasNode[] = nodes.map((n) => {
     const data = n.data ?? {};
+    const abs = absPos(n);
     const base = {
       id: n.id,
-      x: Math.round(n.x),
-      y: Math.round(n.y),
+      x: Math.round(abs.x),
+      y: Math.round(abs.y),
       width: Math.round(n.width),
       height: Math.round(n.height),
       color: colorToObsidian(n.color) ?? (n.color || undefined),
     };
+    const mfBag: Record<string, unknown> = { data };
+    if (n.parentId) mfBag.parentId = n.parentId;
+    const children = childrenByParent.get(n.id);
+    const withChildren = children?.length
+      ? { children }
+      : {};
     switch (n.type) {
       case "text":
         return {
           ...base,
+          ...withChildren,
           type: "text",
           text: String(data.text ?? ""),
-          masarflow: { data },
+          masarflow: mfBag,
         };
       case "note":
         return {
           ...base,
+          ...withChildren,
           type: "file",
           file: String(data.noteId ?? ""),
           label: String(data.title ?? ""),
-          masarflow: { data },
+          masarflow: mfBag,
         };
       case "media":
         return {
           ...base,
+          ...withChildren,
           type: "file",
           file: String(data.attachmentId ?? data.src ?? ""),
           label: String(data.name ?? ""),
-          masarflow: { data },
+          masarflow: mfBag,
         };
       case "link":
         return {
           ...base,
+          ...withChildren,
           type: "link",
           url: String(data.url ?? ""),
           label: String(data.title ?? ""),
-          masarflow: { data },
+          masarflow: mfBag,
         };
       case "group":
         return {
           ...base,
+          ...withChildren,
           type: "group",
           label: String(data.label ?? data.title ?? ""),
-          masarflow: { data },
+          masarflow: mfBag,
         };
       default:
-        return { ...base, type: "text", text: "", masarflow: { data } };
+        return { ...base, ...withChildren, type: "text", text: "", masarflow: mfBag };
     }
   });
 
@@ -234,23 +266,45 @@ export function fromCanvasFile(
   const rawNodes = json.nodes ?? [];
   const rawEdges = json.edges ?? [];
 
+  // Resolve grouping: Obsidian files list children on the group node, while
+  // MasarFlow stores parentId on the child (with relative positions).
+  const posById = new Map(rawNodes.map((n) => [n.id, { x: n.x, y: n.y }]));
+  const childParent = new Map<string, string>();
+  for (const n of rawNodes) {
+    for (const childId of n.children ?? []) {
+      childParent.set(childId, n.id);
+    }
+  }
+  const coordsFor = (id: string, x: number, y: number, mfParentId?: unknown) => {
+    const pid =
+      childParent.get(id) ?? (typeof mfParentId === "string" ? mfParentId : null);
+    const p = pid ? posById.get(pid) : undefined;
+    return {
+      parentId: pid ?? null,
+      x: p ? x - p.x : x,
+      y: p ? y - p.y : y,
+    };
+  };
+
   const nodes: CanvasNodeInput[] = rawNodes.map((n) => {
     const color = colorFromObsidian(n.color);
     const mfBag = (n.masarflow ?? {}) as Record<string, unknown>;
     const mfData = (mfBag.data as Record<string, unknown> | undefined) ?? {};
     const w = n.width ?? 240;
     const h = n.height ?? 140;
+    const coords = coordsFor(n.id, n.x, n.y, mfBag.parentId);
 
     switch (n.type) {
       case "text":
         return {
           id: n.id,
           type: "text",
-          x: n.x,
-          y: n.y,
+          x: coords.x,
+          y: coords.y,
           width: w,
           height: h,
           color,
+          parentId: coords.parentId,
           data: { text: n.text ?? String(mfData.text ?? ""), ...mfData },
         };
       case "file":
@@ -259,11 +313,12 @@ export function fromCanvasFile(
           return {
             id: n.id,
             type: "note",
-            x: n.x,
-            y: n.y,
+            x: coords.x,
+            y: coords.y,
             width: w,
             height: h,
             color,
+            parentId: coords.parentId,
             data: { ...mfData, noteId: mfData.noteId, title: n.label ?? String(mfData.title ?? "") },
           };
         }
@@ -271,11 +326,12 @@ export function fromCanvasFile(
           return {
             id: n.id,
             type: "media",
-            x: n.x,
-            y: n.y,
+            x: coords.x,
+            y: coords.y,
             width: w,
             height: h,
             color,
+            parentId: coords.parentId,
             data: { ...mfData, name: n.label ?? String(mfData.name ?? "") },
           };
         }
@@ -283,44 +339,48 @@ export function fromCanvasFile(
         return {
           id: n.id,
           type: "note",
-          x: n.x,
-          y: n.y,
+          x: coords.x,
+          y: coords.y,
           width: w,
           height: h,
           color,
+          parentId: coords.parentId,
           data: { ...mfData, file: n.file ?? "", title: n.label ?? (n.file ?? "File").split("/").pop() ?? "File" },
         };
       case "link":
         return {
           id: n.id,
           type: "link",
-          x: n.x,
-          y: n.y,
+          x: coords.x,
+          y: coords.y,
           width: w,
           height: h,
           color,
+          parentId: coords.parentId,
           data: { ...mfData, url: n.url ?? "", title: n.label ?? "" },
         };
       case "group":
         return {
           id: n.id,
           type: "group",
-          x: n.x,
-          y: n.y,
+          x: coords.x,
+          y: coords.y,
           width: w,
           height: h,
           color,
+          parentId: coords.parentId,
           data: { ...mfData, label: n.label ?? String(mfData.label ?? "Group") },
         };
       default:
         return {
           id: n.id,
           type: "text",
-          x: n.x,
-          y: n.y,
+          x: coords.x,
+          y: coords.y,
           width: w,
           height: h,
           color,
+          parentId: coords.parentId,
           data: { text: "" },
         };
     }

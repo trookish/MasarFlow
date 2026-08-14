@@ -1,4 +1,4 @@
-import { ExternalLink, Monitor, Moon, RefreshCw, SquareTerminal, Sun } from "lucide-react";
+import { ExternalLink, Monitor, Moon, PanelLeft, RefreshCw, SquareTerminal, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { THEME_MODES, applyAppearance } from "@/lib/theme";
 import { useApp } from "@/lib/store";
@@ -44,6 +44,7 @@ export function Topbar() {
   const setTerminalOpen = useApp((s) => s.setTerminalOpen);
   const settings = useApp((s) => s.settings);
   const setSettings = useApp((s) => s.setSettings);
+  const patchSettings = useApp((s) => s.patchSettings);
   const server = useApp((s) => s.server);
   const updateInfo = useApp((s) => s.updateInfo);
   const setUpdateInfo = useApp((s) => s.setUpdateInfo);
@@ -119,6 +120,20 @@ export function Topbar() {
           ) : (
             <Moon className="h-4 w-4" />
           )}
+        </button>
+        <button
+          onClick={() => {
+            if (settings) void patchSettings({ taskbarCollapsed: !settings.taskbarCollapsed });
+          }}
+          title={settings?.taskbarCollapsed ? "Show taskbar (Ctrl+B)" : "Hide taskbar (Ctrl+B)"}
+          className={cn(
+            "app-no-drag flex h-9 w-9 items-center justify-center rounded-md transition-colors",
+            settings?.taskbarCollapsed
+              ? "bg-accent text-foreground"
+              : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+          )}
+        >
+          <PanelLeft className="h-4 w-4" />
         </button>
         <button
           onClick={() => setTerminalOpen(!terminalOpen)}

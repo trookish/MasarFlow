@@ -14,12 +14,21 @@ function GroupNodeComponent({
   selected,
 }: NodeProps<GroupNodeType>) {
   const [collapsed, setCollapsed] = useState(data.collapsed ?? false);
+  const [editingLabel, setEditingLabel] = useState(false);
+  const [labelDraft, setLabelDraft] = useState(data.label ?? "Group");
   const label = data.label ?? "Group";
 
   function toggle() {
     const next = !collapsed;
     setCollapsed(next);
     data.onDataChange?.(id, { ...data, collapsed: next });
+  }
+
+  function commitLabel() {
+    setEditingLabel(false);
+    const next = labelDraft.trim() || "Group";
+    setLabelDraft(next);
+    if (next !== label) data.onDataChange?.(id, { ...data, label: next });
   }
 
   return (
@@ -49,9 +58,31 @@ function GroupNodeComponent({
         >
           {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
         </button>
-        <span className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-          {label}
-        </span>
+        {editingLabel ? (
+          <input
+            autoFocus
+            value={labelDraft}
+            onChange={(e) => setLabelDraft(e.target.value)}
+            onBlur={commitLabel}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitLabel();
+              if (e.key === "Escape") setEditingLabel(false);
+            }}
+            className="min-w-0 flex-1 rounded border border-input bg-background px-1.5 py-0.5 text-xs font-semibold outline-none"
+          />
+        ) : (
+          <span
+            className="flex-1 cursor-text truncate text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setLabelDraft(label);
+              setEditingLabel(true);
+            }}
+            title="Double-click to rename"
+          >
+            {label}
+          </span>
+        )}
       </div>
 
       {/* Children are React Flow child nodes (parentId), not rendered here.

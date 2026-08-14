@@ -68,6 +68,13 @@ export default function App() {
         e.preventDefault();
         useApp.getState().setTerminalOpen(!useApp.getState().terminalOpen);
       }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        const s = useApp.getState();
+        if (s.settings) {
+          void s.patchSettings({ taskbarCollapsed: !s.settings.taskbarCollapsed });
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
 
@@ -89,6 +96,8 @@ export default function App() {
     return off;
   }, [settings]);
 
+  const taskbarDirection = settings?.taskbarDirection ?? "bottom";
+
   return (
     <div className="relative flex h-screen overflow-hidden bg-background text-foreground">
       {settings && (
@@ -99,7 +108,7 @@ export default function App() {
         />
       )}
       <div className="relative z-10 flex min-w-0 flex-1">
-        <Sidebar />
+        {taskbarDirection !== "right" && <Sidebar />}
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar />
           <main className="min-h-0 flex-1 overflow-hidden">
@@ -110,6 +119,7 @@ export default function App() {
           </main>
           <TerminalPanel />
         </div>
+        {taskbarDirection === "right" && <Sidebar />}
       </div>
     </div>
   );

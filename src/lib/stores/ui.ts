@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+/** Where the taskbar (nav rail + panel) sits: left edge, right edge, or a floating bottom dock. */
+export type TaskbarDirection = "left" | "bottom" | "right";
+
 interface UIState {
   /** Sidebar collapsed to icon rail. Persisted. */
   sidebarCollapsed: boolean;
@@ -10,6 +13,10 @@ interface UIState {
   /** Which nav group is active in the two-rail sidebar. Persisted. */
   activeNavGroup: string;
   setActiveNavGroup: (group: string) => void;
+
+  /** Taskbar placement. Persisted. */
+  taskbarDirection: TaskbarDirection;
+  setTaskbarDirection: (direction: TaskbarDirection) => void;
 
   /** Transient overlay state (not persisted). */
   paletteOpen: boolean;
@@ -31,6 +38,9 @@ export const useUIStore = create<UIState>()(
       activeNavGroup: "Capture",
       setActiveNavGroup: (activeNavGroup) => set({ activeNavGroup }),
 
+      taskbarDirection: "bottom",
+      setTaskbarDirection: (taskbarDirection) => set({ taskbarDirection }),
+
       paletteOpen: false,
       setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
       searchOpen: false,
@@ -41,7 +51,11 @@ export const useUIStore = create<UIState>()(
     {
       name: "masarflow-ui",
       // Only sidebar layout prefs should persist.
-      partialize: (s) => ({ sidebarCollapsed: s.sidebarCollapsed, activeNavGroup: s.activeNavGroup }),
+      partialize: (s) => ({
+        sidebarCollapsed: s.sidebarCollapsed,
+        activeNavGroup: s.activeNavGroup,
+        taskbarDirection: s.taskbarDirection,
+      }),
     },
   ),
 );

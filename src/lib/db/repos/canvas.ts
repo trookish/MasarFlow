@@ -80,6 +80,7 @@ export const canvasRepo = {
       height: input.height ?? 140,
       data: input.data ?? {},
       color: input.color ?? "",
+      parentId: input.parentId ?? null,
       createdAt: ts,
       updatedAt: ts,
     };

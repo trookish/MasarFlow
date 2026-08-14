@@ -111,6 +111,7 @@ export function KnowledgeGraph({
   );
   const svgRef = useRef<SVGSVGElement>(null);
   const simRef = useRef<Simulation<GNode, GLink> | null>(null);
+  const rafRef = useRef<number | null>(null);
   const drag = useRef<{
     mode: "none" | "pan" | "node";
     node?: GNode;
@@ -246,10 +247,23 @@ export function KnowledgeGraph({
         forceRadial<GNode>(Math.min(W, H) / 2 - 70, W / 2, H / 2).strength(0.55),
       );
     }
-    sim.on("tick", () => setGnodes((cur) => [...cur]));
+    // Batch per-tick state updates through a single animation frame so large
+    // graphs re-render at most once per frame instead of once per tick.
+    sim.on("tick", () => {
+      if (rafRef.current == null) {
+        rafRef.current = requestAnimationFrame(() => {
+          rafRef.current = null;
+          setGnodes((cur) => [...cur]);
+        });
+      }
+    });
     simRef.current = sim;
     return () => {
       sim.stop();
+      if (rafRef.current != null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     };
   }, [filtered, layout]);
 
@@ -273,7 +287,7 @@ export function KnowledgeGraph({
     };
   }
 
-  function onWheel(e: React.WheelEvent) {
+  function onWheel(e: WheelEvent) {
     e.preventDefault();
     const p = clientToSvg(e.clientX, e.clientY);
     const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
@@ -284,6 +298,16 @@ export function KnowledgeGraph({
       return { k, x: p.x - wx * k, y: p.y - wy * k };
     });
   }
+
+  // React's root-level wheel listener is passive, so preventDefault() there
+  // can't stop the browser's own zoom/scroll. Attach a native non-passive
+  // listener directly to the svg instead.
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  });
 
   function onPointerDownBackground(e: React.PointerEvent) {
     (e.target as Element).setPointerCapture?.(e.pointerId);
@@ -367,6 +391,7 @@ export function KnowledgeGraph({
             icon={Network}
             title="Nothing to graph yet"
             description="Create notes and link them with [[wikilinks]], or load the demo data to see the knowledge graph come alive."
+            className="h-full"
           />
         ) : (
           <>
@@ -428,7 +453,6 @@ export function KnowledgeGraph({
               ref={svgRef}
               viewBox={`0 0 ${W} ${H}`}
               className="h-full w-full touch-none select-none"
-              onWheel={onWheel}
               onPointerDown={onPointerDownBackground}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}

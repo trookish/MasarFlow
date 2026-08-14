@@ -77,6 +77,8 @@ function defaultSettings(): AppSettings {
     bannerColor: ACCENTS[0],
     bannerGlowMode: "accent",
     bannerGlowColor: ACCENTS[0],
+    taskbarDirection: "bottom",
+    taskbarCollapsed: false,
     autoOpenBrowser: true,
     fontSize: 13,
     autoCheckUpdates: true,

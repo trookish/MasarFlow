@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { copyFileSync } from "node:fs";
 import { join } from "node:path";
 import type { EnvData, EnvField, EnvFieldKind } from "@shared/types";
@@ -183,4 +183,64 @@ export function servicePorts(targetDir: string): { appPort: number; pythonPort: 
     }
   }
   return { appPort, pythonPort };
+}
+
+/**
+ * Ports a live MasarFlow run actually bound to, as published by
+ * scripts/start.mjs. The launcher spawns `npm run dev:full` / `npm start`,
+ * which shift ports forward when stale listeners squat the configured ones —
+ * polling the configured ports would keep the chips red forever.
+ */
+export function runPorts(targetDir: string): { appPort: number; pythonPort: number } | null {
+  try {
+    const file = join(targetDir, ".masarflow", "run-ports.json");
+    const raw = JSON.parse(readFileSync(file, "utf8")) as {
+      pid?: number;
+      app?: number;
+      python?: number;
+    };
+    if (!raw || typeof raw.app !== "number" || typeof raw.python !== "number") {
+      return null;
+    }
+    // A force-killed run (taskkill /F) leaves the file behind without its
+    // exit hooks — only trust it while the writer process is still alive.
+    if (typeof raw.pid === "number") {
+      try {
+        process.kill(raw.pid, 0);
+      } catch {
+        return null;
+      }
+    }
+    return { appPort: raw.app, pythonPort: raw.python };
+  } catch {
+    return null;
+  }
+}
+
+/** The ports the launcher should poll/open: a live run's real ports when
+ *  known, otherwise the configured ones from .env.local. */
+export function effectivePorts(targetDir: string): { appPort: number; pythonPort: number } {
+  return runPorts(targetDir) ?? servicePorts(targetDir);
+}
+
+/** Drop a stale ports file (e.g. right after the launcher stops a run). */
+export function clearRunPorts(targetDir: string): void {
+  try {
+    const file = join(targetDir, ".masarflow", "run-ports.json");
+    if (existsSync(file)) {
+      const raw = JSON.parse(readFileSync(file, "utf8")) as { pid?: number };
+      // Only remove files from a dead run — never one a live run still owns.
+      if (typeof raw.pid === "number") {
+        try {
+          process.kill(raw.pid, 0);
+          return;
+        } catch {
+          // pid is dead — safe to remove
+        }
+      }
+      unlinkSync(file);
+    }
+  } catch {
+    // best effort
+  }
 }

@@ -1,12 +1,17 @@
 import type { ServerStatus } from "@shared/types";
 
-async function reachable(port: number): Promise<boolean> {
+/**
+ * Probe a local URL. `requireOk` is used for the Python service, whose real
+ * liveness signal is a 200 from /health — any other response (or a foreign
+ * process squatting the port) must not light the chip green.
+ */
+async function reachable(url: string, requireOk = false): Promise<boolean> {
   try {
-    await fetch(`http://127.0.0.1:${port}`, {
+    const res = await fetch(url, {
       signal: AbortSignal.timeout(700),
       headers: { "User-Agent": "masarflow-launcher" },
     });
-    return true;
+    return requireOk ? res.ok : true;
   } catch {
     return false;
   }
@@ -22,7 +27,12 @@ export function startStatusPolling(
     running = true;
     try {
       const { appPort, pythonPort } = getPorts();
-      const [app, python] = await Promise.all([reachable(appPort), reachable(pythonPort)]);
+      const [app, python] = await Promise.all([
+        reachable(`http://127.0.0.1:${appPort}`),
+        // The Python service has no root route — hitting "/" just produces a
+        // 404 in its access log. Its health endpoint is the intended probe.
+        reachable(`http://127.0.0.1:${pythonPort}/health`, true),
+      ]);
       emit({ app, python, appPort, pythonPort });
     } catch {
       // ignore transient failures

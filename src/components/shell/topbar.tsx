@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Search, Command as CommandIcon, Keyboard, PanelLeft, RefreshCw } from "lucide-react";
 import { useUIStore } from "@/lib/stores/ui";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import { ProjectSwitcher } from "./project-switcher";
 import { ThemeToggle } from "./theme-toggle";
 import { PomodoroWidget, DailyNoteButton } from "./plugin-widgets";
@@ -14,11 +15,13 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils/cn";
 
 export function Topbar() {
+  const mounted = useMounted();
   const setSearchOpen = useUIStore((s) => s.setSearchOpen);
   const setPaletteOpen = useUIStore((s) => s.setPaletteOpen);
   const setShortcutsOpen = useUIStore((s) => s.setShortcutsOpen);
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const taskbarDirection = useUIStore((s) => s.taskbarDirection);
   const [updateOpen, setUpdateOpen] = useState(false);
   const updateInfo = useUpdatesStore((s) => s.info);
   const updateState = useUpdatesStore((s) => s.state);
@@ -29,13 +32,23 @@ export function Topbar() {
     if (updateState !== "checking") void checkUpdates();
   }
 
+  const toggleLabel = !mounted
+    ? "Collapse sidebar (⌘B)"
+    : taskbarDirection === "bottom"
+      ? sidebarCollapsed
+        ? "Show dock (⌘B)"
+        : "Hide dock (⌘B)"
+      : sidebarCollapsed
+        ? "Expand sidebar (⌘B)"
+        : "Collapse sidebar (⌘B)";
+
   return (
     <header className="relative z-40 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur">
-      <Tooltip label={sidebarCollapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"} side="bottom" align="start">
+      <Tooltip label={toggleLabel} side="bottom" align="start">
         <Button
           variant="ghost"
           size="icon"
-          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={toggleLabel}
           onClick={toggleSidebar}
         >
           <PanelLeft className="h-4 w-4" />
