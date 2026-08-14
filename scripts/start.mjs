@@ -187,23 +187,32 @@ const BOOT_REQUIRED = [
 /**
  * Check that every boot-critical package is actually installed in the venv.
  * Fast (importlib.metadata only — no heavy imports). Returns the names of the
- * missing packages.
+ * missing packages. A single Python spawn checks all packages at once — six
+ * separate `python -c` launches cost ~1s of interpreter startup on Windows.
  */
 function missingRequirements() {
-  const missing = [];
-  for (const name of BOOT_REQUIRED) {
-    try {
-      execFileSync(venvPython, ["-c", "import importlib.metadata as im, sys; im.distribution(sys.argv[1])", name], {
-        cwd: pyDir,
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "pipe"],
-        timeout: 60_000,
-      });
-    } catch {
-      missing.push(name);
-    }
+  try {
+    const script = [
+      "import importlib.metadata as im, sys",
+      "missing = []",
+      "for n in sys.argv[1:]:",
+      "    try:",
+      "        im.distribution(n)",
+      "    except Exception:",
+      "        missing.append(n)",
+      "print('\\n'.join(missing))",
+    ].join("\n");
+    const out = execFileSync(venvPython, ["-c", script, ...BOOT_REQUIRED], {
+      cwd: pyDir,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 60_000,
+    });
+    return out.split(/\r?\n/).filter((n) => n.trim().length > 0);
+  } catch {
+    // A broken interpreter is itself a failure — report everything missing.
+    return [...BOOT_REQUIRED];
   }
-  return missing;
 }
 
 /**
@@ -577,12 +586,6 @@ async function main() {
     ? Number(new URL(requestedUrl).port) || Number(PYTHON_PORT)
     : Number(PYTHON_PORT);
   const pyPort = await findFreePort(requestedPort);
-  if (pyPort !== requestedPort) {
-    console.error(
-      `[start] port ${requestedPort} is occupied — running the Python service on ${pyPort} instead. ` +
-        "(A reboot clears stale Windows socket entries.)",
-    );
-  }
 
   // Next dev refuses to start while another dev/build server for this project
   // holds .next/lock (e.g. a stale server from a force-killed previous run).
@@ -633,6 +636,11 @@ async function main() {
     PORT: String(appPort),
     PYTHON_SERVICE_URL: `http://127.0.0.1:${pyPort}`,
     PYTHON_PORT: String(pyPort),
+    // start.mjs owns the Python process — the app must never spawn a second
+    // uvicorn that races this one for the same port (a stale probe can win
+    // the race and kill the whole stack with EADDRINUSE). The app follows
+    // the shifted port via .masarflow/run-ports.json instead.
+    MASARFLOW_PYTHON_MANAGED: "1",
   };
   if (bridgeEnv.secret) nextEnv.MASARFLOW_BRIDGE_SECRET = bridgeEnv.secret;
   if (bridgeEnv.url) nextEnv.MASARFLOW_BRIDGE_URL = bridgeEnv.url;
@@ -663,14 +671,12 @@ async function main() {
     process.exit(1);
   }
 
-  const pyArgs = [
+  const pyArgsBase = [
     "-m",
     "uvicorn",
     "app.main:app",
     "--app-dir",
     "python-service",
-    "--port",
-    String(pyPort),
   ];
   if (isDev) {
     // Watch ONLY the Python app source, never the whole python-service dir.
@@ -678,10 +684,65 @@ async function main() {
     // embedding syncs and would otherwise restart the worker mid-job — the
     // "watchfiles: N changes detected" restart loop that killed in-flight
     // embeddings and stalled chat turns. Code edits still hot-reload.
-    pyArgs.push("--reload", "--reload-dir", "python-service/app");
+    pyArgsBase.push("--reload", "--reload-dir", "python-service/app");
   }
 
-  const pyChild = startProcess("py", venvPython, pyArgs, { cwd: root });
+  // Windows can leave "phantom" sockets that pass the findFreePort probe but
+  // still reject the real bind — and a foreign process can squat the port
+  // between probe and spawn. A single bad port must never take the whole app
+  // down: retry by shifting forward, keeping the ports file (and therefore
+  // the app's boot gate) in sync with the port that actually works.
+  let workingPyPort = pyPort;
+  let pyChild = null;
+  for (let attempt = 0; attempt < 8 && !pyChild; attempt++) {
+    const child = startProcess(
+      "py",
+      venvPython,
+      [...pyArgsBase, "--port", String(workingPyPort)],
+      { cwd: root },
+    );
+    const deadline = Date.now() + 25_000;
+    let healthy = false;
+    while (Date.now() < deadline) {
+      if (child.exitCode !== null || child.spawnFailed) break;
+      const health = await fetchJson(
+        `http://127.0.0.1:${workingPyPort}/health`,
+        1000,
+      );
+      if (health?.status === "ok") {
+        healthy = true;
+        break;
+      }
+      await sleep(500);
+    }
+    if (healthy) {
+      pyChild = child;
+      break;
+    }
+    console.warn(
+      `[start] python service did not become healthy on port ${workingPyPort} — retrying on ${workingPyPort + 1}.`,
+    );
+    try {
+      child.kill("SIGKILL");
+    } catch {}
+    workingPyPort += 1;
+    writePortsFile(appPort, workingPyPort, opencodePort);
+  }
+  if (!pyChild) {
+    console.error(
+      "[start] python service failed to start on any port — check the python-service logs above.",
+    );
+    try {
+      nextChild.kill("SIGKILL");
+    } catch {}
+    process.exit(1);
+  }
+  if (workingPyPort !== requestedPort) {
+    console.error(
+      `[start] port ${requestedPort} was unusable — running the Python service on ${workingPyPort} instead. ` +
+        "(A reboot clears stale Windows socket entries.)",
+    );
+  }
 
   const cleanup = (signal) => {
     clearPortsFile();

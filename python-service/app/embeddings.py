@@ -1,29 +1,38 @@
 """Embedding model + persistent vector store.
 
 A single Chroma collection holds chunks for every project, keyed by the
-`projectId` metadata field — simpler to reconcile than one collection per
+`projectId` metadata field �?" simpler to reconcile than one collection per
 project (see job_queue.py's full-replace-by-project sync).
+
+chromadb / sentence-transformers are imported lazily (on first model/collection
+use): their imports cost seconds, and this module is imported at uvicorn boot
+via main.py / job_queue.py. Deferring them keeps the service's boot time
+dominated by FastAPI alone.
 """
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import chromadb
-from sentence_transformers import SentenceTransformer
+if TYPE_CHECKING:
+    import chromadb
+    from sentence_transformers import SentenceTransformer
 
 MODEL_NAME = os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 STORE_DIR = Path(__file__).parent.parent / "store" / "chroma"
 COLLECTION_NAME = "masarflow"
 
 _model: SentenceTransformer | None = None
-_collection = None
+_collection: chromadb.Collection | None = None
 
 
 def get_model() -> SentenceTransformer:
     global _model
     if _model is None:
+        from sentence_transformers import SentenceTransformer
+
         _model = SentenceTransformer(MODEL_NAME)
     return _model
 
@@ -31,9 +40,11 @@ def get_model() -> SentenceTransformer:
 def get_collection(store_dir: Path | None = None):
     """Returns the shared Chroma collection, creating it (cosine space) on
     first use. `store_dir` (or the module-level STORE_DIR) is overridable so
-    tests can point at a temp dir — resolved at call time, not import time."""
+    tests can point at a temp dir �?" resolved at call time, not import time."""
     global _collection
     if _collection is None:
+        import chromadb
+
         resolved = store_dir or STORE_DIR
         resolved.mkdir(parents=True, exist_ok=True)
         client = chromadb.PersistentClient(path=str(resolved))

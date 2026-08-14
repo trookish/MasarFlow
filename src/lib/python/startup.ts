@@ -13,7 +13,7 @@
 // dynamically shifted port.
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 
@@ -39,6 +39,11 @@ const GLOBAL_KEY = "__masarflowPythonServiceState";
 const MAX_TAIL = 40;
 const DEFAULT_URL = "http://127.0.0.1:8000";
 const PORT_SCAN_RANGE = 100;
+/** How long the launcher-managed service may take to answer /health. */
+const MANAGED_READY_DEADLINE_MS = 120_000;
+/** Grace window before the death-watch declares the managed service failed. */
+const MANAGED_DOWN_GRACE_MS = 10_000;
+const PORTS_FILE = ".masarflow" + path.sep + "run-ports.json";
 
 // The repo root is runtime data (wherever the app is launched from), so it
 // must be resolved dynamically; the ignore comment stops Turbopack from
@@ -51,6 +56,38 @@ const venvPython = path.join(pyDir, ".venv", venvBin, venvExe);
 
 function resolveServiceUrl(): string {
   return process.env.PYTHON_SERVICE_URL?.trim() || DEFAULT_URL;
+}
+
+/**
+ * Set by scripts/start.mjs (`MASARFLOW_PYTHON_MANAGED=1`): the launcher owns
+ * the Python process. The app must never spawn a second uvicorn — a stale
+ * health probe racing the launcher's boot can win the port and kill the whole
+ * stack with EADDRINUSE — so startup polls instead of spawning, and follows
+ * port shifts through .masarflow/run-ports.json.
+ */
+function isLauncherManaged(): boolean {
+  return process.env.MASARFLOW_PYTHON_MANAGED === "1";
+}
+
+/** The live python port the launcher published (null when unknown). */
+function readManagedPythonPort(): number | null {
+  try {
+    const file = path.join(root, PORTS_FILE);
+    if (!existsSync(file)) return null;
+    const raw = JSON.parse(readFileSync(file, "utf8")) as {
+      python?: number;
+    };
+    return typeof raw.python === "number" ? raw.python : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Where the launcher-managed service actually answers right now. */
+function managedServiceUrl(): string {
+  const port = readManagedPythonPort();
+  if (port) return `http://127.0.0.1:${port}`;
+  return resolveServiceUrl();
 }
 
 function resolvePort(): string {
@@ -101,6 +138,9 @@ interface ProcessState {
   stdout: OutputTail;
   stderr: OutputTail;
   startedAt: number | null;
+  /** Generation token for the launcher-managed watch loop (bumped on restart
+   *  so a superseded watcher stops and never overwrites newer state). */
+  watchToken: number;
 }
 
 /** The single shared manager instance, created lazily. */
@@ -118,6 +158,7 @@ function svc(): ProcessState {
     stdout: new OutputTail(),
     stderr: new OutputTail(),
     startedAt: null,
+    watchToken: 0,
   };
   g[GLOBAL_KEY] = fresh;
   return fresh;
@@ -141,18 +182,20 @@ function summarizeError(): string | null {
   return null;
 }
 
-/** The URL the app-managed service actually answers on right now. */
+/** The URL the service actually answers on right now. */
 function activeUrl(): string {
+  if (isLauncherManaged()) return managedServiceUrl();
   return `http://127.0.0.1:${svc().port ?? resolvePort()}`;
 }
 
 /**
- * The URL /api/python/* proxies should target. Returns the managed service's
- * live URL while it's up (so the app follows a dynamically shifted port), or
- * null when nothing managed is running (callers fall back to the env default).
+ * The URL /api/python/* proxies should target. Returns the live service URL
+ * while it's up (so the app follows a dynamically shifted port), or null when
+ * nothing is running (callers fall back to the env default).
  */
 export function getManagedServiceUrl(): string | null {
-  if (svc().state === "starting" || svc().state === "running") {
+  const s = svc();
+  if (s.state === "starting" || s.state === "running") {
     return activeUrl();
   }
   return null;
@@ -171,17 +214,26 @@ function snapshot(): PythonStartupStatus {
   };
 }
 
-async function probeHealth(timeoutMs = 800): Promise<boolean> {
+async function probeUrl(url: string, timeoutMs = 800): Promise<boolean> {
   try {
-    const res = await fetch(`${resolveServiceUrl()}/health`, {
+    const res = await fetch(`${url}/health`, {
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) return false;
-    const data = (await res.json()) as { ok?: boolean };
-    return data.ok === true;
+    const data = (await res.json()) as { ok?: boolean; status?: string };
+    // The raw python service answers `{"status": "ok", ...}`; the Next proxy
+    // route rewrites it to `{ok: true, ...}`. Accept both.
+    return data.ok === true || data.status === "ok";
   } catch {
     return false;
   }
+}
+
+function probeHealth(timeoutMs = 800): Promise<boolean> {
+  return probeUrl(
+    isLauncherManaged() ? managedServiceUrl() : resolveServiceUrl(),
+    timeoutMs,
+  );
 }
 
 function isPortInUse(port: number): Promise<boolean> {
@@ -284,12 +336,83 @@ function spawnService(): PythonStartupStatus {
 }
 
 /**
+ * Launcher-managed mode: the Python process belongs to scripts/start.mjs, so
+ * the app only watches it. The watch follows the published port (it shifts
+ * forward when the configured one is squatted), flips the state to "failed"
+ * when the service never becomes healthy or dies, and is superseded by a
+ * newer watch on restart (token check).
+ */
+async function watchManagedPython(token: number): Promise<void> {
+  const current = svc();
+  const sleepMs = (ms: number) =>
+    new Promise<void>((r) => setTimeout(r, ms));
+
+  const readyDeadline = Date.now() + MANAGED_READY_DEADLINE_MS;
+  let healthy = false;
+  while (current.watchToken === token && Date.now() < readyDeadline) {
+    if (await probeHealth(1000)) {
+      healthy = true;
+      break;
+    }
+    await sleepMs(500);
+  }
+  if (current.watchToken !== token) return; // superseded by a restart
+  if (!healthy) {
+    current.state = "failed";
+    current.spawnError =
+      "The launcher-managed Python service did not become healthy — check the launcher terminal for errors.";
+    return;
+  }
+
+  // Death-watch: keep polling; a short unavailability (launcher restarting the
+  // service) is tolerated within the grace window, anything longer is a
+  // failure the app surfaces with Retry.
+  while (current.watchToken === token) {
+    await sleepMs(2000);
+    if (await probeHealth(1000)) continue;
+    let downFor = 0;
+    while (current.watchToken === token && downFor < MANAGED_DOWN_GRACE_MS) {
+      await sleepMs(2000);
+      downFor += 2000;
+      if (await probeHealth(1000)) break;
+    }
+    if (current.watchToken !== token) return;
+    if (!(await probeHealth(1000))) {
+      current.state = "failed";
+      current.spawnError =
+        "The launcher-managed Python service stopped — restart the app from the launcher.";
+      return;
+    }
+  }
+}
+
+/**
  * Ensures the Python service is running: if it's already healthy (e.g. the
  * user started it manually, or an orphan from a dev-server reload), no new
- * process is spawned. Idempotent — concurrent calls share one spawn.
+ * process is spawned. Idempotent — concurrent calls share one spawn. In
+ * launcher-managed mode nothing is spawned at all — the launcher owns the
+ * process, so this only (re)starts the watch.
  */
 export async function startPythonService(): Promise<PythonStartupStatus> {
   const current = svc();
+  if (isLauncherManaged()) {
+    if (current.state === "starting" || current.state === "running") {
+      return snapshot();
+    }
+    current.state = "starting";
+    current.exitCode = null;
+    current.exitSignal = null;
+    current.spawnError = null;
+    current.startedAt = Date.now();
+    // Bump the token first so any older watch gives up before it can write.
+    const token = ++current.watchToken;
+    void watchManagedPython(token);
+    // Report "running" immediately (matching the app-managed spawn, which
+    // also returns before uvicorn answers): the client's health step polls
+    // until the service actually answers.
+    current.state = "running";
+    return snapshot();
+  }
   if (alive(current.child)) return snapshot();
   if (startPromise) return startPromise;
 
@@ -318,9 +441,15 @@ export async function startPythonService(): Promise<PythonStartupStatus> {
 /**
  * Clean restart for the "Retry now" button: kill any child, then fall back to
  * the same start logic (health pre-check first, so an already-running manual
- * instance is reused instead of causing a port conflict).
+ * instance is reused instead of causing a port conflict). In launcher-managed
+ * mode the process can't be killed from here — the watch is simply restarted.
  */
 export async function restartPythonService(): Promise<PythonStartupStatus> {
+  if (isLauncherManaged()) {
+    svc().watchToken++; // cancel any in-flight watch
+    svc().state = "idle";
+    return startPythonService();
+  }
   if (startPromise) await startPromise;
   const current = svc();
 
