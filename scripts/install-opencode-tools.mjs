@@ -15,7 +15,7 @@
  *
  * `scripts/start.mjs` calls installOpencodeTools() automatically before
  * spawning `opencode serve` (so it always has the current tool set). Run it
- * manually (`npm run tools:install`) after starting your own opencode server
+ * manually (`pnpm run tools:install`) after starting your own opencode server
  * — then RESTART the server so it picks the tools up.
  *
  * The generated tool files use Node's built-in TypeScript type stripping —

@@ -5,7 +5,7 @@
  * Ensures the python-service venv exists (creates + pip-installs on first
  * run), then starts the Next.js production server and the uvicorn AI service
  * together, prefixing each process's output. Kills both when either exits or
- * on Ctrl-C. Mirrors `npm run dev:full` but for `next start`.
+ * on Ctrl-C. Mirrors `pnpm run dev:full` but for `next start`.
  *
  * Requires Python 3.11+ on PATH and a prior `next build`.
  */
@@ -86,8 +86,8 @@ async function fetchJson(url, timeoutMs = 3000) {
 }
 
 /**
- * Locate the opencode binary: OPENCODE_BIN override → npm global install
- * (opencode-ai ships the compiled binary) → PATH.
+ * Locate the opencode binary: OPENCODE_BIN override → npm/pnpm global
+ * install (opencode-ai ships the compiled binary) → PATH.
  */
 function resolveOpencodeBin() {
   if (process.env.OPENCODE_BIN) return process.env.OPENCODE_BIN;
@@ -113,12 +113,37 @@ function resolveOpencodeBin() {
       ).trim();
       candidates.push(path.join(npmRoot, "opencode-ai", "bin", "opencode.exe"));
     } catch {}
+    // Same for a pnpm global install (PNPM_HOME or `pnpm root -g`).
+    for (const pnpmRoot of [
+      process.env.PNPM_HOME,
+      (() => {
+        try {
+          return execFileSync("cmd.exe", ["/d", "/s", "/c", "pnpm root -g"], {
+            encoding: "utf8",
+          }).trim();
+        } catch {
+          return "";
+        }
+      })(),
+    ]) {
+      if (pnpmRoot) {
+        candidates.push(
+          path.join(pnpmRoot, "opencode-ai", "bin", "opencode.exe"),
+        );
+      }
+    }
   } else {
     try {
       const npmRoot = execFileSync("npm", ["root", "-g"], {
         encoding: "utf8",
       }).trim();
       candidates.push(path.join(npmRoot, "opencode-ai", "bin", "opencode"));
+    } catch {}
+    try {
+      const pnpmRoot = execFileSync("pnpm", ["root", "-g"], {
+        encoding: "utf8",
+      }).trim();
+      candidates.push(path.join(pnpmRoot, "opencode-ai", "bin", "opencode"));
     } catch {}
   }
   for (const exe of candidates) {
@@ -365,7 +390,7 @@ async function verifyWorkspaceTools(baseUrl) {
     const missing = spot.filter((name) => !ids.includes(name));
     if (missing.length === spot.length) {
       console.warn(
-        "[opencode] the workspace functions are NOT registered — the server was already running and needs a restart to pick up the installed tools (or run `npm run tools:install` and restart it).",
+        "[opencode] the workspace functions are NOT registered — the server was already running and needs a restart to pick up the installed tools (or run `pnpm run tools:install` and restart it).",
       );
     } else if (missing.length) {
       console.warn(
@@ -516,7 +541,7 @@ async function main() {
   try {
     nextCli = require.resolve("next/dist/bin/next");
   } catch {
-    console.error("[start] next is not installed — run `npm install` first.");
+    console.error("[start] next is not installed — run `pnpm install` first.");
     process.exit(1);
   }
 
@@ -530,11 +555,11 @@ async function main() {
     const prerenderManifest = path.join(root, ".next", "prerender-manifest.json");
     if (!existsSync(buildId) || !existsSync(prerenderManifest)) {
       console.error(
-        "[start] no production build found in .next — the last `npm run build` did not complete.",
+        "[start] no production build found in .next — the last `pnpm run build` did not complete.",
       );
-      console.error("[start]   Run `npm run build` and make sure no other MasarFlow server is running");
+      console.error("[start]   Run `pnpm run build` and make sure no other MasarFlow server is running");
       console.error("[start]   (stop the app first — a running dev/prod server locks the .next folder),");
-      console.error("[start]   then run `npm start` again.");
+      console.error("[start]   then run `pnpm start` again.");
       process.exit(1);
     }
   }

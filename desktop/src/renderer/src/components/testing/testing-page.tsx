@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/kbd";
 
-const npm = (script: string): { file: string; args: string[] } =>
+const pnpm = (script: string): { file: string; args: string[] } =>
   window.masarFlow.platform === "win32"
     ? { file: "cmd.exe", args: ["/c", script] }
     : { file: "/bin/sh", args: ["-lc", script] };
@@ -24,25 +24,25 @@ function makeTests(targetDir: string): TestDefinition[] {
       key: "lint",
       name: "Lint",
       description: "ESLint (Next.js + TypeScript rules)",
-      command: "npm run lint",
+      command: "pnpm run lint",
     },
     {
       key: "typecheck",
       name: "Typecheck",
       description: "TypeScript strict check (tsc --noEmit)",
-      command: "npm run typecheck",
+      command: "pnpm run typecheck",
     },
     {
       key: "unit",
       name: "Unit tests",
       description: "Vitest unit tests (tests/unit/)",
-      command: "npm test",
+      command: "pnpm test",
     },
     {
       key: "e2e",
       name: "E2E",
       description: "Playwright end-to-end smoke tests",
-      command: "npm run e2e",
+      command: "pnpm run e2e",
       hint: "Requires a production build first (Run → Production → Build).",
     },
     {
@@ -89,8 +89,8 @@ export function TestingPage() {
 
   const runTest = async (t: TestDefinition): Promise<void> => {
     const cwd = t.run?.cwd ?? targetDir;
-    const file = t.run?.file ?? npm(t.command).file;
-    const args = t.run?.args ?? npm(t.command).args;
+    const file = t.run?.file ?? pnpm(t.command).file;
+    const args = t.run?.args ?? pnpm(t.command).args;
     const s: SessionInfo = await window.masarFlow.session.start({
       label: t.command,
       kind: "test",

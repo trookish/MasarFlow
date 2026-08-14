@@ -595,7 +595,7 @@ export function ChatView() {
           setModels(current);
         } catch {
           setSendError(
-            "The AI agent service is unavailable — start OpenCode (or run `npm run dev:full`) and try again.",
+            "The AI agent service is unavailable — start OpenCode (or run `pnpm run dev:full`) and try again.",
           );
           return;
         }
@@ -1797,7 +1797,7 @@ export function ChatView() {
           </Button>
           {backend === "opencode" && !opencodeHealthy && (
             <Tooltip
-              label="The AI agent service is unreachable — start OpenCode or run `npm run dev:full`."
+              label="The AI agent service is unreachable — start OpenCode or run `pnpm run dev:full`."
               side="bottom"
             >
               <Button
@@ -1850,7 +1850,7 @@ export function ChatView() {
             description={
               opencodeHealthy
                 ? "Pick a backend from the header (OpenCode · API · Local Ollama), choose a provider and model, then send a message. OpenCode manages its own provider keys (`opencode auth`); API keys you add live in your browser only."
-                : "The OpenCode server isn't reachable — switch a chat to the API or Local (Ollama) backend, or start OpenCode with `npm run dev:full` (it spawns `opencode serve`)."
+                : "The OpenCode server isn't reachable — switch a chat to the API or Local (Ollama) backend, or start OpenCode with `pnpm run dev:full` (it spawns `opencode serve`)."
             }
             action={
               <Button

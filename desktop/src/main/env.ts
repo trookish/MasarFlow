@@ -187,7 +187,7 @@ export function servicePorts(targetDir: string): { appPort: number; pythonPort: 
 
 /**
  * Ports a live MasarFlow run actually bound to, as published by
- * scripts/start.mjs. The launcher spawns `npm run dev:full` / `npm start`,
+ * scripts/start.mjs. The launcher spawns `pnpm run dev:full` / `pnpm start`,
  * which shift ports forward when stale listeners squat the configured ones —
  * polling the configured ports would keep the chips red forever.
  */

@@ -2,7 +2,7 @@
 /**
  * Real end-to-end verification of the OpenCode chat backend.
  *
- * Requires the dev stack running (Next on :3000 via `npm run dev:full`, plus
+ * Requires the dev stack running (Next on :3000 via `pnpm run dev:full`, plus
  * an OpenCode server reachable at OPENCODE_BASE_URL with at least one
  * connected provider). Exercises the REAL OpenCode server + a REAL model:
  * streaming text, tool execution, refresh recovery, and the

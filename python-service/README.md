@@ -3,7 +3,7 @@
 Required runtime. Provides embeddings, semantic search, and RAG context
 retrieval to the Next.js app via `src/app/api/python/*` proxy routes. The
 workspace shell holds on a setup screen until this service is healthy
-(`npm start` and `npm run dev:full` launch it for you).
+(`pnpm start` and `pnpm run dev:full` launch it for you).
 
 ## Setup
 
@@ -34,7 +34,7 @@ app. Use a plain `--reload` (or none) only if you move `STORE_DIR` outside
 Or, from the repo root, run both Next.js and this service together:
 
 ```
-npm run dev:full
+pnpm run dev:full
 ```
 
 Set `PYTHON_SERVICE_URL` in `.env.local` (see `.env.local.example` at the repo

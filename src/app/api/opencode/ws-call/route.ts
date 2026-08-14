@@ -30,7 +30,7 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json(
       {
         error:
-          "The MasarFlow tool bridge is not configured (MASARFLOW_BRIDGE_SECRET missing) — restart via npm run dev:full.",
+          "The MasarFlow tool bridge is not configured (MASARFLOW_BRIDGE_SECRET missing) — restart via pnpm run dev:full.",
       },
       { status: 503 },
     );

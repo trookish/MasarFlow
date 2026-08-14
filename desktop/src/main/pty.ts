@@ -144,7 +144,7 @@ class PtyManager extends EventEmitter<SessionEvents> {
     if (!s) return;
     if (s.info.status === "running") {
       if (process.platform === "win32") {
-        // Taskkill with /T kills the whole process tree (npm → node → children).
+        // Taskkill with /T kills the whole process tree (pnpm → node → children).
         try {
           execFile("taskkill", ["/pid", String(s.pty.pid), "/T", "/F"]);
         } catch {

@@ -366,7 +366,7 @@ test("OpenCode permission requests appear in the ApprovalCard and are forwarded"
         permissionId: "prm_1",
         permissionType: "bash",
         title: "Run command",
-        pattern: "npm run build",
+        pattern: "pnpm run build",
       },
       { type: "text", text: "Building now…" },
       { type: "message_id", messageId: "msg_e2e_2" },
@@ -383,7 +383,7 @@ test("OpenCode permission requests appear in the ApprovalCard and are forwarded"
   await composer.press("Enter");
 
   await expect(page.getByText("Run this command?").first()).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByText("npm run build")).toBeVisible();
+  await expect(page.getByText("pnpm run build")).toBeVisible();
   await page.getByRole("button", { name: "Approve" }).click();
 
   // The card clears and the reply streams.

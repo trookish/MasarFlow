@@ -26,8 +26,8 @@ export default defineConfig({
   ],
   webServer: {
     // Run against the production build for fast, deterministic pages (no
-    // dev-mode on-demand compilation). Run `npm run build` first.
-    command: "npm run start",
+    // dev-mode on-demand compilation). Run `pnpm run build` first.
+    command: "pnpm run start",
     url: "http://localhost:3000",
     timeout: 120_000,
     reuseExistingServer: true,

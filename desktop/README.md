@@ -19,14 +19,14 @@ desktop/
 
 ## Features
 
-- **Setup** — checks Node.js 20+, npm, Python 3.11+, `node_modules`,
-  `.env.local`, and the Python venv; installs whatever is missing (`npm
+- **Setup** — checks Node.js 20+, pnpm, Python 3.11+, `node_modules`,
+  `.env.local`, and the Python venv; installs whatever is missing (`pnpm
   install`, venv + pip) with live output in the terminal panel. Also
   compares the installed project version against the latest GitHub release
   and can update the project in place (`git pull` + dependency reinstall).
   Runs automatically on first launch for a target directory.
-- **Run** — Development (`npm run dev:full`) and Production (`npm run build`
-  → `npm start`) modes with a pill-tab switch, live status chip, port health
+- **Run** — Development (`pnpm run dev:full`) and Production (`pnpm run build`
+  → `pnpm start`) modes with a pill-tab switch, live status chip, port health
   indicators (:3000 app / :8000 Python AI), open-in-browser, and Stop, which
   kills the entire process tree (`taskkill /T /F` on Windows).
 - **Configuration** — form for every `.env.local` variable (with enable/
@@ -43,7 +43,7 @@ desktop/
 
 ## Requirements
 
-- **Node.js 20+** and **npm** (to build the launcher)
+- **Node.js 20+** and **pnpm** (to build the launcher)
 - The MasarFlow repo itself (the launcher detects it automatically: in the
   repo's `desktop/` folder it walks up to the repo root; the packaged exe
   uses `PORTABLE_EXECUTABLE_DIR`)
@@ -52,21 +52,21 @@ desktop/
 
 | Script | Purpose |
 | --- | --- |
-| `npm run dev` | electron-vite dev server (HMR for the renderer, reloads for main) |
-| `npm run build` | Production build of main/preload/renderer into `out/` |
-| `npm run start` | Run the built app (`electron-vite preview`) |
-| `npm run dist` | Build + package NSIS installer and portable exe into `dist/` |
-| `npm run dist:dir` | Build + unpacked app folder only |
-| `npm run typecheck` | `tsc --noEmit` for main/preload and renderer |
+| `pnpm run dev` | electron-vite dev server (HMR for the renderer, reloads for main) |
+| `pnpm run build` | Production build of main/preload/renderer into `out/` |
+| `pnpm run start` | Run the built app (`electron-vite preview`) |
+| `pnpm run dist` | Build + package NSIS installer and portable exe into `dist/` |
+| `pnpm run dist:dir` | Build + unpacked app folder only |
+| `pnpm run typecheck` | `tsc --noEmit` for main/preload and renderer |
 
 From the repo root, the same commands are available as
-`npm run desktop:dev`, `desktop:build`, `desktop:start`, `desktop:dist`, and
+`pnpm run desktop:dev`, `desktop:build`, `desktop:start`, `desktop:dist`, and
 `desktop:typecheck`.
 
 ## Releasing
 
 ```bash
-npm run dist
+pnpm run dist
 ```
 
 - `dist/MasarFlow Launcher Setup <ver>.exe` — NSIS installer
@@ -81,7 +81,7 @@ location, so a plain desktop shortcut works out of the box.
 The packaged executables are **not code-signed**, so Windows SmartScreen shows
 "Windows protected your PC" the first time they run — on every release
 (including the older 0.1.2.x installers). This is expected for unsigned apps;
-running from source (`npm start`) never warns because it uses Electron's own
+running from source (`pnpm start`) never warns because it uses Electron's own
 signed binary.
 
 To run a downloaded installer or portable exe:
@@ -106,7 +106,7 @@ The main process includes two env-gated harnesses useful for CI:
 $env:MASARFLOW_LAUNCHER_SELFTEST = "$env:TEMP\selftest.log"   # pty echo/kill + dev:full + optional build/start
 $env:MASARFLOW_LAUNCHER_SELFTEST_PROD = "1"                   # add the production build+start phase
 $env:MASARFLOW_LAUNCHER_GUITEST = "$env:TEMP\guitest.log"     # DOM dump + click-through run/stop cycle
-npm start
+pnpm start
 ```
 
 ## Notes

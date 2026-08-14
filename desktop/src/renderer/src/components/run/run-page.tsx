@@ -193,7 +193,7 @@ export function RunPage() {
                 </Badge>
               </div>
               <CardDescription>
-                Runs <code className="font-mono text-[11px] text-primary">npm run dev:full</code> — Next.js dev server
+                Runs <code className="font-mono text-[11px] text-primary">pnpm run dev:full</code> — Next.js dev server
                 with hot reload, plus the Python AI service and the OpenCode chat backend.
               </CardDescription>
             </CardHeader>
@@ -244,7 +244,7 @@ export function RunPage() {
                   )}
                 </div>
                 <CardDescription>
-                  Runs <code className="font-mono text-[11px] text-primary">npm run build</code> — Next.js production build. Required once before starting.
+                  Runs <code className="font-mono text-[11px] text-primary">pnpm run build</code> — Next.js production build. Required once before starting.
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex items-center gap-2">
@@ -274,7 +274,7 @@ export function RunPage() {
                   </Badge>
                 </div>
                 <CardDescription>
-                  Runs <code className="font-mono text-[11px] text-primary">npm start</code> — the production launcher
+                  Runs <code className="font-mono text-[11px] text-primary">pnpm start</code> — the production launcher
                   (Next.js + Python service + OpenCode server).
                 </CardDescription>
               </CardHeader>

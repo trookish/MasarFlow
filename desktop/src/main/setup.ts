@@ -121,9 +121,9 @@ function checkNode(): SetupStep {
   return step;
 }
 
-function checkNpm(): SetupStep {
-  // On Windows `npm` is npm.cmd — spawnSync needs the real file or shell:true.
-  const candidates = process.platform === "win32" ? ["npm.cmd", "npm"] : ["npm"];
+function checkPnpm(): SetupStep {
+  // On Windows `pnpm` is pnpm.cmd — spawnSync needs the real file or shell:true.
+  const candidates = process.platform === "win32" ? ["pnpm.cmd", "pnpm"] : ["pnpm"];
   let code = -1;
   let out = "";
   for (const file of candidates) {
@@ -136,14 +136,14 @@ function checkNpm(): SetupStep {
     code = res.code;
   }
   const step: SetupStep = {
-    key: "npm",
-    label: "npm",
+    key: "pnpm",
+    label: "pnpm",
     description: "Package manager for installing MasarFlow dependencies.",
     status: "missing",
   };
   if (code !== 0) {
     step.status = "fail";
-    step.detail = "npm not found. It ships with Node.js — reinstall Node.js 20+.";
+    step.detail = "pnpm not found. Install it with `npm install -g pnpm` or `corepack enable pnpm`, then restart the launcher.";
   } else {
     step.status = "pass";
     step.detail = `Found v${out}`;
@@ -275,7 +275,7 @@ function checkDeps(targetDir: string): SetupStep {
     step.detail = "node_modules present.";
   } else {
     step.status = existsSync(join(targetDir, "node_modules")) ? "fail" : "missing";
-    step.detail = "Run npm install to install dependencies.";
+    step.detail = "Run pnpm install to install dependencies.";
   }
   return step;
 }
@@ -330,12 +330,12 @@ async function checkAll(targetDir: string): Promise<CheckResults> {
   const project = checkProject(targetDir);
   const version = await checkVersion(targetDir);
   const node = checkNode();
-  const npm = checkNpm();
+  const pnpm = checkPnpm();
   const { step: python, python: pyInfo } = checkPython();
   const deps = checkDeps(targetDir);
   const envfile = checkEnvFile(targetDir);
   const venv = checkVenv(targetDir);
-  return { steps: [project, version, node, npm, python, deps, envfile, venv], python: pyInfo };
+  return { steps: [project, version, node, pnpm, python, deps, envfile, venv], python: pyInfo };
 }
 
 function buildState(targetDir: string, steps: SetupStep[]): SetupState {
@@ -448,13 +448,13 @@ class SetupEngine {
       const depsOk = await this.runInstallSession(targetDir, {
         label: "Install updated dependencies",
         kind: "setup",
-        command: "npm install",
+        command: "pnpm install",
         file: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
-        args: process.platform === "win32" ? ["/c", "npm install"] : ["-lc", "npm install"],
+        args: process.platform === "win32" ? ["/c", "pnpm install"] : ["-lc", "pnpm install"],
         cwd: targetDir,
       });
       if (!depsOk) {
-        return { ok: false, error: "npm install after the update failed — see the terminal output above." };
+        return { ok: false, error: "pnpm install after the update failed — see the terminal output above." };
       }
 
       const res = await checkAll(targetDir);
@@ -508,11 +508,11 @@ class SetupEngine {
         ok = this.createEnvFile(targetDir);
       } else if (key === "deps") {
         ok = await this.runInstallSession(targetDir, {
-          label: "npm install",
+          label: "pnpm install",
           kind: "setup",
-          command: "npm install",
+          command: "pnpm install",
           file: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
-          args: process.platform === "win32" ? ["/c", "npm install"] : ["-lc", "npm install"],
+          args: process.platform === "win32" ? ["/c", "pnpm install"] : ["-lc", "pnpm install"],
           cwd: targetDir,
         });
       } else if (key === "venv" && res.python) {

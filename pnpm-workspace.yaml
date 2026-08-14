@@ -1,0 +1,10 @@
+packages:
+  - "."
+  - "desktop"
+
+allowBuilds:
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+  node-pty: true
+  unrs-resolver: true

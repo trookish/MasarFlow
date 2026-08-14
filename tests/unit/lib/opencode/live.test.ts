@@ -3,7 +3,7 @@
  * OPENCODE_BASE_URL to point at a running `opencode serve` instance with at
  * least one connected provider (OPENCODE_SMOKE_PROVIDER/OPENCODE_SMOKE_MODEL
  * select it; defaults to opencode-go/deepseek-v4-flash). Skipped otherwise —
- * CI and normal `npm test` runs stay hermetic.
+ * CI and normal `pnpm test` runs stay hermetic.
  */
 
 import { afterAll, describe, expect, it } from "vitest";

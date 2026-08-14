@@ -5,7 +5,7 @@ import { appendFileSync } from "node:fs";
  * GUI smoke test: dump DOM state from the real window to a log file.
  * With MASARFLOW_LAUNCHER_GUITEST_RUN=1 it also clicks "Start development",
  * waits for port 3000, then clicks "Stop" and verifies teardown.
- * Triggered with MASARFLOW_LAUNCHER_GUITEST=<logfile> npm start
+ * Triggered with MASARFLOW_LAUNCHER_GUITEST=<logfile> pnpm start
  */
 export function startGuiTest(win: BrowserWindow): void {
   const logFile = process.env.MASARFLOW_LAUNCHER_GUITEST;

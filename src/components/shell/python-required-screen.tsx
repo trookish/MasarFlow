@@ -164,7 +164,7 @@ export function PythonRequiredScreen() {
                   Set up the Python environment once, then retry:
                 </p>
                 <pre className="mt-2 overflow-x-auto rounded-md border border-border bg-muted/50 p-3 text-xs text-muted-foreground">
-                  {`npm run setup:python   # creates python-service/.venv + installs deps`}
+                  {`pnpm run setup:python   # creates python-service/.venv + installs deps`}
                 </pre>
               </div>
             )}

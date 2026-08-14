@@ -36,7 +36,7 @@ export type SetupStepKey =
   | "project"
   | "version"
   | "node"
-  | "npm"
+  | "pnpm"
   | "python"
   | "deps"
   | "envfile"

@@ -8,7 +8,7 @@ import { settings } from "./settings";
 
 /**
  * Scripted smoke test for the main process. Run with
- * MASARFLOW_LAUNCHER_SELFTEST=<logfile> npm start
+ * MASARFLOW_LAUNCHER_SELFTEST=<logfile> pnpm start
  */
 export function maybeRunSelfTest(): void {
   const logFile = process.env.MASARFLOW_LAUNCHER_SELFTEST;
@@ -84,9 +84,9 @@ export function maybeRunSelfTest(): void {
       const info = ptyManager.start({
         label: "selftest dev:full",
         kind: "run",
-        command: "npm run dev:full",
+        command: "pnpm run dev:full",
         file: "cmd.exe",
-        args: ["/c", "npm run dev:full"],
+        args: ["/c", "pnpm run dev:full"],
         cwd: targetDir,
       });
       const deadline = Date.now() + 240_000;
@@ -125,14 +125,14 @@ export function maybeRunSelfTest(): void {
     void devOk;
 
     if (process.env.MASARFLOW_LAUNCHER_SELFTEST_PROD === "1") {
-      // 4. Production: npm run build → npm start → port 3000 → kill.
+      // 4. Production: pnpm run build → pnpm start → port 3000 → kill.
       const buildOk = await new Promise<boolean>((resolvePromise) => {
         const info = ptyManager.start({
           label: "selftest build",
           kind: "build",
-          command: "npm run build",
+          command: "pnpm run build",
           file: "cmd.exe",
-          args: ["/c", "npm run build"],
+          args: ["/c", "pnpm run build"],
           cwd: targetDir,
         });
         const onExit = (p: SessionExitPayload): void => {
@@ -155,9 +155,9 @@ export function maybeRunSelfTest(): void {
         const info = ptyManager.start({
           label: "selftest prod",
           kind: "run",
-          command: "npm start",
+          command: "pnpm start",
           file: "cmd.exe",
-          args: ["/c", "npm start"],
+          args: ["/c", "pnpm start"],
           cwd: targetDir,
         });
         const deadline = Date.now() + 240_000;

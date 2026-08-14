@@ -57,11 +57,11 @@ function startDev(autoOpen: boolean): SessionInfo | null {
   const dir = currentTargetDir();
   ptyManager.killKind("run");
   const session = ptyManager.start({
-    label: "npm run dev:full",
+    label: "pnpm run dev:full",
     kind: "run",
-    command: "npm run dev:full",
+    command: "pnpm run dev:full",
     file: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
-    args: process.platform === "win32" ? ["/c", "npm run dev:full"] : ["-lc", "npm run dev:full"],
+    args: process.platform === "win32" ? ["/c", "pnpm run dev:full"] : ["-lc", "pnpm run dev:full"],
     cwd: dir,
   });
   if (autoOpen) {
@@ -74,11 +74,11 @@ function startProd(autoOpen: boolean): SessionInfo | null {
   const dir = currentTargetDir();
   ptyManager.killKind("run");
   const session = ptyManager.start({
-    label: "npm start",
+    label: "pnpm start",
     kind: "run",
-    command: "npm start",
+    command: "pnpm start",
     file: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
-    args: process.platform === "win32" ? ["/c", "npm start"] : ["-lc", "npm start"],
+    args: process.platform === "win32" ? ["/c", "pnpm start"] : ["-lc", "pnpm start"],
     cwd: dir,
   });
   if (autoOpen) {
@@ -90,11 +90,11 @@ function startProd(autoOpen: boolean): SessionInfo | null {
 function buildProject(): SessionInfo | null {
   ptyManager.killKind("build");
   return ptyManager.start({
-    label: "npm run build",
+    label: "pnpm run build",
     kind: "build",
-    command: "npm run build",
+    command: "pnpm run build",
     file: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
-    args: process.platform === "win32" ? ["/c", "npm run build"] : ["-lc", "npm run build"],
+    args: process.platform === "win32" ? ["/c", "pnpm run build"] : ["-lc", "pnpm run build"],
     cwd: currentTargetDir(),
   });
 }

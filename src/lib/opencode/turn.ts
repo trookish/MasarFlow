@@ -352,7 +352,7 @@ export function runTurn(
           if (missing && missing.length > 0) {
             emit({
               type: "notice",
-              message: `The OpenCode server is missing MasarFlow's workspace functions (e.g. ${missing.slice(0, 3).join(", ")}). Restart it with \`npm run dev:full\` (or run \`npm run tools:install\`) so the agent can create and update notes, specs, and tasks in your project.`,
+              message: `The OpenCode server is missing MasarFlow's workspace functions (e.g. ${missing.slice(0, 3).join(", ")}). Restart it with \`pnpm run dev:full\` (or run \`pnpm run tools:install\`) so the agent can create and update notes, specs, and tasks in your project.`,
             });
           }
         }

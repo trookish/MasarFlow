@@ -331,7 +331,7 @@ export function SetupPage() {
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-sm font-medium">What initialization does</p>
           <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-            <li>• Installs Node dependencies (<code className="font-mono">npm install</code>) when node_modules is missing.</li>
+            <li>• Installs Node dependencies (<code className="font-mono">pnpm install</code>) when node_modules is missing.</li>
             <li>• Copies <code className="font-mono">.env.local.example</code> → <code className="font-mono">.env.local</code> when missing.</li>
             <li>• Creates <code className="font-mono">python-service/.venv</code> and installs the AI requirements (takes a few minutes the first time).</li>
             <li>• Everything streams live to the terminal panel below.</li>

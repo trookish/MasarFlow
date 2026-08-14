@@ -217,7 +217,7 @@ function spawnService(): PythonStartupStatus {
     current.exitSignal = null;
     current.spawnError =
       `Python venv not found at python-service/.venv — run ` +
-      "`npm run setup:python` once, then try again.";
+      "`pnpm run setup:python` once, then try again.";
     return snapshot();
   }
 
