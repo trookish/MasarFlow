@@ -83,4 +83,17 @@ describe("createEchoStripper", () => {
     expect(s.strip(" الآن؟ الجواب:")).toBe("الجواب:");
     expect(s.strip("والتفاصيل")).toBe("والتفاصيل");
   });
+
+  it("never touches later deltas once the echo diverges", () => {
+    const s = createEchoStripper("What can you see?");
+    expect(s.strip("What can you fix?")).toBe("fix?");
+    expect(s.strip("seen any bugs?")).toBe("seen any bugs?");
+  });
+
+  it("disarms permanently when a partial echo diverges", () => {
+    const s = createEchoStripper("What can you see?");
+    expect(s.strip("What can yo")).toBe("");
+    expect(s.strip("u help")).toBe("help"); // "u " still matched as echo, then divergence
+    expect(s.strip(" me please")).toBe(" me please"); // disarmed — untouched
+  });
 });

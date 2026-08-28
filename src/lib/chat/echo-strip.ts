@@ -32,10 +32,15 @@ const BOUNDARY_SKIP = /[\s.,!?;:…'"`)\]}>؟،؛]/;
 export function createEchoStripper(userText: string): EchoStripper {
   const target = norm(userText);
   let pos = 0;
+  // Set the first time matching provably diverges. From then on the echo
+  // either never existed or is already over — every later delta is real
+  // content and must pass through untouched (otherwise a later delta whose
+  // start happens to continue the stale target loses characters).
+  let dead = false;
 
   return {
     strip: (delta: string) => {
-      if (!target) return delta;
+      if (!target || dead) return delta;
       let out = "";
       let i = 0;
 
@@ -61,6 +66,7 @@ export function createEchoStripper(userText: string): EchoStripper {
           i++;
           continue;
         }
+        dead = true;
         break;
       }
 
@@ -85,6 +91,7 @@ export function createEchoStripper(userText: string): EchoStripper {
     },
     reset: () => {
       pos = 0;
+      dead = false;
     },
   };
 }
