@@ -105,6 +105,10 @@ export function findNode(tree: DockNode, id: string): DockNode | null {
  * The tabs/page node that currently holds `panelId` (tabs containing it in
  * pages, or the page node whose pageId it is). Null when absent.
  */
+export function findHolder(tree: DockNode, panelId: string): DockNode | null {
+  return findNodeContaining(tree, panelId);
+}
+
 function findNodeContaining(
   tree: DockNode,
   panelId: string,
@@ -459,4 +463,88 @@ export function normalizeTree(tree: DockNode): DockNode {
     case "page":
       return tree;
   }
+}
+
+/**
+ * Insert a payload node (from a floater — NOT currently in the tree) at
+ * `target` ("root" or node id) arriving from `zone`. Same insertion
+ * semantics as movePanel, minus the removal step:
+ * - zone "tab": merge the payload's pages into the target tabs node (or
+ *   convert a bare page target) and activate the payload's active page.
+ * - left/top: replace the target with split [payload, target];
+ *   right/bottom: split [target, payload].
+ * - target "root": wrap at the root level.
+ * - A placeholder-only root is REPLACED by the payload on a tab-merge (the
+ *   placeholder must not become a group member).
+ * - A stale target falls back to a root insert (no payload loss).
+ */
+export function insertPanel(
+  tree: DockNode,
+  payload: DockNode,
+  targetNodeId: string | "root",
+  zone: DockZone,
+): DockNode {
+  const isPlaceholderRoot =
+    tree.type === "page" && tree.pageId === PLACEHOLDER_PAGE_ID;
+
+  // Placeholder root + tab-merge: the payload replaces the tree wholesale.
+  if (isPlaceholderRoot && zone === "tab") return normalizeTree(payload);
+
+  if (targetNodeId === "root" || isPlaceholderRoot) {
+    if (isPlaceholderRoot && targetNodeId !== "root") {
+      // Stale target against an empty tree: fall back to root insert.
+      return insertAtRoot(tree, payload, zone);
+    }
+    return insertAtRoot(tree, payload, zone);
+  }
+
+  const target = findNode(tree, targetNodeId);
+  if (!target) return insertAtRoot(tree, payload, zone);
+
+  if (zone === "tab") {
+    return normalizeTree(
+      mapTreeNoNulls(tree, (node) => {
+        if (node.id !== targetNodeId) return node;
+        if (node.type === "tabs") {
+          const pages = [...node.pages];
+          for (const p of payloadPages(payload)) {
+            if (!pages.includes(p)) pages.push(p);
+          }
+          return {
+            type: "tabs",
+            id: node.id,
+            activePage: payloadPages(payload)[0] ?? node.activePage,
+            pages,
+          };
+        }
+        if (node.type === "page" && node.pageId !== PLACEHOLDER_PAGE_ID) {
+          return {
+            type: "tabs",
+            id: node.id,
+            activePage: payloadPages(payload)[0] ?? node.pageId,
+            pages: [node.pageId, ...payloadPages(payload)],
+          };
+        }
+        return node;
+      }),
+    );
+  }
+
+  // Edge zones: replace the target with a binary split around the payload.
+  return normalizeTree(
+    mapTreeNoNulls(tree, (node) => {
+      if (node.id !== targetNodeId) return node;
+      if (node.type === "split") return node;
+      const children =
+        zone === "left" || zone === "top" ? [payload, node] : [node, payload];
+      return {
+        type: "split",
+        id: newId("split"),
+        direction:
+          zone === "left" || zone === "right" ? "horizontal" : "vertical",
+        ratio: 0.5,
+        children,
+      };
+    }),
+  );
 }

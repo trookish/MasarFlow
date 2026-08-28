@@ -4,6 +4,8 @@ import {
   collectPages,
   findNode,
   focusPanel,
+  findHolder,
+  insertPanel,
   isFocusedIn,
   movePanel,
   normalizeTree,
@@ -447,5 +449,102 @@ describe("normalizeTree", () => {
     expect(normalized.type).toBe("page");
     if (normalized.type !== "page") return;
     expect(normalized.pageId).toBe("/dashboard");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// insertPanel (docking payloads that are not yet in the tree — floaters)
+// ---------------------------------------------------------------------------
+
+describe("insertPanel", () => {
+  const floatPayload = (id: string, pageId: string): DockNode =>
+    page(id, pageId);
+
+  it("inserts a page payload left of the target as a split", () => {
+    const tree = split("s1", "horizontal", 0.5, BRAIN, TASKS);
+    const inserted = insertPanel(
+      tree,
+      floatPayload("f-chat", "/chat"),
+      "p-tasks",
+      "left",
+    );
+    if (inserted.type !== "split") return expect.unreachable();
+    // Target replaced by a split: [payload, tasks].
+    expect(inserted.children[1].type).toBe("split");
+    if (inserted.children[1].type !== "split") return;
+    expect(inserted.children[1].children[0]).toEqual({
+      type: "page",
+      id: "f-chat",
+      pageId: "/chat",
+    });
+    expect(inserted.children[1].children[1]).toEqual(TASKS);
+    expect(collectPages(inserted)).toEqual(["/brain", "/chat", "/tasks"]);
+  });
+
+  it("inserts a tabs payload as a whole group at the root (left)", () => {
+    const tree = TASKS;
+    const groupPayload: DockNode = tabs("t-float", "/chat", [
+      "/chat",
+      "/search",
+    ]);
+    const inserted = insertPanel(tree, groupPayload, "root", "left");
+    if (inserted.type !== "split") return expect.unreachable();
+    expect(inserted.children[0]).toEqual(groupPayload);
+    expect(inserted.children[1]).toEqual(TASKS);
+  });
+
+  it("merges payload pages when zone is tab", () => {
+    const tree = BRAIN_TASKS_TABS;
+    const inserted = insertPanel(
+      tree,
+      tabs("t-f", "/chat", ["/chat", "/specs"]),
+      "t-a",
+      "tab",
+    );
+    if (inserted.type !== "tabs") return expect.unreachable();
+    expect(inserted.pages).toEqual(["/brain", "/tasks", "/chat", "/specs"]);
+    expect(inserted.activePage).toBe("/chat");
+  });
+
+  it("replaces a placeholder-only root when tab-merging onto root", () => {
+    const placeholder = page("ph", "/dashboard");
+    const inserted = insertPanel(
+      placeholder,
+      tabs("t-f", "/chat", ["/chat"]),
+      "root",
+      "tab",
+    );
+    // The placeholder must not become a group member; a 1-page tabs payload
+    // folds to a page (keeping the id) via normalize.
+    expect(inserted).toEqual(page("t-f", "/chat"));
+  });
+
+  it("stale target falls back to a root insert (no payload loss)", () => {
+    const tree = split("s1", "horizontal", 0.5, BRAIN, TASKS);
+    const inserted = insertPanel(
+      tree,
+      floatPayload("f-chat", "/chat"),
+      "gone-node",
+      "left",
+    );
+    expect(collectPages(inserted).sort()).toEqual(
+      ["/brain", "/tasks", "/chat"].sort(),
+    );
+  });
+});
+
+describe("findHolder", () => {
+  it("returns the tabs node containing the panel", () => {
+    const tree = split("s1", "horizontal", 0.5, BRAIN_TASKS_TABS, TASKS);
+    expect(findHolder(tree, "/tasks")).toEqual(BRAIN_TASKS_TABS);
+  });
+
+  it("returns the page node whose pageId matches", () => {
+    const tree = split("s1", "horizontal", 0.5, BRAIN, TASKS);
+    expect(findHolder(tree, "/tasks")).toEqual(TASKS);
+  });
+
+  it("returns null for unknown panels", () => {
+    expect(findHolder(BRAIN, "/nope")).toBeNull();
   });
 });
