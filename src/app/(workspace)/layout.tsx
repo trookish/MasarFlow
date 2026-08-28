@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
@@ -16,11 +16,23 @@ import { useUIStore } from "@/lib/stores/ui";
 import { useActiveProject } from "@/lib/hooks/use-project";
 import { useMounted } from "@/lib/hooks/use-mounted";
 import { useUpdatesStore } from "@/lib/stores/updates";
+import { useDockSync } from "@/lib/hooks/use-dock-sync";
+import { DockWorkspace } from "@/components/dock/dock-workspace";
 import { projectsRepo } from "@/lib/db/repos";
 import {
   startPeriodicEmbeddingSync,
   stopPeriodicEmbeddingSync,
 } from "@/lib/ai/embedding-sync";
+
+/**
+ * Dock mode runtime: runs the URL<->dock sync and renders the dock
+ * workspace. Wrapped in Suspense by the layout because useDockSync reads
+ * search params (client-side; no server rendering involved).
+ */
+function DockWorkspaceLive() {
+  useDockSync();
+  return <DockWorkspace />;
+}
 
 export default function WorkspaceLayout({
   children,
@@ -31,6 +43,7 @@ export default function WorkspaceLayout({
   const mounted = useMounted();
   const { state: pythonState } = usePythonHealth();
   const taskbarDirection = useUIStore((s) => s.taskbarDirection);
+  const dockEnabled = useUIStore((s) => s.dockEnabled);
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
   const activeProject = useActiveProject();
@@ -120,7 +133,15 @@ export default function WorkspaceLayout({
               }}
             />
           ) : null}
-          <div className="relative z-10 h-full">{children}</div>
+          <div className="relative z-10 h-full">
+            {dockEnabled ? (
+              <Suspense fallback={null}>
+                <DockWorkspaceLive />
+              </Suspense>
+            ) : (
+              children
+            )}
+          </div>
         </main>
       </div>
       {!sidebarOnLeft && <Sidebar />}

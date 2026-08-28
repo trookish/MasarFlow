@@ -18,6 +18,10 @@ interface UIState {
   taskbarDirection: TaskbarDirection;
   setTaskbarDirection: (direction: TaskbarDirection) => void;
 
+  /** Dock window manager on/off (off = classic routing layout). Persisted. */
+  dockEnabled: boolean;
+  setDockEnabled: (value: boolean) => void;
+
   /** Transient overlay state (not persisted). */
   paletteOpen: boolean;
   setPaletteOpen: (value: boolean) => void;
@@ -41,6 +45,9 @@ export const useUIStore = create<UIState>()(
       taskbarDirection: "bottom",
       setTaskbarDirection: (taskbarDirection) => set({ taskbarDirection }),
 
+      dockEnabled: true,
+      setDockEnabled: (dockEnabled) => set({ dockEnabled }),
+
       paletteOpen: false,
       setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
       searchOpen: false,
@@ -55,6 +62,7 @@ export const useUIStore = create<UIState>()(
         sidebarCollapsed: s.sidebarCollapsed,
         activeNavGroup: s.activeNavGroup,
         taskbarDirection: s.taskbarDirection,
+        dockEnabled: s.dockEnabled,
       }),
     },
   ),
