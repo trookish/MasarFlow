@@ -3,13 +3,18 @@
 /**
  * URL <-> dock sync — the contract that keeps routing alive under the dock.
  *
- * 1. URL changes (sidebar links, command palette, deep links, back/forward)
- *    focus-or-open the matching panel and snapshot any query params onto it.
- * 2. Dock focus changes (tab clicks, drags, closes) mirror the focused
- *    panel's URL into the address bar via router.replace (no history spam).
+ * One converged effect handles both directions; a ref decides which signal
+ * is authoritative:
+ * - URL changed since last run -> the URL wins: focus-or-open the panel for
+ *   the current URL, then read the FRESH state and mirror the focused
+ *   panel's URL back if it differs (replaces, never pushes — no history
+ *   spam; back/forward keep working because they change the URL).
+ * - Dock focus changed (tab click, drag, close) -> mirror the focused
+ *   panel's URL into the address bar.
  *
- * The two effects are idempotent: after a replace, the URL matches the
- * focused panel and neither effect acts again, so there is no loop.
+ * Reading the state via getState() AFTER open() is what prevents the
+ * cold-load race: a deep link to a non-default page must not be reverted to
+ * the default panel by a stale render-time focus value.
  *
  * The hook calls useSearchParams, so it must be rendered inside a <Suspense>
  * boundary (same pattern the workspace pages use for their views).
@@ -40,30 +45,37 @@ export function useDockSync(): void {
   const search = searchParams?.toString() ?? "";
   const currentUrl = search ? `${pathname}?${search}` : pathname;
 
-  // URL -> dock: focus-or-open the panel for the current URL.
-  useEffect(() => {
-    if (!activeProjectId) return;
-    useDockStore.getState().open(currentUrl);
-  }, [currentUrl, activeProjectId]);
-
-  // dock -> URL: mirror the focused panel into the address bar.
+  // Re-render trigger for dock-side focus changes (tab clicks, closes...).
   const focusedUrl = useDockStore((s) => {
     const state = s.activeProjectId ? s.projects[s.activeProjectId] : null;
     return state ? urlOfFocused(state) : null;
   });
 
-  // The last URL we pushed ourselves; replaces are skipped when the dock
-  // hasn't moved since, so a replace -> effect cycle terminates immediately.
-  const lastReplacedRef = useRef<string | null>(null);
+  const prevUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!focusedUrl) return;
-    if (focusedUrl === currentUrl) {
-      lastReplacedRef.current = focusedUrl;
+    if (!activeProjectId) return;
+    const store = useDockStore.getState();
+    const urlChanged = prevUrlRef.current !== currentUrl;
+    prevUrlRef.current = currentUrl;
+
+    if (urlChanged) {
+      // URL is authoritative: focus-or-open, then mirror from FRESH state.
+      store.open(currentUrl);
+      const freshState = store.getProject();
+      const fresh = freshState ? urlOfFocused(freshState) : null;
+      if (fresh && fresh !== currentUrl) router.replace(fresh);
       return;
     }
-    if (lastReplacedRef.current === focusedUrl) return;
-    lastReplacedRef.current = focusedUrl;
-    router.replace(focusedUrl);
-  }, [focusedUrl, currentUrl, router]);
+
+    // Dock focus changed. The render closure's focusedUrl can be stale
+    // (StrictMode double-invokes this effect with the mount render's
+    // closure after the URL branch already updated the store), so verify
+    // against the LIVE state before touching the URL.
+    if (focusedUrl !== currentUrl) {
+      const liveState = store.getProject();
+      const live = liveState ? urlOfFocused(liveState) : null;
+      if (live && live !== currentUrl) router.replace(live);
+    }
+  }, [currentUrl, focusedUrl, activeProjectId, router]);
 }
