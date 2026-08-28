@@ -1,9 +1,8 @@
 "use client";
 
 /**
- * The dock workspace — the docked-mode replacement for `{children}` in the
- * workspace layout. Renders the active workspace's layout tree recursively,
- * with maximize handling. Floating windows land with the DnD milestone.
+ * Dock workspace: renders the active workspace's layout tree, floating
+ * windows, the minimized/collapsed tray, and maximize handling.
  */
 
 import type { DockNode } from "@/lib/dock/types";
@@ -13,6 +12,8 @@ import { useDockStore } from "@/lib/stores/dock";
 import { PAGE_COMPONENTS } from "./panel-loader";
 import { DockTreeView } from "./dock-tree-view";
 import { PanelContent } from "./panel-content";
+import { DockFloatingWindow } from "./dock-floating-window";
+import { DockTray } from "./dock-tray";
 
 export function DockWorkspace() {
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
@@ -30,17 +31,25 @@ export function DockWorkspace() {
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      {/* Tree, hidden while a panel is maximized (panels stay mounted). */}
+      {/* Layout tree, hidden while a panel is maximized (stays mounted). */}
       <PanelContent active={!maximized}>
         <DockTreeView node={tree} />
       </PanelContent>
 
-      {/* Maximized panel fills the workspace above the tree. */}
+      {/* Maximized tiled panel fills the workspace above the tree. */}
       {maximized ? (
         <div className="absolute inset-0 z-20">
           <MaximizedPanel panelId={maximized} />
         </div>
       ) : null}
+
+      {/* Floating windows. */}
+      {projectState.floaters.map((f) =>
+        f.minimized ? null : <DockFloatingWindow key={f.id} floater={f} />,
+      )}
+
+      {/* Minimized windows + collapsed panels. */}
+      <DockTray />
     </div>
   );
 }
