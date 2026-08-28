@@ -168,6 +168,7 @@ import {
   type MenuResult,
 } from "@/lib/chat/mentions";
 import { resolveRecordMention } from "@/lib/chat/mention-resolve";
+import { createEchoStripper } from "@/lib/chat/echo-strip";
 
 /* ── Suggestions shown on an empty thread ─────────────────────────────── */
 
@@ -991,6 +992,11 @@ export function ChatView() {
     let lastError: string | null = null;
     let sessionId = thread.opencodeSessionId;
 
+    // Some models restate the user's message before answering — strip that
+    // leading echo from the streamed reply so the chat shows the answer, not
+    // a repeat of the question.
+    const echoStripper = createEchoStripper(userText);
+
     /** Only the current generation may touch live UI state. */
     const finishState = () => {
       if (gen !== turnGenRef.current) return;
@@ -1042,7 +1048,7 @@ export function ChatView() {
       if (gen !== turnGenRef.current || !thread) return;
       switch (e.type) {
         case "text":
-          acc += e.text;
+          acc += echoStripper.strip(e.text);
           break;
         case "reasoning":
           reasoningAcc += e.text;
@@ -1116,6 +1122,7 @@ export function ChatView() {
           tools = [];
           files = [];
           notices = [];
+          echoStripper.reset();
           break;
         case "error":
           lastError = e.message;
@@ -1310,6 +1317,10 @@ export function ChatView() {
     const files: string[] = [];
     let lastError: string | null = null;
 
+    // Strip a leading echo of the user's message from the reply (see
+    // createEchoStripper) — same guarantee as the OpenCode path.
+    const echoStripper = createEchoStripper(userText);
+
     /** Only the current generation may touch live UI state. */
     const finishState = () => {
       if (gen !== turnGenRef.current) return;
@@ -1485,7 +1496,7 @@ export function ChatView() {
           if (gen !== turnGenRef.current) return;
           switch (e.type) {
             case "text":
-              acc += e.text;
+              acc += echoStripper.strip(e.text);
               break;
             case "reasoning":
               reasoningAcc += e.text;

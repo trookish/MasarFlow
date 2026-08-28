@@ -619,6 +619,7 @@ Filesystem/shell tools (agentic mode): fs_list, fs_read, fs_search are read-only
   return `${identity}
 ${toolGuidance}${linked}
 
+Answer directly: never repeat, restate, or echo the user's message back at the top of your reply — treat the question as already read and go straight to your answer.
 Respond in concise Markdown. Use [[Note Title]] wikilink syntax when referring to brain notes.
 
 ---

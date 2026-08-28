@@ -136,6 +136,16 @@ describe("formatWorkspaceContext — RAG chunks", () => {
 });
 
 describe("buildAssistantSystemPrompt — hybrid toolbelt (OpenCode + workspace functions)", () => {
+  it("tells the model not to echo the user's message back", () => {
+    const text = buildAssistantSystemPrompt("briefing", {
+      withTools: true,
+      toolbelt: "hybrid",
+      filesystemTools: [{ id: "read", description: "Read." }],
+    });
+    expect(text).toContain("never repeat, restate, or echo");
+    expect(text).toContain("go straight to your answer");
+  });
+
   it("lists the real workspace functions alongside the fs tools", () => {
     const text = buildAssistantSystemPrompt("briefing text", {
       withTools: true,
