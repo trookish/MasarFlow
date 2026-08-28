@@ -71,4 +71,16 @@ describe("createEchoStripper", () => {
     const s = createEchoStripper("What can you see?");
     expect(s.strip("What can you fix?")).toBe("fix?");
   });
+
+  it("strips an echo in a non-Latin script (Arabic)", () => {
+    const s = createEchoStripper("ماذا ترى الآن؟");
+    expect(s.strip("ماذا ترى الآن؟ أرى مساحة العمل.")).toBe("أرى مساحة العمل.");
+  });
+
+  it("strips an Arabic echo across chunk boundaries", () => {
+    const s = createEchoStripper("ماذا ترى الآن؟");
+    expect(s.strip("ماذا ترى")).toBe("");
+    expect(s.strip(" الآن؟ الجواب:")).toBe("الجواب:");
+    expect(s.strip("والتفاصيل")).toBe("والتفاصيل");
+  });
 });

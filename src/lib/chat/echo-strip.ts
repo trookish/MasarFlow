@@ -16,11 +16,18 @@ export interface EchoStripper {
 
 /** Lowercase, collapse whitespace, drop punctuation — for echo comparison. */
 function norm(s: string): string {
-  return s.toLowerCase().replace(/\s+/g, " ").replace(/[^\w\s]/g, "").trim();
+  return s
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    // Letters and digits from every script (Arabic, CJK, Cyrillic, …) are
+    // echo content; only punctuation and symbols are dropped. ASCII-only \w
+    // would normalize a whole Arabic message to "" and disable the stripper.
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .trim();
 }
 
 /** Chars skipped after the echo completes: whitespace + echo punctuation. */
-const BOUNDARY_SKIP = /[\s.,!?;:…'"`)\]}>]/;
+const BOUNDARY_SKIP = /[\s.,!?;:…'"`)\]}>؟،؛]/;
 
 export function createEchoStripper(userText: string): EchoStripper {
   const target = norm(userText);
@@ -34,8 +41,7 @@ export function createEchoStripper(userText: string): EchoStripper {
 
       // Matching phase: consume the echo, skipping whitespace on both sides
       // and any punctuation the model may add or drop ("what can you see"
-      // matches "What can you see?" and "whatcanyousee"). Divergence (a real
-      // word difference) ends matching — the rest is genuine content.
+      // matches "What can you see?" and "whatcanyousee").
       while (i < delta.length && pos < target.length) {
         const c = delta[i];
         if (/\s/.test(c)) {
@@ -46,7 +52,7 @@ export function createEchoStripper(userText: string): EchoStripper {
           pos++;
           continue;
         }
-        if (!/[\w]/.test(c)) {
+        if (!/[\p{L}\p{N}]/u.test(c)) {
           i++;
           continue;
         }
