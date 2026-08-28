@@ -17,10 +17,20 @@ export type { DockZone } from "./types";
 export { newId } from "./types";
 
 const PLACEHOLDER_PAGE_ID = "/dashboard";
+/**
+ * Reserved node id for the placeholder page. Emptiness must be detected by
+ * NODE ID, never by pageId — a real user panel legitimately lives at
+ * "/dashboard" and must not be mistaken for the placeholder.
+ */
+export const PLACEHOLDER_NODE_ID = "dock-placeholder";
 
 /** Placeholder page node used when a tree would otherwise be empty. */
 function placeholderPage(): DockNode {
-  return { type: "page", id: newId("page"), pageId: PLACEHOLDER_PAGE_ID };
+  return {
+    type: "page",
+    id: PLACEHOLDER_NODE_ID,
+    pageId: PLACEHOLDER_PAGE_ID,
+  };
 }
 
 /**
@@ -329,11 +339,14 @@ export function movePanel(
     base = closePanel(tree, sourcePanelId);
   }
 
-  // The source was the only content: the payload REPLACES the placeholder
-  // root wholesale (the placeholder must never survive as a sibling).
+  // The source was the only content: the payload REPLACES the emptied tree
+  // wholesale. The placeholder is recognized by its reserved node id — a
+  // real "/dashboard" page is never mistaken for it.
   const isPlaceholderRoot =
-    base.type === "page" && base.pageId === PLACEHOLDER_PAGE_ID;
-  if (isPlaceholderRoot) {
+    base.type === "page" && base.id === PLACEHOLDER_NODE_ID;
+  const payloadIds = new Set(payloadPages(payload));
+  const remaining = collectPages(base).filter((p) => !payloadIds.has(p));
+  if (isPlaceholderRoot || remaining.length === 0) {
     return normalizeTree(payload);
   }
 
@@ -473,8 +486,10 @@ export function insertPanel(
   targetNodeId: string | "root",
   zone: DockZone,
 ): DockNode {
+  // Detect the placeholder by its reserved node id (never pageId — a real
+  // "/dashboard" page is not the placeholder).
   const isPlaceholderRoot =
-    tree.type === "page" && tree.pageId === PLACEHOLDER_PAGE_ID;
+    tree.type === "page" && tree.id === PLACEHOLDER_NODE_ID;
 
   // Placeholder root: the payload REPLACES the tree wholesale (the
   // placeholder must never become a group member or split sibling).
@@ -503,7 +518,7 @@ export function insertPanel(
             pages,
           };
         }
-        if (node.type === "page" && node.pageId !== PLACEHOLDER_PAGE_ID) {
+        if (node.type === "page" && node.id !== PLACEHOLDER_NODE_ID) {
           return {
             type: "tabs",
             id: node.id,

@@ -14,6 +14,7 @@ import {
   resizeSplit,
 } from "@/lib/dock/tree";
 import type { DockNode } from "@/lib/dock/types";
+import { PLACEHOLDER_NODE_ID } from "@/lib/dock/tree";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -507,7 +508,7 @@ describe("insertPanel", () => {
   });
 
   it("replaces a placeholder-only root when tab-merging onto root", () => {
-    const placeholder = page("ph", "/dashboard");
+    const placeholder: DockNode = { type: "page", id: PLACEHOLDER_NODE_ID, pageId: "/dashboard" };
     const inserted = insertPanel(
       placeholder,
       tabs("t-f", "/chat", ["/chat"]),
@@ -551,7 +552,7 @@ describe("findHolder", () => {
 
 describe("placeholder-root replacement", () => {
   it("insertPanel edge zone: payload replaces a placeholder-only root", () => {
-    const placeholder = page("ph", "/dashboard");
+    const placeholder: DockNode = { type: "page", id: PLACEHOLDER_NODE_ID, pageId: "/dashboard" };
     const inserted = insertPanel(
       placeholder,
       floatPayloadHelper("f-chat", "/chat"),
@@ -572,3 +573,60 @@ describe("placeholder-root replacement", () => {
 function floatPayloadHelper(id: string, pageId: string): DockNode {
   return { type: "page", id, pageId };
 }
+
+// ---------------------------------------------------------------------------
+// Regression: a real "/dashboard" page must never be treated as the
+// placeholder sentinel (data-loss bug found by drag probe 2026-08-29).
+// ---------------------------------------------------------------------------
+
+describe("real dashboard page is not the placeholder", () => {
+  it("movePanel left onto a real /dashboard page keeps BOTH panels", () => {
+    const tree = split(
+      "s1",
+      "horizontal",
+      0.5,
+      page("dashId", "/dashboard"),
+      page("chatId", "/chat"),
+    );
+    const moved = movePanel(tree, "/chat", "dashId", "left");
+    const pages = collectPages(moved).sort();
+    expect(pages).toEqual(["/chat", "/dashboard"]);
+  });
+
+  it("movePanel left onto a real dashboard TAB keeps the other tab", () => {
+    const tree = split(
+      "s1",
+      "horizontal",
+      0.5,
+      tabs("t-dash", "/dashboard", ["/dashboard", "/specs"]),
+      page("chatId", "/chat"),
+    );
+    const moved = movePanel(tree, "/chat", "t-dash", "left");
+    const pages = collectPages(moved).sort();
+    expect(pages).toEqual(["/chat", "/dashboard", "/specs"]);
+  });
+
+  it("insertPanel onto a real /dashboard root page does not swallow it", () => {
+    const tree = page("dashId", "/dashboard");
+    const payload = page("chatId", "/chat");
+    const inserted = insertPanel(tree, payload, "dashId", "left");
+    const pages = collectPages(inserted).sort();
+    expect(pages).toEqual(["/chat", "/dashboard"]);
+  });
+
+  it("insertPanel tab-merge onto a real /dashboard keeps both", () => {
+    const tree = page("dashId", "/dashboard");
+    const payload = page("chatId", "/chat");
+    const inserted = insertPanel(tree, payload, "dashId", "tab");
+    const pages = collectPages(inserted).sort();
+    expect(pages).toEqual(["/chat", "/dashboard"]);
+  });
+
+  it("moving the last real panel still replaces the placeholder root", () => {
+    // Emptied tree (placeholder) + payload -> payload becomes root.
+    const tree: DockNode = { type: "page", id: PLACEHOLDER_NODE_ID, pageId: "/dashboard" }; // true placeholder
+    const moved = movePanel(tree, "/chat", "root", "left");
+    // /chat is not in the tree: no-op normalize.
+    expect(collectPages(moved)).toEqual(["/dashboard"]);
+  });
+});

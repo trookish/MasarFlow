@@ -19,6 +19,7 @@ import {
   newId,
   normalizeTree,
   openPanel,
+  PLACEHOLDER_NODE_ID,
 } from "./tree";
 import { joinPanelId, pageIdOf, paramsOf } from "./types";
 
@@ -90,8 +91,10 @@ export function focusedPanelId(s: ProjectDockState): string {
   }
 
   const first = collectPages(tree)[0];
+  // A placeholder-only tree counts as empty (floaters may hold the real
+  // focus); a real "/dashboard" page does not (its node id differs).
   const placeholderOnly =
-    tree.type === "page" && tree.pageId === "/dashboard";
+    tree.type === "page" && tree.id === PLACEHOLDER_NODE_ID;
   if (!placeholderOnly && first) return first;
 
   const float = s.floaters

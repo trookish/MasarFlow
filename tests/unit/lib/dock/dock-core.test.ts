@@ -17,6 +17,7 @@ import {
   urlOfFocused,
 } from "@/lib/dock/dock-core";
 import type { DockNode, ProjectDockState } from "@/lib/dock/types";
+import { PLACEHOLDER_NODE_ID } from "@/lib/dock/tree";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -82,7 +83,7 @@ describe("focusedPanelId", () => {
   });
 
   it("falls back to the top non-minimized floater when the tree is empty", () => {
-    const s = baseState(page("p-empty", "/dashboard"));
+    const s = baseState({ type: "page", id: PLACEHOLDER_NODE_ID, pageId: "/dashboard" });
     s.floaters = [
       {
         id: "f1",
