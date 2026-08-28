@@ -329,23 +329,12 @@ export function movePanel(
     base = closePanel(tree, sourcePanelId);
   }
 
-  // The source was the only content: the payload becomes the new root.
+  // The source was the only content: the payload REPLACES the placeholder
+  // root wholesale (the placeholder must never survive as a sibling).
   const isPlaceholderRoot =
     base.type === "page" && base.pageId === PLACEHOLDER_PAGE_ID;
   if (isPlaceholderRoot) {
-    return normalizeTree(
-      targetNodeId === "root" || zone === "tab"
-        ? payload
-        : {
-            type: "split",
-            id: newId("split"),
-            direction:
-              zone === "left" || zone === "right" ? "horizontal" : "vertical",
-            ratio: 0.5,
-            children:
-              zone === "left" || zone === "top" ? [payload, base] : [base, payload],
-          },
-    );
+    return normalizeTree(payload);
   }
 
   if (targetNodeId === "root") return insertAtRoot(base, payload, zone);
@@ -487,14 +476,11 @@ export function insertPanel(
   const isPlaceholderRoot =
     tree.type === "page" && tree.pageId === PLACEHOLDER_PAGE_ID;
 
-  // Placeholder root + tab-merge: the payload replaces the tree wholesale.
-  if (isPlaceholderRoot && zone === "tab") return normalizeTree(payload);
+  // Placeholder root: the payload REPLACES the tree wholesale (the
+  // placeholder must never become a group member or split sibling).
+  if (isPlaceholderRoot) return normalizeTree(payload);
 
-  if (targetNodeId === "root" || isPlaceholderRoot) {
-    if (isPlaceholderRoot && targetNodeId !== "root") {
-      // Stale target against an empty tree: fall back to root insert.
-      return insertAtRoot(tree, payload, zone);
-    }
+  if (targetNodeId === "root") {
     return insertAtRoot(tree, payload, zone);
   }
 

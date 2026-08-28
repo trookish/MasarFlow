@@ -548,3 +548,27 @@ describe("findHolder", () => {
     expect(findHolder(BRAIN, "/nope")).toBeNull();
   });
 });
+
+describe("placeholder-root replacement", () => {
+  it("insertPanel edge zone: payload replaces a placeholder-only root", () => {
+    const placeholder = page("ph", "/dashboard");
+    const inserted = insertPanel(
+      placeholder,
+      floatPayloadHelper("f-chat", "/chat"),
+      "root",
+      "left",
+    );
+    expect(inserted).toEqual({ type: "page", id: "f-chat", pageId: "/chat" });
+  });
+
+  it("movePanel: moving the last panel within itself replaces the placeholder", () => {
+    // Single panel tree; drag it to its own node's left zone.
+    const tree = page("p-solo", "/solo");
+    const moved = movePanel(tree, "/solo", "p-solo", "left");
+    expect(moved).toEqual({ type: "page", id: "p-solo", pageId: "/solo" });
+  });
+});
+
+function floatPayloadHelper(id: string, pageId: string): DockNode {
+  return { type: "page", id, pageId };
+}

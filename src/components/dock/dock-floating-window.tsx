@@ -14,6 +14,7 @@ import { getPageDef } from "@/lib/dock/registry";
 import { useDockStore } from "@/lib/stores/dock";
 import { PAGE_COMPONENTS } from "./panel-loader";
 import { PanelContent } from "./panel-content";
+import { startFloaterDrag } from "./use-dock-dnd";
 import { cn } from "@/lib/utils/cn";
 
 /** Edge/corner resize handles: [css class, resize flags]. */
@@ -75,6 +76,9 @@ export function DockFloatingWindow({ floater }: { floater: FloatWindow }) {
 
   const startWindowDrag = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
+      // Begin a dock drag (enables docking to tree targets on release) and
+      // move the window live via the same gesture.
+      startFloaterDrag(floater.id, floater.panelIds, e);
       const { x, y } = floater;
       gesture(e, (dx, dy) => {
         moveFloater(floater.id, {

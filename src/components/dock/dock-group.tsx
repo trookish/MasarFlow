@@ -9,7 +9,8 @@
 import { X, MoreHorizontal, PictureInPicture2, Maximize2, PanelBottomClose, PanelLeftClose } from "lucide-react";
 import { getPageDef } from "@/lib/dock/registry";
 import { pageIdOf } from "@/lib/dock/types";
-import { useDockStore, type DragSource } from "@/lib/stores/dock";
+import { useDockStore } from "@/lib/stores/dock";
+import { startPanelDrag } from "./use-dock-dnd";
 import { PanelContent } from "./panel-content";
 import { PAGE_COMPONENTS } from "./panel-loader";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -33,12 +34,10 @@ export function DockGroup({ nodeId, pages, activePage, collapsed }: DockGroupPro
   const close = useDockStore((s) => s.close);
   const toggleCollapse = useDockStore((s) => s.toggleCollapse);
   const toggleMaximize = useDockStore((s) => s.toggleMaximize);
-  const setDrag = useDockStore((s) => s.setDrag);
 
   function startTabDrag(e: React.PointerEvent, panelId: string) {
     if (e.button !== 0) return;
-    const source: DragSource = { kind: "panel", panelId, nodeId };
-    setDrag({ source, pointer: { x: e.clientX, y: e.clientY }, zone: null, targetId: null });
+    startPanelDrag(panelId, nodeId, e);
   }
 
   if (collapsed) {
@@ -64,7 +63,10 @@ export function DockGroup({ nodeId, pages, activePage, collapsed }: DockGroupPro
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col">
+    <div
+      data-dock-node={nodeId}
+      className="flex h-full min-h-0 w-full flex-col"
+    >
       {/* Tab strip */}
       <div
         role="tablist"
