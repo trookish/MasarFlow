@@ -15,7 +15,7 @@
  * their docking commit.
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useDockStore } from "@/lib/stores/dock";
 
 /**
@@ -25,9 +25,16 @@ import { useDockStore } from "@/lib/stores/dock";
  */
 export function useDockDnd(): void {
   const drag = useDockStore((s) => s.drag);
+  // Pointer position where the active drag started (drag.pointer is updated
+  // during the move, so the origin must be captured separately).
+  const originRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
-    if (!drag) return;
+    if (!drag) {
+      originRef.current = null;
+      return;
+    }
+    if (!originRef.current) originRef.current = { ...drag.pointer };
 
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") useDockStore.getState().setDrag(null);
@@ -44,11 +51,18 @@ export function useDockDnd(): void {
     function onUp(e: PointerEvent) {
       const s = useDockStore.getState();
       const d = s.drag;
+      const origin = originRef.current;
       s.setDrag(null);
-      if (!d) return;
+      originRef.current = null;
+      if (!d || !origin) return;
 
       const { source, zone, targetId } = d;
       const overWorkspace = targetId !== "outside";
+
+      // A click (no meaningful movement) never commits — it must not float,
+      // move, or dock anything. Tab focus already happened on pointerdown.
+      const dist = Math.hypot(e.clientX - origin.x, e.clientY - origin.y);
+      if (source.kind !== "floater" && dist < 4) return;
 
       if (source.kind === "floater") {
         // The window moved live via its own gesture; if the release happened
