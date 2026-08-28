@@ -77,10 +77,34 @@ export function Topbar() {
     void window.masarFlow.settings.set({ theme: next });
   };
 
+  // The topbar hide/show icon hugs the taskbar's edge: left → left, right →
+  // right. When the taskbar is the bottom dock, the icon is hidden entirely —
+  // the dock's own chevron handles hide/show.
+  const taskbarDirection = settings?.taskbarDirection ?? "bottom";
+
+  const hideShowButton =
+    taskbarDirection === "bottom" ? null : (
+      <button
+        onClick={() => {
+          if (settings) void patchSettings({ taskbarCollapsed: !settings.taskbarCollapsed });
+        }}
+        title={settings?.taskbarCollapsed ? "Show taskbar (Ctrl+B)" : "Hide taskbar (Ctrl+B)"}
+        className={cn(
+          "app-no-drag flex h-9 w-9 items-center justify-center rounded-md transition-colors",
+          settings?.taskbarCollapsed
+            ? "bg-accent text-foreground"
+            : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+        )}
+      >
+        <PanelLeft className="h-4 w-4" />
+      </button>
+    );
+
   return (
     <header className="app-drag relative z-40 flex h-14 shrink-0 items-center border-b border-border bg-background/80 px-3 backdrop-blur">
       <div className="app-no-drag flex items-center">
         <span className="text-sm font-semibold">MasarFlow Launcher</span>
+        {taskbarDirection === "left" && <div className="ml-1 flex">{hideShowButton}</div>}
       </div>
 
       <div className="ml-4 flex items-center gap-2">
@@ -121,20 +145,7 @@ export function Topbar() {
             <Moon className="h-4 w-4" />
           )}
         </button>
-        <button
-          onClick={() => {
-            if (settings) void patchSettings({ taskbarCollapsed: !settings.taskbarCollapsed });
-          }}
-          title={settings?.taskbarCollapsed ? "Show taskbar (Ctrl+B)" : "Hide taskbar (Ctrl+B)"}
-          className={cn(
-            "app-no-drag flex h-9 w-9 items-center justify-center rounded-md transition-colors",
-            settings?.taskbarCollapsed
-              ? "bg-accent text-foreground"
-              : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-          )}
-        >
-          <PanelLeft className="h-4 w-4" />
-        </button>
+        {taskbarDirection === "right" && hideShowButton}
         <button
           onClick={() => setTerminalOpen(!terminalOpen)}
           title="Toggle terminal"

@@ -1,6 +1,7 @@
 import {
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   ChevronUp,
   FlaskConical,
   Play,
@@ -145,8 +146,18 @@ export function Sidebar() {
     );
   }
 
-  // Collapsed left rail: fully hidden — the topbar toggle (Ctrl+B) brings it back.
-  if (collapsed) return null;
+  // Collapsed left rail: floating expand handle on the left edge.
+  if (collapsed) {
+    return (
+      <button
+        onClick={() => void patchSettings({ taskbarCollapsed: false })}
+        title="Expand taskbar (Ctrl+B)"
+        className="app-no-drag fixed left-0 top-1/2 z-40 flex h-20 w-6 -translate-y-1/2 items-center justify-center rounded-r-lg border border-l-0 border-sidebar-border bg-sidebar/85 text-muted-foreground shadow-lg backdrop-blur-md transition-colors hover:bg-accent/60 hover:text-foreground"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    );
+  }
 
   return (
     <div

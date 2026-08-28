@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils/cn";
 import { NAV_GROUPS, type NavItem, type NavGroup } from "@/lib/nav";
@@ -362,6 +362,21 @@ export function Sidebar() {
         className="fixed right-0 top-1/2 z-40 flex h-20 w-6 -translate-y-1/2 items-center justify-center rounded-l-lg border border-r-0 border-sidebar-border bg-sidebar/85 text-muted-foreground shadow-lg backdrop-blur-md transition-colors hover:bg-accent/60 hover:text-foreground"
       >
         <ChevronLeft className="h-4 w-4" />
+      </button>
+    );
+  }
+
+  // Left rail collapsed: floating expand handle on the left edge.
+  if (!isRight && sidebarCollapsed) {
+    return (
+      <button
+        type="button"
+        onClick={toggleSidebar}
+        aria-label="Expand sidebar"
+        title="Expand sidebar (⌘B)"
+        className="fixed left-0 top-1/2 z-40 flex h-20 w-6 -translate-y-1/2 items-center justify-center rounded-r-lg border border-l-0 border-sidebar-border bg-sidebar/85 text-muted-foreground shadow-lg backdrop-blur-md transition-colors hover:bg-accent/60 hover:text-foreground"
+      >
+        <ChevronRight className="h-4 w-4" />
       </button>
     );
   }

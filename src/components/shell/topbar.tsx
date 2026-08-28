@@ -32,28 +32,33 @@ export function Topbar() {
     if (updateState !== "checking") void checkUpdates();
   }
 
+  // The topbar hide/show icon hugs the taskbar's edge: left → left, right →
+  // right. When the taskbar is the bottom dock, the icon is hidden entirely —
+  // the dock's own chevron handles hide/show. Hydration-safe default: "left".
+  const direction = mounted ? taskbarDirection : "left";
+
   const toggleLabel = !mounted
     ? "Collapse sidebar (⌘B)"
-    : taskbarDirection === "bottom"
-      ? sidebarCollapsed
-        ? "Show dock (⌘B)"
-        : "Hide dock (⌘B)"
-      : sidebarCollapsed
-        ? "Expand sidebar (⌘B)"
-        : "Collapse sidebar (⌘B)";
+    : sidebarCollapsed
+      ? "Expand sidebar (⌘B)"
+      : "Collapse sidebar (⌘B)";
+
+  const toggleButton = (
+    <Tooltip label={toggleLabel} side="bottom" align="start">
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={toggleLabel}
+        onClick={toggleSidebar}
+      >
+        <PanelLeft className="h-4 w-4" />
+      </Button>
+    </Tooltip>
+  );
 
   return (
     <header className="relative z-40 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur">
-      <Tooltip label={toggleLabel} side="bottom" align="start">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={toggleLabel}
-          onClick={toggleSidebar}
-        >
-          <PanelLeft className="h-4 w-4" />
-        </Button>
-      </Tooltip>
+      {direction === "left" && toggleButton}
 
       <ProjectSwitcher />
 
@@ -110,6 +115,7 @@ export function Topbar() {
           </Button>
         </Tooltip>
         <ThemeToggle />
+        {direction === "right" && toggleButton}
       </div>
       <UpdateDialog open={updateOpen} onOpenChange={setUpdateOpen} />
     </header>
