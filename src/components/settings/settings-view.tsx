@@ -688,6 +688,8 @@ function RangeField({
 function InterfaceSection() {
   const taskbarDirection = useUIStore((s) => s.taskbarDirection);
   const setTaskbarDirection = useUIStore((s) => s.setTaskbarDirection);
+  const dockEnabled = useUIStore((s) => s.dockEnabled);
+  const setDockEnabled = useUIStore((s) => s.setDockEnabled);
 
   return (
     <SectionPanel
@@ -695,6 +697,19 @@ function InterfaceSection() {
       description="Placement and behavior of the navigation taskbar."
       onReset={() => setTaskbarDirection("bottom")}
     >
+      <SettingRow
+        label="Dock window manager"
+        description="Docked mode turns every page into a draggable panel with splits, tab groups, floating windows, and per-project workspaces. Turning it off restores the classic single-page routing layout."
+      >
+        <SegmentedControl<"on" | "off">
+          value={dockEnabled ? "on" : "off"}
+          options={[
+            { value: "on", label: "On" },
+            { value: "off", label: "Off" },
+          ]}
+          onChange={(v) => setDockEnabled(v === "on")}
+        />
+      </SettingRow>
       <SettingRow
         label="Taskbar direction"
         description="Left docks the nav rail on the left edge, Right mirrors it to the right edge, and Bottom turns it into a floating dock — click a group to pop its pages up above it."

@@ -9,6 +9,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { PomodoroWidget, DailyNoteButton } from "./plugin-widgets";
 import { UpdateDialog } from "./update-dialog";
 import { useUpdatesStore } from "@/lib/stores/updates";
+import { WorkspaceMenu } from "@/components/dock/workspace-menu";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -61,6 +62,7 @@ export function Topbar() {
       {direction === "left" && toggleButton}
 
       <ProjectSwitcher />
+      <WorkspaceMenu />
 
       <button
         type="button"

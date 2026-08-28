@@ -23,6 +23,14 @@ const GROUPS: { title: string; items: { keys: string[]; label: string }[] }[] =
       ],
     },
     {
+      title: "Dock (when enabled)",
+      items: [
+        { keys: ["Alt", "←"], label: "Focus previous tab" },
+        { keys: ["Alt", "→"], label: "Focus next tab" },
+        { keys: ["Ctrl", "Shift", "K"], label: "Close focused panel" },
+      ],
+    },
+    {
       title: "Brain",
       items: [
         { keys: ["[", "["], label: "Insert a wikilink (in editor)" },
