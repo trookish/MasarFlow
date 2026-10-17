@@ -4,7 +4,6 @@
     "lib": ["ES2023"],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "jsx": "react-jsx",
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -19,8 +18,7 @@
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["src/shared/*"],
-      "@/*": ["src/renderer/src/*"]
+      "@shared/*": ["src/shared/*"]
     }
   },
   "include": ["src/main/**/*", "src/preload/**/*", "src/shared/**/*", "electron.vite.config.ts"]
