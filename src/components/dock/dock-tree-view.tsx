@@ -46,10 +46,10 @@ function SplitNode({
 
   return (
     <div
-      className={cn("flex h-full min-h-0 w-full", horizontal ? "flex-row" : "flex-col")}
+      className={cn("flex h-full min-h-0 w-full overflow-hidden", horizontal ? "flex-row" : "flex-col")}
     >
       <div
-        className="min-h-0 min-w-0"
+        className="min-h-0 min-w-0 overflow-hidden"
         style={
           horizontal
             ? { width: `${node.ratio * 100}%`, flex: "0 0 auto" }
@@ -59,7 +59,7 @@ function SplitNode({
         <DockNodeChild node={first} />
       </div>
       <SplitDivider direction={node.direction} splitId={node.id} ratio={node.ratio} />
-      <div className="min-h-0 min-w-0 flex-1">
+      <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
         <DockNodeChild node={second} />
       </div>
     </div>

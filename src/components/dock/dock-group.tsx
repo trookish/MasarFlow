@@ -94,7 +94,7 @@ export function DockGroup({ nodeId, pages, activePage, collapsed }: DockGroupPro
   return (
     <div
       data-dock-node={nodeId}
-      className="flex h-full min-h-0 w-full flex-col"
+      className="flex h-full min-h-0 w-full flex-col overflow-hidden"
     >
       {/* Tab strip */}
       <div
@@ -212,9 +212,13 @@ export function DockGroup({ nodeId, pages, activePage, collapsed }: DockGroupPro
       </div>
 
       {/* Active panel content; inactive tabs stay mounted but hidden.
+          The body CLIPS (min-w-0 + overflow-hidden): a panel whose content is
+          wider than its split track must not paint over the neighbouring pane —
+          that bleed was the P9.T18 tiled-overlap bug (content stayed visible
+          through the neighbour's transparent chrome and stole its clicks).
           e2e anchors (P9.T6): `dock-panel` + the focused panel's id — the
           tab strip's active tab carries the same `data-dock-url` value. */}
-      <div className="min-h-0 flex-1" data-testid="dock-panel" data-dock-url={activePage}>
+      <div className="min-h-0 min-w-0 flex-1 overflow-hidden" data-testid="dock-panel" data-dock-url={activePage}>
         {pages.map((panelId) => (
           <PanelTab key={panelId} panelId={panelId} active={panelId === activePage} />
         ))}
