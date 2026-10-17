@@ -58,4 +58,11 @@ export const CH = {
   diagnosticsCollect: "diagnostics:collect",
   changelogRead: "changelog:read",
   logsOpenFolder: "logs:open-folder",
+  // P10.T9: electron-updater — status events + user actions (GitHub release feed)
+  updaterStatus: "updater:status",
+  updaterGet: "updater:get",
+  updaterCheck: "updater:check",
+  updaterDownload: "updater:download",
+  updaterInstall: "updater:install",
+  updaterSetChannel: "updater:set-channel",
 } as const;

@@ -12,9 +12,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUpdatesStore } from "@/lib/stores/updates";
+import { getDesktop } from "@/lib/desktop/bridge";
+import { describeUpdaterStatus } from "@desktop-shared/updater-status";
 import { cn } from "@/lib/utils/cn";
 
-/** Dialog showing the GitHub update check result (releases + commits). */
+/** Dialog showing the update check result (releases + commits). */
 export function UpdateDialog({
   open,
   onOpenChange,
@@ -25,6 +27,9 @@ export function UpdateDialog({
   const info = useUpdatesStore((s) => s.info);
   const state = useUpdatesStore((s) => s.state);
   const check = useUpdatesStore((s) => s.check);
+  const updaterStatus = useUpdatesStore((s) => s.updaterStatus);
+  const updaterAction =
+    updaterStatus && ["available", "downloading", "ready"].includes(updaterStatus.phase) ? updaterStatus : null;
 
   return (
     <Dialog
@@ -40,6 +45,26 @@ export function UpdateDialog({
         </DialogDescription>
       </DialogHeader>
       <DialogBody>
+        {updaterAction ? (
+          <div className="mb-3 space-y-2 rounded-md border border-border bg-card p-3 text-xs">
+            <p>{describeUpdaterStatus(updaterAction)}</p>
+            {updaterAction.phase !== "ready" ? (
+              <p className="text-muted-foreground">The installer is unsigned; Windows SmartScreen may ask you to confirm.</p>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              {updaterAction.phase === "available" ? (
+                <Button size="sm" onClick={() => void getDesktop()?.updater.download()}>
+                  Download
+                </Button>
+              ) : null}
+              {updaterAction.phase === "ready" ? (
+                <Button size="sm" onClick={() => void getDesktop()?.updater.install()}>
+                  Restart now
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
         {info ? (
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-card p-3 text-xs">

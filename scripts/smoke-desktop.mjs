@@ -109,6 +109,7 @@ child.on("exit", () => {
     r.path.startsWith("/dashboard") &&
     r.origin === "masarflow://app" &&
     r.hasApi === true &&
+    r.hasUpdater === true &&
     r.guard?.status === 403 &&
     (r.denial?.status === 401 || r.denial?.status === 403);
   if (ok) {

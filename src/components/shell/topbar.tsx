@@ -29,6 +29,8 @@ export function Topbar() {
   const updateInfo = useUpdatesStore((s) => s.info);
   const updateState = useUpdatesStore((s) => s.state);
   const checkUpdates = useUpdatesStore((s) => s.check);
+  // P10.T9: the real updater's phase drives the dot in the desktop app.
+  const updaterPhase = useUpdatesStore((s) => s.updaterStatus?.phase);
 
   // Desktop build indicator: the user must know which build they are in.
   // `mounted` gating keeps SSR and the first client render identical (the
@@ -113,7 +115,7 @@ export function Topbar() {
                 updateState === "checking" && "animate-spin",
               )}
             />
-            {updateInfo?.updateAvailable ? (
+            {updateInfo?.updateAvailable || updaterPhase === "available" || updaterPhase === "ready" ? (
               <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-primary" />
             ) : null}
           </Button>

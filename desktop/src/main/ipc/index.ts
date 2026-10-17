@@ -14,6 +14,8 @@ import { settings } from "../settings";
 import { listBackups, readBackup, writeBackup } from "../backups";
 import { collectDiagnostics, readChangelog } from "../diagnostics";
 import { logDir } from "../logging";
+import { applyChannel, checkForUpdates, downloadUpdate, installUpdateNow, updaterSnapshot } from "../updater";
+import type { UpdateChannel } from "@shared/updater-status";
 import { createExecGit } from "../git/exec";
 import { createGitService } from "../git/service";
 import { registerTerminalIpc } from "./terminal";
@@ -101,13 +103,29 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
   // Diagnostics (P10.T7): the collector never returns secret values or raw
   // files — only redacted markdown. The renderer may name at most 50 keys.
+  // P10.T9: the updater phase is main-process state, so it is added here.
   ipcMain.handle(CH.diagnosticsCollect, (_e, input: unknown) => {
     const raw = (input as { secretKeys?: unknown } | null)?.secretKeys;
     const secretKeys = (Array.isArray(raw) ? raw : []).filter((k): k is string => typeof k === "string").slice(0, 50);
-    return collectDiagnostics({ secretKeys });
+    return collectDiagnostics({ secretKeys, updatePhase: updaterSnapshot().phase });
   });
   ipcMain.handle(CH.changelogRead, () => readChangelog());
   ipcMain.handle(CH.logsOpenFolder, () => shell.openPath(logDir()));
+
+  // Updater (P10.T9): the renderer triggers checks/downloads and switches the
+  // channel; the channel preference is persisted before it is applied.
+  ipcMain.handle(CH.updaterGet, () => updaterSnapshot());
+  ipcMain.handle(CH.updaterCheck, () => checkForUpdates(win));
+  ipcMain.handle(CH.updaterDownload, () => downloadUpdate(win));
+  ipcMain.handle(CH.updaterInstall, () => {
+    installUpdateNow();
+  });
+  ipcMain.handle(CH.updaterSetChannel, (_e, channel: unknown) => {
+    const next: UpdateChannel = channel === "test" ? "test" : "stable";
+    settings.set({ updateChannel: next });
+    applyChannel(next);
+    return updaterSnapshot();
+  });
 
   // Automatic backups: gzipped JSON under userData/backups. Only file names
   // matching the app's own pattern are ever read back.

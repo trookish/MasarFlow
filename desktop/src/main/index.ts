@@ -10,6 +10,7 @@ import { buildCsp } from "./security/csp";
 import { isPermissionAllowed } from "./security/permissions";
 import { settings } from "./settings";
 import { installLogBuffer, logDir, pruneRotatedLogs, rotateServerLogs } from "./logging";
+import { checkForUpdates, initUpdater } from "./updater";
 import { createMainWindow } from "./windows/main-window";
 
 app.setName("MasarFlow");
@@ -26,10 +27,9 @@ let backend: BackendHandle | null = null;
 let quitting = false;
 
 /**
- * Tray menu v2 (P10.T11): Open / Control Center / logs / hide-on-close / Quit.
- * Rebuilt whenever the hide-on-close checkbox changes so the tick matches the
- * persisted setting. The "Check for updates…" item arrives with the updater
- * (P10.T9), which is outside this stream's scope.
+ * Tray menu v2 (P10.T11 + P10.T9): Open / Control Center / check for updates /
+ * logs / hide-on-close / Quit. Rebuilt whenever the hide-on-close checkbox
+ * changes so the tick matches the persisted setting.
  */
 function rebuildTrayMenu(): void {
   if (!tray) return;
@@ -39,6 +39,7 @@ function rebuildTrayMenu(): void {
       { label: "Open MasarFlow", click: showWindow },
       { type: "separator" },
       { label: "Control Center", click: () => sendWindowRoute("/control-center") },
+      { label: "Check for updates…", click: () => void checkForUpdates(() => mainWindow) },
       { label: "Open logs folder", click: () => void shell.openPath(logDir()) },
       { type: "separator" },
       {
@@ -103,6 +104,7 @@ function runSmoke(win: BrowserWindow): void {
             path: location.pathname,
             origin: location.origin,
             hasApi: typeof window.masarflow === "object",
+            hasUpdater: typeof window.masarflow?.updater?.check === "function",
             guard: { status: r.status, error: String(j.error || "") },
           };
         })()`,
@@ -168,7 +170,16 @@ async function boot(): Promise<void> {
   mainWindow.on("maximize", () => mainWindow?.webContents.send(CH.winMaximized, true));
   mainWindow.on("unmaximize", () => mainWindow?.webContents.send(CH.winMaximized, false));
   if (SMOKE) runSmoke(mainWindow);
-  else createTray();
+  else {
+    createTray();
+    // P10.T9: wire the updater once the window exists. The launch check is a
+    // plain timeout that cannot slow the start-up path, runs only for installed
+    // builds, and never in smoke mode (which must stay offline and fast).
+    initUpdater(() => mainWindow);
+    if (app.isPackaged && !process.env.MASARFLOW_UPDATER_DEV_FEED) {
+      setTimeout(() => void checkForUpdates(() => mainWindow), 15_000);
+    }
+  }
 }
 
 if (!app.requestSingleInstanceLock()) {

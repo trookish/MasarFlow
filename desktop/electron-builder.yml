@@ -16,10 +16,22 @@ extraResources:
     to: app-server
   - from: app-server/node_modules
     to: app-server/node_modules
+  # P10.T9: the Control Center's "What changed" block reads this file.
+  - from: ../CHANGELOG.md
+    to: CHANGELOG.md
 # node-pty ships N-API prebuilds (ABI-stable) — no native rebuild needed
 npmRebuild: false
 asarUnpack:
   - "**/node_modules/node-pty/**"
+# Auto-update feed (F9). The workflow never lets electron-builder publish
+# (that would create tag v0.2.0 instead of v0.2.0.0 — see P10.T14); this block
+# only makes electron-builder emit latest.yml next to the installers.
+publish:
+  provider: github
+  owner: trookish
+  repo: MasarFlow
+  channel: latest
+  releaseType: release
 win:
   target:
     - target: nsis

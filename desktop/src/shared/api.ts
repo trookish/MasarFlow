@@ -1,6 +1,7 @@
 import type { GitBranchInfo, GitCommitInfo, GitDiffFile, GitRepoStatus, GitResult } from "./git";
 import type { EnvRow } from "./redact";
 import type { P10Settings } from "./app-settings";
+import type { UpdaterStatus } from "./updater-status";
 import type { SessionInfo } from "./types";
 
 /**
@@ -120,5 +121,14 @@ export interface MasarflowApi {
     get(): Promise<Record<string, unknown>>;
     /** Merge a partial patch; returns the settings after the merge. */
     set(patch: Partial<P10Settings>): Promise<Record<string, unknown>>;
+  };
+  updater: {
+    get(): Promise<UpdaterStatus>;
+    check(): Promise<UpdaterStatus>;
+    download(): Promise<UpdaterStatus>;
+    /** Restart now and install. */
+    install(): Promise<void>;
+    setChannel(channel: "stable" | "test"): Promise<UpdaterStatus>;
+    onStatus(cb: (status: UpdaterStatus) => void): () => void;
   };
 }

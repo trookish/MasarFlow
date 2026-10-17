@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { CH } from "@shared/channels";
 import type { MasarflowApi } from "@shared/api";
+import type { UpdaterStatus } from "@shared/updater-status";
 
 const api: MasarflowApi = {
   platform: process.platform,
@@ -103,6 +104,18 @@ const api: MasarflowApi = {
   settings: {
     get: () => ipcRenderer.invoke(CH.settingsGet),
     set: (patch) => ipcRenderer.invoke(CH.settingsSet, patch),
+  },
+  updater: {
+    get: () => ipcRenderer.invoke(CH.updaterGet),
+    check: () => ipcRenderer.invoke(CH.updaterCheck),
+    download: () => ipcRenderer.invoke(CH.updaterDownload),
+    install: () => ipcRenderer.invoke(CH.updaterInstall),
+    setChannel: (channel) => ipcRenderer.invoke(CH.updaterSetChannel, channel),
+    onStatus: (cb) => {
+      const listener = (_e: unknown, status: UpdaterStatus): void => cb(status);
+      ipcRenderer.on(CH.updaterStatus, listener);
+      return () => ipcRenderer.removeListener(CH.updaterStatus, listener);
+    },
   },
 };
 
