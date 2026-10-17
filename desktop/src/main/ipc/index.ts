@@ -6,6 +6,7 @@ import { CH } from "@shared/channels";
 import { envForDisplay } from "@shared/redact";
 import { isRootAllowed } from "@shared/roots";
 import type { AppSettings } from "@shared/types";
+import { APP_DISPLAY_VERSION } from "@shared/version";
 import { addRootToFile, readRootsFile } from "../security/roots";
 import { isSafeExternalUrl } from "../security/url-policy";
 import { SecretStore, createSafeStorageCodec, isValidSecretKey } from "../secrets";
@@ -16,14 +17,12 @@ import { createGitService } from "../git/service";
 import { registerTerminalIpc } from "./terminal";
 import { registerLogsIpc } from "./logs";
 
-const DISPLAY_VERSION = "0.2.0.0"; // single source for UI; package.json holds the semver
-
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
   const win = (): BrowserWindow | null => getWindow();
 
   ipcMain.handle(CH.appInfo, () => ({
     version: app.getVersion(),
-    displayVersion: DISPLAY_VERSION,
+    displayVersion: APP_DISPLAY_VERSION,
     userData: app.getPath("userData"),
     packaged: app.isPackaged,
   }));
