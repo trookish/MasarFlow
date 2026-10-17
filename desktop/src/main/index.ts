@@ -44,6 +44,8 @@ function showWindow(): void {
   mainWindow.focus();
 }
 
+const SMOKE_ROOT = process.platform === "win32" ? "C:\\msf-smoke-unregistered" : "/msf-smoke-unregistered";
+
 /** Smoke mode: prove the packaged app boots the workspace, report to a file, exit. */
 function runSmoke(win: BrowserWindow): void {
   const out = process.env.MASARFLOW_SMOKE_OUT ?? "";
@@ -55,11 +57,26 @@ function runSmoke(win: BrowserWindow): void {
   win.webContents.on("did-finish-load", async () => {
     try {
       const info = await win.webContents.executeJavaScript(
-        `({ path: location.pathname, origin: location.origin, hasApi: typeof window.masarflow === "object" })`,
+        `(async () => {
+          const r = await fetch("/api/fs/list", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ root: ${JSON.stringify(SMOKE_ROOT)}, path: "" }),
+          });
+          const j = await r.json().catch(() => ({}));
+          return {
+            path: location.pathname,
+            origin: location.origin,
+            hasApi: typeof window.masarflow === "object",
+            guard: { status: r.status, error: String(j.error || "") },
+          };
+        })()`,
       );
       if (String(info.path).startsWith("/dashboard")) {
         clearTimeout(timer);
-        finish({ ok: true, ...info }, 0);
+        // The POST must get past the guard (token + Host + Origin) and be refused by the ROOT allow-list.
+        const guardOk = info.guard.status === 403 && /not been linked/.test(info.guard.error);
+        finish({ ok: guardOk, ...info }, guardOk ? 0 : 1);
       }
     } catch (e) {
       finish({ ok: false, error: String(e) }, 1);

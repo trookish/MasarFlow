@@ -9,6 +9,7 @@
 //     so nothing can resolve upward into the dev tree.
 import { spawn, spawnSync } from "node:child_process";
 import { cpSync, existsSync, lstatSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -103,12 +104,7 @@ child.on("exit", () => {
   if (timedOut) fail("SMOKE_FAIL: packaged app did not exit within 120s");
   if (!existsSync(out)) fail("SMOKE_FAIL: no result file at " + out);
   const r = JSON.parse(readFileSync(out, "utf8"));
-  const ok =
-    r.ok === true &&
-    r.origin === "masarflow://app" &&
-    r.hasApi === true &&
-    typeof r.path === "string" &&
-    r.path.startsWith("/dashboard");
+  const ok = r.ok && r.origin === "masarflow://app" && r.hasApi === true && r.guard?.status === 403;
   if (ok) {
     console.log("booted from:", exe);
     console.log("SMOKE_OK", JSON.stringify(r));

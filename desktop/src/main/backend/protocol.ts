@@ -1,6 +1,6 @@
 import { net, protocol } from "electron";
 import { Readable } from "node:stream";
-import { APP_SCHEME, TOKEN_HEADER } from "@shared/security";
+import { APP_ORIGIN, APP_SCHEME, TOKEN_HEADER } from "@shared/security";
 import { buildCsp } from "../security/csp";
 import { isNullBodyStatus, rewriteRedirectToApp, rewriteRequestToServer } from "./protocol-url";
 
@@ -43,6 +43,11 @@ export function installAppProtocol(opts: AppProtocolOptions): void {
 
     const headers = new Headers(request.headers);
     headers.set(TOKEN_HEADER, opts.token);
+    // Chromium does not send an Origin for fetches made from the custom scheme
+    // (the smoke run showed guard 403 "state-changing requests must carry an
+    // allowed origin"), so assert the app origin here. This proxy is the only
+    // entry point to the loopback server.
+    if (request.method !== "GET" && request.method !== "HEAD") headers.set("origin", APP_ORIGIN);
 
     return new Promise<Response>((resolve, reject) => {
       const req = net.request({
