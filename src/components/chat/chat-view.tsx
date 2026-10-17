@@ -13,7 +13,6 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
-  Plug,
   Plus,
   Trash2,
   Send,
@@ -143,6 +142,11 @@ import {
   fallbackNoticeText,
   parseFallbackNotice,
 } from "@/lib/ai/providers/fallback-notice";
+import {
+  parseModelRef,
+  parseSlashModel,
+  resolveModelRef,
+} from "@/lib/ai/providers/model-ref";
 import { useSpeechInput } from "@/lib/hooks/use-speech";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { usePageSettings } from "@/lib/stores/page-settings";
@@ -164,6 +168,7 @@ import {
 import { MarkdownPreview } from "@/components/brain/markdown-preview";
 import { LinkedProjectsDialog } from "./linked-projects-dialog";
 import { ConnectionsDialog } from "./connections-dialog";
+import { UnifiedModelPicker } from "./model-picker";
 import {
   MentionMenu,
   getCaretCoordinates,
@@ -258,6 +263,7 @@ export function ChatView() {
   const [stream, setStream] = useState<LiveStream | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [inlineNotice, setInlineNotice] = useState<string | null>(null);
+  const [modelPickerOpen, setModelPickerOpen] = useState(false);
   const [linkDialog, setLinkDialog] = useState(false);
   const [connDialog, setConnDialog] = useState(false);
   const [pendingApproval, setPendingApproval] = useState<{
@@ -1677,6 +1683,39 @@ export function ChatView() {
     const text = input.trim();
     if (!text && pending.length === 0) return;
 
+    // `/model …` never reaches the network: bare opens the unified model
+    // picker; `provider-or-label:model` repoints this chat at a saved
+    // connection. The command itself is consumed locally either way.
+    const slash = parseSlashModel(input);
+    if (slash) {
+      if (!slash.ref) {
+        setModelPickerOpen(true);
+        setSendError(null);
+        return;
+      }
+      const hit = resolveModelRef(slash.ref, connections);
+      if (hit) {
+        const conn = connections.find((c) => c.id === hit.connectionId);
+        await chatThreadsRepo.update(thread.id, {
+          connectionId: hit.connectionId,
+          modelId: hit.modelId,
+          providerId: conn?.providerId ?? thread.providerId,
+          // A switch only makes sense on the API backend.
+          backend: "api",
+        });
+        setInput("");
+        setSendError(null);
+        setInlineNotice(
+          `Now using ${conn?.label ?? hit.connectionId}:${hit.modelId}`,
+        );
+      } else {
+        setSendError(
+          `No saved connection matches "${parseModelRef(slash.ref).providerId}". Add one in Connections.`,
+        );
+      }
+      return;
+    }
+
     if (backend === "opencode") {
       if (!models) {
         setSendError("Loading AI providers from OpenCode…");
@@ -1996,66 +2035,19 @@ export function ChatView() {
                 onChange={(b) => void switchBackend(b)}
               />
 
-              {backend === "opencode" && opencodeHealthy && (
-                <OpenCodeProviderMenu
-                  providers={models?.providers ?? []}
-                  value={thread.providerId}
-                  onChange={(providerId) => {
-                    const provider = models?.providers.find(
-                      (p) => p.providerId === providerId,
-                    );
-                    chatThreadsRepo.update(thread.id, {
-                      providerId,
-                      modelId: provider?.models[0]?.id ?? "",
-                    });
-                  }}
-                />
-              )}
-              {backend === "opencode" &&
-                opencodeHealthy &&
-                opencodeProvider && (
-                  <OpenCodeModelMenu
-                    models={opencodeProvider.models}
-                    value={thread.modelId}
-                    onChange={(m) =>
-                      chatThreadsRepo.update(thread.id, { modelId: m })
-                    }
-                  />
-                )}
-
               {backend === "api" && (
-                <>
-                  <ConnectionMenu
-                    connections={connections}
-                    value={apiConnection?.id ?? thread.connectionId}
-                    onChange={(connectionId) => {
-                      const conn = connections.find(
-                        (c) => c.id === connectionId,
-                      );
-                      if (!conn) return;
-                      const provider = catalog
-                        ? providerForConnection(catalog, conn)
-                        : null;
-                      chatThreadsRepo.update(thread.id, {
-                        connectionId,
-                        providerId: conn.providerId,
-                        modelId: provider
-                          ? defaultModelId(provider)
-                          : thread.modelId,
-                      });
-                    }}
-                    onManage={() => setConnDialog(true)}
-                  />
-                  {apiProvider && (
-                    <CatalogModelMenu
-                      models={modelsForProvider(apiProvider)}
-                      value={thread.modelId}
-                      onChange={(m) =>
-                        chatThreadsRepo.update(thread.id, { modelId: m })
-                      }
-                    />
-                  )}
-                </>
+                <UnifiedModelPicker
+                  connections={connections}
+                  catalog={catalog}
+                  connectionId={apiConnection?.id ?? thread.connectionId}
+                  modelId={thread.modelId}
+                  open={modelPickerOpen}
+                  onOpenChange={setModelPickerOpen}
+                  onSelect={(choice) =>
+                    chatThreadsRepo.update(thread.id, choice)
+                  }
+                  onManageConnections={() => setConnDialog(true)}
+                />
               )}
 
               {backend === "ollama" && (
@@ -2965,77 +2957,6 @@ function BackendSwitch({
   );
 }
 
-/* ── Saved-connection picker (API backend) ────────────────────────────── */
-
-function ConnectionMenu({
-  connections,
-  value,
-  onChange,
-  onManage,
-}: {
-  connections: AiConnection[];
-  value: string;
-  onChange: (connectionId: string) => void;
-  onManage: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const current = connections.find((c) => c.id === value);
-  return (
-    <div className="relative shrink-0">
-      <Button variant="outline" size="sm" onClick={() => setOpen((v) => !v)}>
-        <Plug className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="max-w-32 truncate">
-          {current?.label ?? "Connection"}
-        </span>
-        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-      </Button>
-      {open && (
-        <div className="absolute z-50 mt-1 w-64 overflow-hidden rounded-md border border-border bg-popover shadow-lg">
-          <ul className="p-1">
-            {connections.map((c) => (
-              <li key={c.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onChange(c.id);
-                    setOpen(false);
-                  }}
-                  className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded px-2.5 py-1.5 text-left text-sm hover:bg-accent",
-                    c.id === value && "bg-accent/60",
-                  )}
-                >
-                  <span className="min-w-0 truncate">{c.label}</span>
-                  <span className="shrink-0 text-[11px] text-muted-foreground">
-                    {c.apiKey ? "key" : "no key"}
-                  </span>
-                </button>
-              </li>
-            ))}
-            {connections.length === 0 && (
-              <li className="px-2.5 py-3 text-center text-xs text-muted-foreground">
-                No connections yet.
-              </li>
-            )}
-          </ul>
-          <div className="border-t border-border px-3 py-2">
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                onManage();
-              }}
-              className="text-[11px] text-muted-foreground hover:text-foreground"
-            >
-              Manage connections…
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ── Catalog model picker (API / Ollama backends) ─────────────────────── */
 
 function CatalogModelMenu({
@@ -3661,156 +3582,3 @@ function ThinkingBlock({
   );
 }
 
-/* ── OpenCode provider / model pickers ────────────────────────────────── */
-
-function OpenCodeProviderMenu({
-  providers,
-  value,
-  onChange,
-}: {
-  providers: { providerId: string; providerName: string }[];
-  value: string;
-  onChange: (providerId: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const current = providers.find((p) => p.providerId === value);
-  return (
-    <div className="relative shrink-0">
-      <Button variant="outline" size="sm" onClick={() => setOpen((v) => !v)}>
-        <Plug className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="max-w-32 truncate">
-          {current?.providerName ?? "Provider"}
-        </span>
-        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-      </Button>
-      {open && (
-        <div className="absolute z-50 mt-1 w-64 overflow-hidden rounded-md border border-border bg-popover shadow-lg">
-          <ul className="p-1">
-            {providers.map((p) => (
-              <li key={p.providerId}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onChange(p.providerId);
-                    setOpen(false);
-                  }}
-                  className={cn(
-                    "w-full truncate rounded px-2.5 py-1.5 text-left text-sm hover:bg-accent",
-                    p.providerId === value && "bg-accent/60",
-                  )}
-                >
-                  {p.providerName}
-                </button>
-              </li>
-            ))}
-            {providers.length === 0 && (
-              <li className="px-2.5 py-3 text-center text-xs text-muted-foreground">
-                No providers connected.
-              </li>
-            )}
-          </ul>
-          <p className="border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
-            Providers are configured in OpenCode — run{" "}
-            <code className="rounded bg-muted px-1">opencode auth</code>.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function OpenCodeModelMenu({
-  models,
-  value,
-  onChange,
-}: {
-  models: {
-    id: string;
-    name: string;
-    capabilities: {
-      reasoning: boolean;
-      attachment: boolean;
-      toolcall: boolean;
-    };
-  }[];
-  value: string;
-  onChange: (modelId: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return models;
-    return models.filter(
-      (m) => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q),
-    );
-  }, [models, query]);
-  const current = models.find((m) => m.id === value);
-
-  return (
-    <div className="relative shrink-0">
-      <Button variant="outline" size="sm" onClick={() => setOpen((v) => !v)}>
-        <span className="max-w-44 truncate">{current?.name ?? "Model"}</span>
-        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-      </Button>
-      {open && (
-        <div className="absolute z-50 mt-1 w-80 overflow-hidden rounded-md border border-border bg-popover shadow-lg">
-          <div className="relative border-b border-border p-1.5">
-            <Search className="absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search models…"
-              className="h-8 pl-8 text-sm"
-            />
-          </div>
-          <ScrollArea className="max-h-64">
-            <ul className="p-1">
-              {results.map((m) => (
-                <li key={m.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onChange(m.id);
-                      setOpen(false);
-                      setQuery("");
-                    }}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-left text-sm hover:bg-accent",
-                      m.id === value && "bg-accent/60",
-                    )}
-                  >
-                    <span className="min-w-0 flex-1 truncate">{m.name}</span>
-                    <span className="flex shrink-0 gap-1">
-                      {m.capabilities.toolcall && (
-                        <span title="Supports tools — full agentic mode">
-                          <Wrench className="h-3 w-3 text-muted-foreground" />
-                        </span>
-                      )}
-                      {m.capabilities.attachment && (
-                        <span title="Accepts images">
-                          <ImageIcon className="h-3 w-3 text-muted-foreground" />
-                        </span>
-                      )}
-                      {m.capabilities.reasoning && (
-                        <span title="Supports extended thinking">
-                          <BrainCircuit className="h-3 w-3 text-muted-foreground" />
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                </li>
-              ))}
-              {results.length === 0 && (
-                <li className="px-2.5 py-3 text-center text-xs text-muted-foreground">
-                  No models found.
-                </li>
-              )}
-            </ul>
-          </ScrollArea>
-        </div>
-      )}
-    </div>
-  );
-}
