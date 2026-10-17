@@ -1,5 +1,23 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
+
+/**
+ * In-memory fallback so the store also works during SSR / node tests (the
+ * browser uses localStorage). Mirrors the dock store's approach.
+ */
+const fallbackStorage: Storage = (() => {
+  const map = new Map<string, string>();
+  return {
+    getItem: (k: string) => map.get(k) ?? null,
+    setItem: (k: string, v: string) => void map.set(k, v),
+    removeItem: (k: string) => void map.delete(k),
+    clear: () => map.clear(),
+    key: (i: number) => [...map.keys()][i] ?? null,
+    get length() {
+      return map.size;
+    },
+  };
+})();
 
 export interface DashboardSettings {
   showMetrics: boolean;
@@ -48,8 +66,8 @@ export interface ChatSettings {
   showTimestamps: boolean;
   codeHighlighting: boolean;
   density: "compact" | "comfortable";
-  /** Backend new chat threads start on (OpenCode / API / Ollama). */
-  defaultBackend: "opencode" | "api" | "ollama";
+  /** Backend new chat threads start on (a saved API connection or Ollama). */
+  defaultBackend: "api" | "ollama";
   /**
    * Ordered fallback targets tried when the primary connection for a new
    * (API-backend) chat fails — copied into `thread.fallbacks` at creation.
@@ -150,7 +168,7 @@ export const PAGE_SETTINGS_DEFAULTS: AllPageSettings = {
     showTimestamps: false,
     codeHighlighting: true,
     density: "comfortable",
-    defaultBackend: "opencode",
+    defaultBackend: "api",
     fallbacks: [],
   },
   agents: { showDisabled: false },
@@ -195,6 +213,27 @@ export const usePageSettings = create<PageSettingsStore>()(
         })),
       reset: (page) => set({ [page]: PAGE_SETTINGS_DEFAULTS[page] }),
     }),
-    { name: "masarflow-page-settings" },
+    {
+      name: "masarflow-page-settings",
+      storage: createJSONStorage(() =>
+        typeof localStorage === "undefined" ? fallbackStorage : localStorage,
+      ),
+      /**
+       * Persisted states predate today's backend list: any stale or unknown
+       * backend value normalizes to "api", and the chat defaults fill fields
+       * old states never had (`fallbacks`).
+       */
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<AllPageSettings>;
+        const chat: ChatSettings = {
+          ...PAGE_SETTINGS_DEFAULTS.chat,
+          ...(p.chat ?? {}),
+        };
+        if (chat.defaultBackend !== "api" && chat.defaultBackend !== "ollama") {
+          chat.defaultBackend = "api";
+        }
+        return { ...current, ...p, chat };
+      },
+    },
   ),
 );

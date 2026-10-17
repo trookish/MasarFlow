@@ -48,9 +48,8 @@ import type { ToolCallRequest } from "./workspace-tool-defs";
  * The workspace tool execution engine: real function-calling tools the AI
  * uses to read and mutate the local database. Tool definitions live in
  * `workspace-tool-defs.ts` (the single source of truth shared with the
- * OpenCode bridge and the system prompt); execution runs in the browser
- * against the Dexie repos, and every mutation writes a dev-log entry so the
- * trail is visible in Dev Logs.
+ * system prompt); execution runs in the browser against the Dexie repos, and
+ * every mutation writes a dev-log entry so the trail is visible in Dev Logs.
  *
  * Coverage is page-to-page: every workspace page's backing entities are
  * readable, and the content pages are creatable/updatable. Config/pipeline

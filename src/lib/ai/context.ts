@@ -456,18 +456,15 @@ export async function assembleWorkspaceContext(
  * the briefing and (when tools are enabled) tells it how to act on the
  * workspace rather than merely advise.
  *
- * `toolbelt` decides which tools actually exist for the model:
+ * `toolbelt` decides which tools the prompt describes as actually available:
  *   - "workspace" — MasarFlow's browser workspace tools (notes, tasks, specs,
- *     docs, …) executed against the local database. Used by the in-browser
- *     Agent Loop (AI Agents, Workflow, chat over API/Ollama backends).
- *   - "filesystem" — opencode-style fs/shell/web tools executed by the
- *     OpenCode server against the session's working directory. Used by
- *     OpenCode-backed chat when the workspace tools are not registered.
- *   - "hybrid" — BOTH the workspace functions (mutate the project DB) and
- *     the OpenCode server's fs/shell tools (act on real files). Used by
- *     OpenCode-backed chat when the workspace tools ARE registered on the
- *     server. `workspaceTools` lists the actual registered functions;
- *     `filesystemTools` lists the server's native tools.
+ *     docs, …) executed against the local database. Used by the Agent Loop
+ *     (AI Agents, Workflow) and by chat without linked project roots.
+ *   - "hybrid" — BOTH the workspace functions (mutate the project DB) and the
+ *     filesystem/shell tools executed by MasarFlow against the linked project
+ *     root, with approval for writes and shell. Used by chat when the agentic
+ *     toolbelt is on. `workspaceTools` lists the actual functions;
+ *     `filesystemTools` lists the native fs tools.
  *   - undefined + withTools=false — chat mode: answer from the briefing only.
  */
 export function buildAssistantSystemPrompt(
@@ -475,24 +472,24 @@ export function buildAssistantSystemPrompt(
   opts: {
     withTools?: boolean;
     role?: string;
-    toolbelt?: "workspace" | "filesystem" | "hybrid";
+    toolbelt?: "workspace" | "hybrid";
     /** External projects linked to this workspace project (fs/shell tools). */
     linkedRoots?: { name: string; rootPath: string }[];
     /**
      * Free-form note appended to the filesystem toolbelt telling the model
-     * where its tools are rooted (e.g. the session's working directory).
+     * where its tools are rooted (e.g. the linked project root).
      */
     filesystemNote?: string;
     /**
-     * The tools actually registered on the OpenCode server (id + description).
+     * The filesystem/shell tools available this turn (id + description).
      * When provided the filesystem toolbelt lists these real tools instead of
      * the generic fs_* names — the model can then call tools that exist.
      */
     filesystemTools?: { id: string; description: string }[];
     /**
-     * The workspace functions actually registered on the OpenCode server
-     * (name + description). Used by the "hybrid" toolbelt so the model sees
-     * exactly the functions it can call.
+     * The workspace functions available this turn (name + description). Used
+     * by the "hybrid" toolbelt so the model sees exactly the functions it can
+     * call.
      */
     workspaceTools?: { name: string; description: string }[];
   } = {},
@@ -530,7 +527,9 @@ Always:
             t.id === "write" ||
             t.id === "apply_patch" ||
             t.id === "webfetch" ||
-            t.id === "shell"
+            t.id === "shell" ||
+            t.id === "fs_write" ||
+            t.id === "shell_run"
               ? " REQUIRES user approval — the user sees and reviews each command/file before it executes; propose edits and commands confidently but expect review."
               : " Runs freely — no approval needed.";
           const desc = t.description.slice(0, 220);
@@ -566,7 +565,7 @@ You can ACT on the MasarFlow workspace AND on the machine through tools, not jus
 WORKSPACE FUNCTIONS — mutate the user's MasarFlow project database (brain notes, specs, tasks, sprints, standards, systems, docs, dev logs, memories, knowledge-graph links). Every change is recorded in Dev Logs and can be rolled back from the chat UI. You have these functions in this session:
 ${workspaceToolListing || "- (none registered on this server — rely on the briefing for workspace facts)"}
 
-FILESYSTEM/SHELL TOOLS — act on the real files on disk (the session's working directory):
+FILESYSTEM/SHELL TOOLS — executed by MasarFlow against the linked project root, with approval for writes and shell commands:
 ${filesystemToolListing}
 ${opts.filesystemNote ? `Working directory note: ${opts.filesystemNote}\n` : ""}Rules of engagement:
 - When the user asks you to create, update, or look up something in the project, CALL the matching workspace function right away — emit the tool call, then act on its result. Do not merely describe what you would do.
@@ -576,28 +575,17 @@ ${opts.filesystemNote ? `Working directory note: ${opts.filesystemNote}\n` : ""}
 ${filesystemRules}
 - Never invent workspace content: if it is not in the briefing or a tool result, say so.`;
 
-  const filesystemToolGuidance = `
-You can ACT on the machine through filesystem/shell tools, not just advise. The tools you actually have in this session are:
-${filesystemToolListing}
-${opts.filesystemNote ? `Working directory note: ${opts.filesystemNote}\n` : ""}The workspace briefing below is real data from the user's MasarFlow project, but you have NO tools to mutate it in this session — it is read-only context only. Your tools work on the real files on disk.
-Rules of engagement:
-${filesystemRules}
-- When you change code, suggest (or ask the user to add) matching notes/specs/docs updates in the workspace — you cannot write those yourself in this session.
-- Never invent files or content: if something is not on disk, say so.`;
-
   const toolGuidance = !opts.withTools
     ? `
 Answer strictly from the workspace briefing below. If something is not in it, say you don't see it in the workspace rather than inventing it.`
-    : opts.toolbelt === "filesystem"
-      ? filesystemToolGuidance
-      : opts.toolbelt === "hybrid"
-        ? hybridToolGuidance
-        : workspaceToolGuidance;
+    : opts.toolbelt === "hybrid"
+      ? hybridToolGuidance
+      : workspaceToolGuidance;
 
   const linked = opts.linkedRoots?.length
     ? `
 
-LINKED EXTERNAL PROJECTS (real folders on the user's machine — you have opencode-style agency over them):
+LINKED EXTERNAL PROJECTS (real folders on the user's machine — you can act on them through filesystem/shell tools):
 ${opts.linkedRoots.map((r) => `- "${r.name}" at ${r.rootPath}`).join("\n")}
 Filesystem/shell tools (agentic mode): fs_list, fs_read, fs_search are read-only and run freely; fs_write and shell_run REQUIRE user approval — the user sees each command/file before it executes, so propose them confidently but expect review. Rules of engagement:
 - Orient with fs_list before reading/writing; read a file before overwriting it.

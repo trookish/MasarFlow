@@ -22,19 +22,20 @@ export interface AgentContextOptions {
   withTools: boolean;
   /**
    * Which tools the prompt should describe as actually available:
-   * "workspace" (in-browser Agent Loop), "filesystem" (OpenCode-backed chat
-   * without workspace tools), or "hybrid" (OpenCode-backed chat with the
-   * workspace functions registered on the server). Only meaningful when
+   * "workspace" (browser workspace tools only — the Agent Loop pages) or
+   * "hybrid" (workspace functions + filesystem/shell tools executed by
+   * MasarFlow against the linked project root, with approval for writes and
+   * shell — chat over a saved API connection). Only meaningful when
    * withTools is true.
    */
-  toolbelt?: "workspace" | "filesystem" | "hybrid";
+  toolbelt?: "workspace" | "hybrid";
   linkedRoots?: { name: string; rootPath: string }[];
   role?: string;
   /** Extra note about where the filesystem tools are rooted. */
   filesystemNote?: string;
-  /** Real tools registered on the OpenCode server (filesystem toolbelt). */
+  /** The filesystem/shell tools available this turn (id + description). */
   filesystemTools?: { id: string; description: string }[];
-  /** Real workspace functions registered on the OpenCode server (hybrid). */
+  /** The workspace functions available this turn (name + description). */
   workspaceTools?: { name: string; description: string }[];
   /** Caller's cancellation signal (honored during RAG retrieval). */
   signal?: AbortSignal;

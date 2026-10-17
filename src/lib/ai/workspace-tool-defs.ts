@@ -4,9 +4,8 @@
  * This module is the single source of truth for the project's functions
  * (create_note, read_spec, create_task, …). It stays free of Dexie/repo
  * imports so it can be safely consumed from server-side code too: the
- * OpenCode custom-tool generator (toolgen), the bridge routes, and the
- * system-prompt tool listings all derive from here, guaranteeing every
- * backend (OpenCode / API / Local) describes exactly the same functions.
+ * system-prompt tool listings and the browser Agent Loop both derive from
+ * here, guaranteeing every backend describes exactly the same functions.
  *
  * Execution lives in `@/lib/ai/tools` (executeWorkspaceTool), which runs in
  * the browser against the Dexie repos.
@@ -14,8 +13,7 @@
 
 /**
  * Enum option lists — duplicated from db/schema.ts ON PURPOSE: this module is
- * import-free so plain Node (scripts/install-opencode-tools.mjs, type
- * stripping) can load it to generate the opencode tool files. A unit test
+ * import-free so it stays loadable outside the app bundle. A unit test
  * (tests/unit/lib/ai/workspace-tool-defs.test.ts) fails if these drift from
  * the zod schemas.
  */

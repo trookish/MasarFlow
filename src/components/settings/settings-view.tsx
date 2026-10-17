@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
@@ -38,6 +38,8 @@ import {
   Pencil,
   ExternalLink,
   PanelLeft,
+  ArrowUp,
+  ArrowDown,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -65,7 +67,10 @@ import {
   type AgentSettingsState,
 } from "@/lib/stores/agent-settings";
 import { DEFAULT_AGENT_CONFIG } from "@/lib/ai/agent";
-import { projectsRepo, categoriesRepo } from "@/lib/db/repos";
+import { projectsRepo, categoriesRepo, aiConnectionsRepo } from "@/lib/db/repos";
+import type { Catalog } from "@/lib/ai/catalog";
+import { fetchCatalog } from "@/lib/ai/catalog";
+import { modelPickerEntries } from "@/components/chat/model-picker";
 import type { Project } from "@/lib/db/schema";
 import { resetData } from "@/lib/db/data";
 import { seedDemoProject } from "@/lib/db/demo-seed";
@@ -1249,6 +1254,60 @@ function ChatSection() {
     v: AllPageSettings["chat"][K],
   ) => update("chat", { [k]: v } as Partial<AllPageSettings["chat"]>);
 
+  const connections = useLiveQuery(() => aiConnectionsRepo.list(), []) ?? [];
+  const [catalog, setCatalog] = useState<Catalog | null>(null);
+  const [pendingConnectionId, setPendingConnectionId] = useState("");
+  const [pendingModelId, setPendingModelId] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    fetchCatalog()
+      .then((c) => {
+        if (alive) setCatalog(c);
+      })
+      .catch(() => {
+        /* offline: the picker simply stays empty */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const entries = modelPickerEntries(connections, catalog);
+  const modelsFor = (connectionId: string) =>
+    entries.filter((e) => e.connectionId === connectionId);
+
+  const labelFor = (f: { connectionId: string; modelId: string }) => {
+    const conn = connections.find((c) => c.id === f.connectionId);
+    const model = entries.find(
+      (e) => e.connectionId === f.connectionId && e.model.id === f.modelId,
+    );
+    return `${conn?.label ?? "Missing connection"} · ${model?.model.name ?? f.modelId}`;
+  };
+
+  const moveFallback = (index: number, delta: -1 | 1) => {
+    const next = [...chat.fallbacks];
+    const to = index + delta;
+    if (to < 0 || to >= next.length) return;
+    [next[index], next[to]] = [next[to], next[index]];
+    set("fallbacks", next);
+  };
+
+  const addFallback = () => {
+    if (!pendingConnectionId || !pendingModelId) return;
+    const exists = chat.fallbacks.some(
+      (f) =>
+        f.connectionId === pendingConnectionId && f.modelId === pendingModelId,
+    );
+    if (!exists) {
+      set("fallbacks", [
+        ...chat.fallbacks,
+        { connectionId: pendingConnectionId, modelId: pendingModelId },
+      ]);
+    }
+    setPendingModelId("");
+  };
+
   return (
     <SectionPanel
       title="Chat"
@@ -1275,17 +1334,130 @@ function ChatSection() {
       </SettingRow>
       <SettingRow
         label="Default AI backend"
-        description="Which backend new chats start on: the OpenCode server, a saved API connection, or local Ollama. Switchable per-chat from the chat header."
+        description="Which backend new chats start on: a saved API connection or local Ollama. Switchable per chat."
       >
         <SegmentedControl
           value={chat.defaultBackend}
           options={[
-            { value: "opencode", label: "OpenCode" },
             { value: "api", label: "API" },
-            { value: "ollama", label: "Ollama" },
+            { value: "ollama", label: "Local (Ollama)" },
           ]}
           onChange={(v) => set("defaultBackend", v)}
         />
+      </SettingRow>
+      <SettingRow
+        label="Fallback models"
+        description="Tried in order when the primary connection fails (rate limits, outages, a revoked key). New chats copy this list; a running chat asks before switching."
+      >
+        <div className="w-80 space-y-1.5">
+          {chat.fallbacks.length === 0 ? (
+            <p className="text-right text-xs text-muted-foreground">
+              None — a failed connection ends the turn.
+            </p>
+          ) : (
+            <ul className="space-y-1">
+              {chat.fallbacks.map((f, i) => {
+                const label = labelFor(f);
+                return (
+                  <li
+                    key={`${f.connectionId}:${f.modelId}:${i}`}
+                    className="flex items-center gap-1 rounded-md border border-border px-2 py-1"
+                  >
+                    <span className="min-w-0 flex-1 truncate text-xs" title={label}>
+                      {i + 1}. {label}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0"
+                      onClick={() => moveFallback(i, -1)}
+                      disabled={i === 0}
+                      title="Move up"
+                      aria-label={`Move ${label} up`}
+                    >
+                      <ArrowUp className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0"
+                      onClick={() => moveFallback(i, 1)}
+                      disabled={i === chat.fallbacks.length - 1}
+                      title="Move down"
+                      aria-label={`Move ${label} down`}
+                    >
+                      <ArrowDown className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                      onClick={() =>
+                        set(
+                          "fallbacks",
+                          chat.fallbacks.filter((_, j) => j !== i),
+                        )
+                      }
+                      title="Remove"
+                      aria-label={`Remove ${label}`}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {connections.length > 0 ? (
+            <div className="flex items-center gap-1">
+              <select
+                value={pendingConnectionId}
+                onChange={(e) => {
+                  setPendingConnectionId(e.target.value);
+                  setPendingModelId("");
+                }}
+                className="h-8 min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-xs"
+                aria-label="Fallback connection"
+              >
+                <option value="">Add fallback…</option>
+                {connections.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={pendingModelId}
+                onChange={(e) => setPendingModelId(e.target.value)}
+                disabled={!pendingConnectionId}
+                className="h-8 min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-xs disabled:opacity-50"
+                aria-label="Fallback model"
+              >
+                <option value="">Model…</option>
+                {modelsFor(pendingConnectionId).map((e) => (
+                  <option key={e.model.id} value={e.model.id}>
+                    {e.model.name}
+                  </option>
+                ))}
+              </select>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 px-2"
+                onClick={addFallback}
+                disabled={!pendingConnectionId || !pendingModelId}
+                title="Add fallback"
+                aria-label="Add fallback"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ) : (
+            <p className="text-right text-[11px] text-muted-foreground">
+              Save an AI connection in Chat first.
+            </p>
+          )}
+        </div>
       </SettingRow>
       <SettingRow
         label="Message density"

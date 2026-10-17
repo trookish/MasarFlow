@@ -135,12 +135,12 @@ describe("formatWorkspaceContext — RAG chunks", () => {
   });
 });
 
-describe("buildAssistantSystemPrompt — hybrid toolbelt (OpenCode + workspace functions)", () => {
+describe("buildAssistantSystemPrompt — hybrid toolbelt (workspace functions + filesystem tools)", () => {
   it("tells the model not to echo the user's message back", () => {
     const text = buildAssistantSystemPrompt("briefing", {
       withTools: true,
       toolbelt: "hybrid",
-      filesystemTools: [{ id: "read", description: "Read." }],
+      filesystemTools: [{ id: "fs_read", description: "Read." }],
     });
     expect(text).toContain("never repeat, restate, or echo");
     expect(text).toContain("go straight to your answer");
@@ -155,9 +155,9 @@ describe("buildAssistantSystemPrompt — hybrid toolbelt (OpenCode + workspace f
         { name: "read_spec", description: "Read a specification." },
       ],
       filesystemTools: [
-        { id: "read", description: "Read a file from disk." },
-        { id: "bash", description: "Run a shell command." },
-        { id: "question", description: "Ask the user something." },
+        { id: "fs_read", description: "Read a file from disk." },
+        { id: "fs_write", description: "Write a file to disk." },
+        { id: "shell_run", description: "Run a shell command." },
       ],
     });
     expect(text).toContain("WORKSPACE FUNCTIONS");
@@ -165,9 +165,9 @@ describe("buildAssistantSystemPrompt — hybrid toolbelt (OpenCode + workspace f
     expect(text).toContain("read_spec");
     expect(text).toContain("mutates your MasarFlow project");
     expect(text).toContain("FILESYSTEM/SHELL TOOLS");
-    expect(text).toContain("read");
+    expect(text).toContain("fs_read");
     expect(text).toContain("REQUIRES user approval");
-    expect(text).toContain("question");
+    expect(text).toContain("fs_write");
     // The hybrid belt must NOT claim the workspace is read-only.
     expect(text).not.toContain("NO tools to mutate");
     expect(text).not.toContain("read-only context");
@@ -177,17 +177,8 @@ describe("buildAssistantSystemPrompt — hybrid toolbelt (OpenCode + workspace f
     const text = buildAssistantSystemPrompt("briefing", {
       withTools: true,
       toolbelt: "hybrid",
-      filesystemTools: [{ id: "bash", description: "Shell" }],
+      filesystemTools: [{ id: "shell_run", description: "Shell" }],
     });
-    expect(text).toContain("(none registered on this server");
-  });
-
-  it("keeps the filesystem belt read-only when used alone", () => {
-    const text = buildAssistantSystemPrompt("briefing", {
-      withTools: true,
-      toolbelt: "filesystem",
-      filesystemTools: [{ id: "read", description: "Read." }],
-    });
-    expect(text).toContain("NO tools to mutate");
+    expect(text).toContain("(none registered");
   });
 });
