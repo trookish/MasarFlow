@@ -8,6 +8,7 @@
 // tricks, absolute-path overrides). Dangerous operations (write, shell) are
 // additionally gated by per-action user approval on the client.
 import * as path from "node:path";
+import { assertRootAllowed } from "@/lib/server/roots";
 
 /** Directory segments skipped while walking (noise or huge). */
 export const IGNORED_SEGMENTS = new Set([
@@ -54,6 +55,7 @@ export function resolveInsideRoot(root: string, rel: string): string {
   if (!root || !path.isAbsolute(root)) {
     throw { status: 400, message: "root must be an absolute path" };
   }
+  assertRootAllowed(root);
   const normRoot = path.resolve(root);
   // Treat the incoming path as relative even if it sneaks in as absolute:
   // strip drive letters / leading slashes so it can never escape the root.

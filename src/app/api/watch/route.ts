@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { assertRootAllowed } from "@/lib/server/roots";
 
 // Real filesystem watcher. Streams live file events from a local directory as
 // Server-Sent Events using Node's fs.watch (recursive). The dev server runs on
@@ -47,6 +48,11 @@ export async function GET(req: NextRequest): Promise<Response> {
       { error: "Directory must be an absolute path" },
       { status: 400 },
     );
+  }
+  try {
+    assertRootAllowed(dir);
+  } catch (e) {
+    return Response.json({ error: (e as { message: string }).message }, { status: 403 });
   }
   let stat: fs.Stats;
   try {
