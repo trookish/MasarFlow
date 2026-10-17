@@ -94,6 +94,12 @@ export const entityKindSchema = z.enum([
   "memory",
   "doc",
   "archNode",
+  "standard",
+  "sprint",
+  "devlog",
+  "canvas",
+  "agent",
+  "thread",
 ]);
 export type EntityKind = z.infer<typeof entityKindSchema>;
 

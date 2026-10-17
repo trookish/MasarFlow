@@ -98,6 +98,16 @@ const enumOf = (values: readonly string[], description: string) => ({
   description,
 });
 
+/**
+ * Entity kinds for the link tools — duplicated from db/schema.ts ON PURPOSE
+ * (this module stays import-free). tests/unit/lib/entities/kinds-parity.test.ts
+ * fails if these drift from the zod schema / the entity registry.
+ */
+const ENTITY_KIND_VALUES = [
+  "note", "spec", "task", "system", "commit", "memory", "doc", "archNode",
+  "standard", "sprint", "devlog", "canvas", "agent", "thread",
+] as const;
+
 export const WORKSPACE_TOOLS: WorkspaceToolDef[] = [
   {
     name: "search_workspace",
@@ -531,33 +541,9 @@ export const WORKSPACE_TOOLS: WorkspaceToolDef[] = [
     parameters: {
       type: "object",
       properties: {
-        sourceType: enumOf(
-          [
-            "note",
-            "spec",
-            "task",
-            "system",
-            "commit",
-            "memory",
-            "doc",
-            "archNode",
-          ],
-          "Source entity kind.",
-        ),
+        sourceType: enumOf(ENTITY_KIND_VALUES, "Source entity kind."),
         sourceId: str("Source entity id."),
-        targetType: enumOf(
-          [
-            "note",
-            "spec",
-            "task",
-            "system",
-            "commit",
-            "memory",
-            "doc",
-            "archNode",
-          ],
-          "Target entity kind.",
-        ),
+        targetType: enumOf(ENTITY_KIND_VALUES, "Target entity kind."),
         targetId: str("Target entity id."),
         linkType: enumOf(
           ["wikilink", "dependency", "reference", "implements", "relates"],
