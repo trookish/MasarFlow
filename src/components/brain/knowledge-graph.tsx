@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   forceSimulation,
   forceManyBody,
@@ -25,6 +25,7 @@ import {
 } from "@/lib/db/repos";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { usePageSettings } from "@/lib/stores/page-settings";
+import { openEntity } from "@/lib/entities/open";
 import { GRAPH_VAR, GRAPH_KIND_LABEL, type GraphKind } from "@/lib/colors";
 import { cn } from "@/lib/utils/cn";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -104,7 +105,6 @@ export function KnowledgeGraph({
   initialCategories?: EntityCategory[];
 } = {}) {
   const projectId = useActiveProjectId();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { layout, showOrphans, showEdgeLabels } = usePageSettings(
     (s) => s.knowledge,
@@ -360,15 +360,8 @@ export function KnowledgeGraph({
     drag.current = { mode: "none", sx: 0, sy: 0, ox: 0, oy: 0 };
   }
 
-  function openEntity(category: EntityCategory, refId: string) {
-    const routes: Record<EntityCategory, string> = {
-      note: `/brain?note=${refId}`,
-      spec: `/specs?spec=${refId}`,
-      task: `/tasks?task=${refId}`,
-      system: `/architecture?system=${refId}`,
-      commit: "/dashboard",
-    };
-    router.push(routes[category]);
+  function openNode(category: EntityCategory, refId: string) {
+    openEntity({ kind: category, id: refId });
   }
 
   function toggleCat(cat: EntityCategory) {
@@ -557,7 +550,7 @@ export function KnowledgeGraph({
           node={selectedNode}
           onClose={() => setSelectedKey(null)}
           onSelectNote={(id) => setSelectedKey(`note:${id}`)}
-          onOpen={openEntity}
+          onOpen={openNode}
         />
       ) : null}
     </div>

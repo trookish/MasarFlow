@@ -16,6 +16,9 @@ import {
   OBSIDIAN_PDF_EXTENSIONS,
   fileExtension,
 } from "@/lib/sync";
+import { markdownUrlTransform } from "@/lib/utils/markdown-url";
+import { parseEntityUri } from "@/lib/entities/registry";
+import { EntityChip } from "@/components/entities/entity-chip";
 
 /** Rewrite `[[Target]]` / `[[Target|Alias]]` into links with a wikilink scheme. */
 function preprocessWikilinks(markdown: string): string {
@@ -93,6 +96,7 @@ export const MarkdownPreview = memo(
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        urlTransform={markdownUrlTransform}
         rehypePlugins={[
           [rehypeHighlight, { detect: false, ignoreMissing: true }],
         ]}
@@ -178,6 +182,10 @@ export const MarkdownPreview = memo(
             );
           },
           a({ href, children, ...props }) {
+            if (typeof href === "string" && href.startsWith("entity:")) {
+              const ref = parseEntityUri(href);
+              if (ref) return <EntityChip entity={ref} />;
+            }
             if (typeof href === "string" && href.startsWith("wikilink:")) {
               const title = decodeURIComponent(href.slice("wikilink:".length));
               return (

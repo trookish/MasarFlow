@@ -58,6 +58,7 @@ import {
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { usePageSettings } from "@/lib/stores/page-settings";
 import { useObsidianStore } from "@/lib/stores/obsidian";
+import { entityHref } from "@/lib/entities/registry";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,12 +93,6 @@ const ENTITY_ICON: Partial<Record<EntityKind, LucideIcon>> = {
   note: PenTool,
   doc: BookOpen,
 };
-
-function entityHref(type: EntityKind, id: string): string | null {
-  if (type === "note") return `/brain?note=${id}`;
-  if (type === "doc") return `/docs?doc=${id}`;
-  return null;
-}
 
 function relTime(ts: number | null): string {
   if (!ts) return "never";
@@ -1030,7 +1025,7 @@ function FileRow({ file }: { file: SyncFile }) {
   const Icon = ENTITY_ICON[file.entityType ?? "note"] ?? FileText;
   const href =
     file.entityType && file.entityId
-      ? entityHref(file.entityType, file.entityId)
+      ? entityHref({ kind: file.entityType, id: file.entityId })
       : null;
   const status = file.status as SyncStatus;
 

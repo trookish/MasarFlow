@@ -21,6 +21,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { devLogsRepo } from "@/lib/db/repos";
+import { entityHref } from "@/lib/entities/registry";
 import type { DevLog, EntityKind } from "@/lib/db/schema";
 import {
   DEVLOG_TYPES,
@@ -59,21 +60,7 @@ const TYPE_ICON: Record<DevLogType, LucideIcon> = {
 
 /** Deep-link to the referenced entity, or null if it has no dedicated route. */
 function refHref(refType: EntityKind | null, refId: string | null): string | null {
-  if (!refType || !refId) return null;
-  switch (refType) {
-    case "note":
-      return `/brain?note=${refId}`;
-    case "spec":
-      return `/specs?spec=${refId}`;
-    case "task":
-      return `/tasks?task=${refId}`;
-    case "system":
-      return `/architecture?system=${refId}`;
-    case "doc":
-      return `/docs?doc=${refId}`;
-    default:
-      return null;
-  }
+  return refType && refId ? entityHref({ kind: refType, id: refId }) : null;
 }
 
 function relativeTime(ts: number): string {
