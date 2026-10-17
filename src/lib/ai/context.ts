@@ -17,6 +17,8 @@ import {
   linksRepo,
   activityRepo,
 } from "@/lib/db/repos";
+import { gitBridge } from "@/lib/git/client";
+import { briefFromStatus, formatRepoLine } from "@/lib/ai/git-context";
 import type {
   Project,
   Note,
@@ -64,6 +66,8 @@ export interface WorkspaceSnapshot {
   devLogs: DevLog[];
   docs: Doc[];
   commits: Commit[];
+  /** P6 — one-line git summary of the project's first linked folder, when it has one. */
+  repo?: string | null;
   /** v2 — optional so older callers and tests keep compiling. */
   links?: Link[];
   canvases?: Canvas[];
@@ -150,7 +154,7 @@ export async function fetchWorkspaceSnapshot(
     linkedProjectsRepo.listByProject(projectId),
     activityRepo.listRecent(projectId, 20),
   ]);
-  return {
+  const snapshot: WorkspaceSnapshot = {
     project: project ?? null,
     notes,
     specs,
@@ -168,6 +172,36 @@ export async function fetchWorkspaceSnapshot(
     linkedProjects,
     activity,
   };
+
+  // P6 — repository awareness for the chat. Best-effort: no desktop bridge
+  // (web/dev), no linked folder, or a folder without a repo simply leaves the
+  // section out; a git failure never breaks the briefing.
+  try {
+    const git = gitBridge();
+    if (git) {
+      const linked = await linkedProjectsRepo.listByProject(projectId);
+      const root = linked.find((lp) => lp.rootPath)?.rootPath;
+      if (root) {
+        const [status, remote, log] = await Promise.all([
+          git.status(root),
+          git.remote(root),
+          git.log(root, { limit: 1 }),
+        ]);
+        if (status.ok) {
+          const last = log.ok ? log.data[0] : undefined;
+          snapshot.repo = formatRepoLine(
+            briefFromStatus(root, status.data, remote.ok ? (remote.data?.url ?? null) : null, last
+              ? { shortSha: last.shortSha, subject: last.subject, date: last.date }
+              : null),
+          );
+        }
+      }
+    }
+  } catch {
+    // The chat just has no repository section — never throw from a briefing.
+  }
+
+  return snapshot;
 }
 
 function clip(text: string, max: number): string {
@@ -307,6 +341,8 @@ export function formatWorkspaceContext(
         .join("\n") + "\n",
     );
   }
+
+  if (snapshot.repo) push(`\n### Repository\n${snapshot.repo}\n`);
 
   if (opts.activeText) push(`\n${opts.activeText}`);
 

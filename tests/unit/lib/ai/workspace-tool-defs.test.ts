@@ -76,3 +76,15 @@ describe("workspace-tool-defs parity with db/schema", () => {
     }
   });
 });
+
+describe("git_status", () => {
+  it("is a read-only tool with an optional root and a described purpose", () => {
+    const def = WORKSPACE_TOOLS.find((t) => t.name === "git_status");
+    expect(def).toBeDefined();
+    expect(def!.description).toContain("repository");
+    const params = def!.parameters as { type: string; properties: Record<string, unknown>; required?: string[] };
+    expect(params.type).toBe("object");
+    expect(params.properties).toHaveProperty("root");
+    expect(params.required ?? []).not.toContain("root");
+  });
+});

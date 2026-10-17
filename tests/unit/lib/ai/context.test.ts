@@ -135,6 +135,18 @@ describe("formatWorkspaceContext — RAG chunks", () => {
   });
 });
 
+describe("formatWorkspaceContext — repository", () => {
+  it("prints the Repository section when a repo line is present", () => {
+    const text = formatWorkspaceContext(snapshot({ repo: "C:/proj on main — working tree clean — last commit abc1234 \"init\"" }));
+    expect(text).toContain("### Repository");
+    expect(text).toContain("C:/proj on main");
+  });
+  it("omits the section when there is no repository", () => {
+    expect(formatWorkspaceContext(snapshot({ repo: null }))).not.toContain("### Repository");
+    expect(formatWorkspaceContext(snapshot())).not.toContain("### Repository");
+  });
+});
+
 describe("buildAssistantSystemPrompt — hybrid toolbelt (workspace functions + filesystem tools)", () => {
   it("tells the model not to echo the user's message back", () => {
     const text = buildAssistantSystemPrompt("briefing", {

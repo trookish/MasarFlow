@@ -831,6 +831,19 @@ export const WORKSPACE_TOOLS: WorkspaceToolDef[] = [
       properties: { limit: num("Max results (default 20, max 100).") },
     },
   },
+  {
+    name: "git_status",
+    description:
+      "Read the state of the project's git repository: branch, upstream divergence, staged/modified/untracked/conflicted file counts and the latest commit. Use it before proposing commits or describing what changed. Read-only — it cannot stage, commit or switch branches.",
+    parameters: {
+      type: "object",
+      properties: {
+        root: str(
+          "Repository folder path. Omit to use the project's first linked folder.",
+        ),
+      },
+    },
+  },
 ];
 
 /** Look up tool definitions by name. */

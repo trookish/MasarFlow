@@ -20,7 +20,9 @@ import {
   syncRepo,
   watchEventsRepo,
   activityRepo,
+  linkedProjectsRepo,
 } from "@/lib/db/repos";
+import { gitBridge } from "@/lib/git/client";
 import {
   taskStatusSchema,
   taskPrioritySchema,
@@ -1317,6 +1319,29 @@ export async function executeWorkspaceTool(
             summary: r.summary,
             at: r.createdAt,
           })),
+        });
+      }
+
+      case "git_status": {
+        const rootArg = s("root");
+        const root =
+          rootArg ||
+          (await linkedProjectsRepo.listByProject(projectId)).find((lp) => lp.rootPath)?.rootPath;
+        if (!root) return fail("No repository root — link a folder to the project or pass root.");
+        const bridge = gitBridge();
+        if (!bridge) return fail("Git is only available in the desktop app.");
+        const [status, remote, log] = await Promise.all([
+          bridge.status(root),
+          bridge.remote(root),
+          bridge.log(root, { limit: 1 }),
+        ]);
+        if (!status.ok) return fail(`git status failed: ${status.message}`);
+        const last = log.ok ? log.data[0] : undefined;
+        return ok({
+          root,
+          ...status.data,
+          remote: remote.ok ? (remote.data?.url ?? null) : null,
+          lastCommit: last ? { sha: last.shortSha, subject: last.subject, date: last.date } : null,
         });
       }
 
