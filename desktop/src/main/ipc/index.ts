@@ -10,6 +10,7 @@ import { listBackups, readBackup, writeBackup } from "../backups";
 import { createExecGit } from "../git/exec";
 import { createGitService } from "../git/service";
 import { registerTerminalIpc } from "./terminal";
+import { registerLogsIpc } from "./logs";
 
 const DISPLAY_VERSION = "0.2.0.0"; // single source for UI; package.json holds the semver
 
@@ -131,4 +132,5 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
   /* ── Tool panels (P8) — terminal sessions, validated against roots.json ── */
   registerTerminalIpc(getWindow);
+  registerLogsIpc(getWindow);
 }
