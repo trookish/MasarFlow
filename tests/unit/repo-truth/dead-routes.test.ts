@@ -13,6 +13,11 @@ import { join } from "node:path";
  *
  * The allow-list entered P9 with the four /api/python/{analyze,parse,git,graph}
  * proxies and is empty because P3 deleted them. It must stay empty.
+ *
+ * Mutation-proved (T3): a probe route with no caller fails with
+ * `fresh: ["/api/t3-probe"]`, and a fake allow-list entry fails with
+ * `stale: ["/api/nope"]` — an empty list here is a real claim, not a vacuous
+ * pass.
  */
 const DEAD_ROUTES: string[] = [];
 
