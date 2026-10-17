@@ -29,6 +29,8 @@ export interface MasarflowApi {
     env(): Promise<EnvRow[]>;
     openLogs(): Promise<void>;
     relaunch(): void;
+    /** Main process asks the shell to navigate (tray → Control Center). */
+    onNavigate(cb: (route: string) => void): () => void;
   };
   dialog: {
     /** Native folder picker; the chosen folder is registered as an allowed root. */

@@ -15,6 +15,7 @@ import { SecretsBootstrap } from "@/components/shell/secrets-bootstrap";
 import { AutoBackup } from "@/components/shell/auto-backup";
 import { DbGate } from "@/components/shell/db-gate";
 import { useGlobalHotkeys } from "@/lib/hooks/use-hotkeys";
+import { useDesktopNavigation } from "@/lib/hooks/use-desktop-navigation";
 import { useProjectStore } from "@/lib/stores/project";
 import { useUIStore } from "@/lib/stores/ui";
 import { useActiveProject } from "@/lib/hooks/use-project";
@@ -47,6 +48,8 @@ export default function WorkspaceLayout({
   children: React.ReactNode;
 }) {
   useGlobalHotkeys();
+  // P10.T11: the tray can ask the shell to navigate (Control Center).
+  useDesktopNavigation();
   // Runs in dock and classic mode alike (useDockSync only mounts with the dock).
   useActivityTracking();
   const mounted = useMounted();

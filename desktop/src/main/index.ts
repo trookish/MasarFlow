@@ -2,13 +2,14 @@ import { app, BrowserWindow, dialog, Menu, nativeImage, session, shell, Tray } f
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CH } from "@shared/channels";
+import { closeBehavior } from "@shared/window-behavior";
 import { installAppProtocol, registerAppScheme } from "./backend/protocol";
 import { startBackend, type BackendHandle } from "./backend/server";
 import { registerIpc } from "./ipc";
 import { buildCsp } from "./security/csp";
 import { isPermissionAllowed } from "./security/permissions";
 import { settings } from "./settings";
-import { installLogBuffer, pruneRotatedLogs, rotateServerLogs } from "./logging";
+import { installLogBuffer, logDir, pruneRotatedLogs, rotateServerLogs } from "./logging";
 import { createMainWindow } from "./windows/main-window";
 
 app.setName("MasarFlow");
@@ -24,19 +25,44 @@ let tray: Tray | null = null;
 let backend: BackendHandle | null = null;
 let quitting = false;
 
+/**
+ * Tray menu v2 (P10.T11): Open / Control Center / logs / hide-on-close / Quit.
+ * Rebuilt whenever the hide-on-close checkbox changes so the tick matches the
+ * persisted setting. The "Check for updates…" item arrives with the updater
+ * (P10.T9), which is outside this stream's scope.
+ */
+function rebuildTrayMenu(): void {
+  if (!tray) return;
+  const hideOnClose = Boolean(settings.get().closeToTray);
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: "Open MasarFlow", click: showWindow },
+      { type: "separator" },
+      { label: "Control Center", click: () => sendWindowRoute("/control-center") },
+      { label: "Open logs folder", click: () => void shell.openPath(logDir()) },
+      { type: "separator" },
+      {
+        label: "Hide on close (keep running in the notification area)",
+        type: "checkbox",
+        checked: hideOnClose,
+        click: (item) => {
+          settings.set({ closeToTray: item.checked });
+          rebuildTrayMenu();
+        },
+      },
+      { type: "separator" },
+      { label: "Quit MasarFlow", click: () => app.quit() },
+    ]),
+  );
+}
+
 function createTray(): void {
   const icon = nativeImage
     .createFromPath(join(__dirname, "../../resources/icon.png"))
     .resize({ width: 16, height: 16 });
   tray = new Tray(icon);
   tray.setToolTip("MasarFlow");
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      { label: "Open MasarFlow", click: () => showWindow() },
-      { type: "separator" },
-      { label: "Quit", click: () => app.quit() },
-    ]),
-  );
+  rebuildTrayMenu();
   tray.on("click", () => showWindow());
 }
 
@@ -45,6 +71,12 @@ function showWindow(): void {
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show();
   mainWindow.focus();
+}
+
+/** Focus the window and ask the renderer to navigate (the shell listens for this). */
+function sendWindowRoute(route: string): void {
+  showWindow();
+  mainWindow?.webContents.send(CH.appNavigate, route);
 }
 
 const SMOKE_ROOT = process.platform === "win32" ? "C:\\msf-smoke-unregistered" : "/msf-smoke-unregistered";
@@ -122,8 +154,15 @@ async function boot(): Promise<void> {
   registerIpc(() => mainWindow);
   mainWindow = createMainWindow({
     devUrl: DEV_URL,
-    onClose: () => {
-      quitting = true; // close = quit; the tray "hide on close" option arrives in P10
+    onClose: (e) => {
+      // `quitting` is set by before-quit / app.quit paths; a plain window close
+      // follows the user's close-to-tray preference, which defaults to OFF.
+      if (closeBehavior({ closeToTray: Boolean(settings.get().closeToTray), quitting }) === "hide") {
+        e.preventDefault();
+        mainWindow?.hide();
+      } else {
+        quitting = true;
+      }
     },
   });
   mainWindow.on("maximize", () => mainWindow?.webContents.send(CH.winMaximized, true));

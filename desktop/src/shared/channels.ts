@@ -3,6 +3,8 @@ export const CH = {
   appInfo: "app:info",
   appOpenLogs: "app:open-logs",
   appRelaunch: "app:relaunch",
+  // P10.T11: the tray asks the shell to navigate (Control Center).
+  appNavigate: "app:navigate",
   dialogChooseFolder: "dialog:choose-folder",
   rootsList: "roots:list",
   rootsCovers: "roots:covers",
