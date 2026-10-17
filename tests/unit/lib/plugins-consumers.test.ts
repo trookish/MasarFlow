@@ -3,7 +3,7 @@ import { PLUGIN_CATALOG } from "@/lib/plugins";
 import { readSources } from "../_helpers/fs-scan";
 import { expectShrinkingAllowlist } from "../_helpers/shrinking-allowlist";
 
-/** Catalog plugins nothing consumes (verified 2026-10-16). Must be [] by P9. */
+/** Catalog plugins nothing consumes. Emptied in P9 (T14–T16). */
 const UNWIRED_PLUGINS: string[] = [];
 
 describe("plugin catalog is real", () => {
