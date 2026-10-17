@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Command as CommandIcon, Keyboard, PanelLeft, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Search, Command as CommandIcon, Keyboard, PanelLeft, RefreshCw, AppWindow } from "lucide-react";
 import { useUIStore } from "@/lib/stores/ui";
 import { useMounted } from "@/lib/hooks/use-mounted";
+import { getDesktop } from "@/lib/desktop/bridge";
 import { ProjectSwitcher } from "./project-switcher";
 import { ThemeToggle } from "./theme-toggle";
 import { PomodoroWidget, DailyNoteButton } from "./plugin-widgets";
@@ -28,6 +29,16 @@ export function Topbar() {
   const updateInfo = useUpdatesStore((s) => s.info);
   const updateState = useUpdatesStore((s) => s.state);
   const checkUpdates = useUpdatesStore((s) => s.check);
+
+  // Desktop build indicator: the user must know which build they are in.
+  // `mounted` gating keeps SSR and the first client render identical (the
+  // preload API only exists after hydration in the desktop app).
+  const desktop = mounted ? getDesktop() : null;
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+  useEffect(() => {
+    if (!desktop) return;
+    void desktop.app.info().then((info) => setAppVersion(info.displayVersion));
+  }, [desktop]);
 
   async function openUpdates() {
     setUpdateOpen(true);
@@ -64,6 +75,16 @@ export function Topbar() {
 
       <ProjectSwitcher />
       <WorkspaceMenu />
+
+      {desktop ? (
+        <span
+          title={`MasarFlow desktop app ${appVersion ?? ""} — commands run on this computer`}
+          className="hidden items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 text-[11px] text-muted-foreground sm:flex"
+        >
+          <AppWindow className="h-3 w-3" />
+          Desktop {appVersion ?? ""}
+        </span>
+      ) : null}
 
       <button
         type="button"

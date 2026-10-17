@@ -17,8 +17,11 @@ import type { DockNode, DockZone } from "@/lib/dock/types";
 import { pageIdOf } from "@/lib/dock/types";
 import { zoneForPoint, type Rect } from "@/lib/dock/geometry";
 import { dropVerdict } from "@/lib/dock/dropguard";
+import { collectPages } from "@/lib/dock/tree";
+import { getPageDef } from "@/lib/dock/registry";
 import { useProjectStore } from "@/lib/stores/project";
 import { useDockStore } from "@/lib/stores/dock";
+import { useViewportMode } from "@/lib/hooks/use-narrow-viewport";
 import { PAGE_COMPONENTS } from "./panel-loader";
 import { PanelErrorBoundary, PanelMissing } from "./panel-error";
 import { DockTreeView } from "./dock-tree-view";
@@ -41,6 +44,8 @@ export function DockWorkspace() {
   const setDrag = useDockStore((s) => s.setDrag);
   const containerRef = useRef<HTMLDivElement>(null);
   const [rect, setRect] = useState<Rect | null>(null);
+  const mode = useViewportMode();
+  const [compactPanel, setCompactPanel] = useState<string | null>(null);
 
   useDockDnd();
   useTerminalSync();
@@ -118,6 +123,18 @@ export function DockWorkspace() {
   const tree: DockNode = wsEntry.tree;
   const maximized = projectState.maximizedPanelId;
 
+  // Compact mode (viewport < 1024px): the split layout is PRESERVED IN STATE
+  // but not rendered, so widening the window restores it exactly — same
+  // ratios, same tabs. Floating windows are hidden in compact mode too (they
+  // would overlap the single column) and reappear on widening; nothing about
+  // them is destroyed. The switcher lists the tree's panels (floaters keep
+  // their own state and are intentionally not offered here).
+  const pages = collectPages(tree);
+  const firstPanel = pages[0] ?? null;
+  // A panel closed (or floated away) while the switcher pointed at it must not
+  // keep rendering: adjust the state during render, never in an effect.
+  if (compactPanel !== null && !pages.includes(compactPanel)) setCompactPanel(null);
+
   return (
     <div
       ref={containerRef}
@@ -125,28 +142,71 @@ export function DockWorkspace() {
       onPointerMove={onPointerMove}
       className="relative h-full w-full overflow-hidden"
     >
-      {/* Layout tree, hidden while a panel is maximized (stays mounted). */}
-      <PanelContent active={!maximized}>
-        <DockTreeView node={tree} />
-      </PanelContent>
-
-      {/* Maximized tiled panel fills the workspace above the tree. */}
-      {maximized ? (
-        <div className="absolute inset-0 z-20">
-          <MaximizedPanel panelId={maximized} />
+      {mode === "compact" ? (
+        <div className="flex h-full min-h-0 flex-col">
+          <div
+            role="tablist"
+            aria-label="Open panels"
+            className="flex h-9 shrink-0 items-center gap-0.5 overflow-x-auto border-b border-border px-1.5"
+          >
+            {pages.map((panelId) => (
+              <button
+                key={panelId}
+                type="button"
+                role="tab"
+                aria-selected={(compactPanel ?? firstPanel) === panelId}
+                onClick={() => setCompactPanel(panelId)}
+                className={
+                  (compactPanel ?? firstPanel) === panelId
+                    ? "h-7 shrink-0 rounded-md bg-accent px-2 text-xs font-medium"
+                    : "h-7 shrink-0 rounded-md px-2 text-xs text-muted-foreground hover:bg-accent/50"
+                }
+              >
+                {getPageDef(panelId)?.label ?? pageIdOf(panelId)}
+              </button>
+            ))}
+          </div>
+          <div className="min-h-0 flex-1">
+            <PanelContent active>
+              {(() => {
+                const Active = PAGE_COMPONENTS[pageIdOf(compactPanel ?? firstPanel ?? "")] ?? null;
+                return Active ? (
+                  <PanelErrorBoundary panelId={compactPanel ?? firstPanel ?? ""}>
+                    <Active />
+                  </PanelErrorBoundary>
+                ) : (
+                  <PanelMissing panelId={compactPanel ?? firstPanel ?? ""} />
+                );
+              })()}
+            </PanelContent>
+          </div>
         </div>
-      ) : null}
+      ) : (
+        <>
+          {/* Layout tree, hidden while a panel is maximized (stays mounted). */}
+          <PanelContent active={!maximized}>
+            <DockTreeView node={tree} />
+          </PanelContent>
 
-      {/* Floating windows. */}
-      {projectState.floaters.map((f) =>
-        f.minimized ? null : <DockFloatingWindow key={f.id} floater={f} />,
+          {/* Maximized tiled panel fills the workspace above the tree. */}
+          {maximized ? (
+            <div className="absolute inset-0 z-20">
+              <MaximizedPanel panelId={maximized} />
+            </div>
+          ) : null}
+
+          {/* Floating windows. */}
+          {projectState.floaters.map((f) =>
+            f.minimized ? null : <DockFloatingWindow key={f.id} floater={f} />,
+          )}
+
+          {/* Minimized windows + collapsed panels. */}
+          <DockTray />
+
+          {/* Docking guides during a drag. */}
+          {drag && rect ? <DockOverlay workspaceRect={rect} /> : null}
+        </>
       )}
-
-      {/* Minimized windows + collapsed panels. */}
-      <DockTray />
-
-      {/* Docking guides during a drag. */}
-      {drag && rect ? <DockOverlay workspaceRect={rect} /> : null}
     </div>
   );
 }
