@@ -874,6 +874,14 @@ function DataSection() {
           <AutoBackupsCard />
         </div>
         <SettingRow
+          label="Control Center"
+          description="Health, linked folders, stored secrets, backups, logs and updates in one place."
+        >
+          <Button variant="outline" size="sm" onClick={() => router.push("/control-center")}>
+            Open Control Center
+          </Button>
+        </SettingRow>
+        <SettingRow
           label="Reset"
           description="Permanently delete every project, note, spec, and task in this browser."
         >

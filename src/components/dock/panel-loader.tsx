@@ -108,6 +108,10 @@ export const PAGE_COMPONENTS: Record<string, ComponentType> = {
     ssr: false,
     loading,
   }),
+  "/control-center": dynamic(() => import("@/app/(workspace)/control-center/page"), {
+    ssr: false,
+    loading,
+  }),
   "/settings": dynamic(() => import("@/app/(workspace)/settings/page"), {
     ssr: false,
     loading,

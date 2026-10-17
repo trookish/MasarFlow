@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  Activity,
   CalendarDays,
   BrainCircuit,
   PenTool,
@@ -178,6 +179,12 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: Search,
       },
       { label: "Plugins", href: "/plugins", icon: Plug },
+      {
+        label: "Control Center",
+        href: "/control-center",
+        icon: Activity,
+        keywords: ["diagnostics", "logs", "update", "backup", "health", "secrets", "folders"],
+      },
       { label: "Settings", href: "/settings", icon: Settings },
     ],
   },
