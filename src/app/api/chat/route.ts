@@ -418,6 +418,21 @@ export async function POST(req: Request): Promise<Response> {
   if (!body.baseUrl)
     return Response.json({ error: "Missing base URL" }, { status: 400 });
 
+  // The base URL is user-supplied (a saved connection or a custom endpoint):
+  // accept only http:/https: — never file: or other local schemes. Custom
+  // endpoints may legitimately point at localhost (a local gateway/proxy).
+  let baseUrl: URL;
+  try {
+    baseUrl = new URL(body.baseUrl);
+  } catch {
+    return Response.json({ error: "Invalid base URL" }, { status: 400 });
+  }
+  if (baseUrl.protocol !== "http:" && baseUrl.protocol !== "https:")
+    return Response.json(
+      { error: "Only http: and https: base URLs are allowed." },
+      { status: 400 },
+    );
+
   const requestId =
     body.requestId && /^[A-Za-z0-9_-]{1,64}$/.test(body.requestId)
       ? body.requestId

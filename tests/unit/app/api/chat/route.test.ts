@@ -58,6 +58,18 @@ describe("api/chat route", () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
+  it("rejects a non-http(s) base URL (file:, ftp:, garbage) with 400", async () => {
+    for (const baseUrl of [
+      "file:///etc/passwd",
+      "ftp://example.com/v1",
+      "not a url",
+    ]) {
+      const res = await POST(req(body({ baseUrl })));
+      expect(res.status).toBe(400);
+    }
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it("sends tools with explicit tool_choice auto by default", async () => {
     const res = await POST(req(body()));
     expect(res.status).toBe(200);
