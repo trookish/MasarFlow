@@ -789,3 +789,19 @@ export const parsedContentSchema = z.object({
   updatedAt: z.number(),
 });
 export type ParsedContent = z.infer<typeof parsedContentSchema>;
+
+/**
+ * One embedded text chunk of a workspace entity (rebuildable index — excluded from backups).
+ */
+export const embeddingSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  kind: z.string(),
+  entityId: z.string(),
+  chunkIndex: z.number(),
+  title: z.string(),
+  text: z.string(),
+  hash: z.string(),
+  vector: z.custom<Float32Array>(),
+});
+export type EmbeddingRow = z.infer<typeof embeddingSchema>;

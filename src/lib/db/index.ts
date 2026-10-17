@@ -38,6 +38,7 @@ import type {
   LinkSuggestion,
   ParsedContent,
   AiUndo,
+  EmbeddingRow,
 } from "./schema";
 
 /**
@@ -82,6 +83,7 @@ export class MasarFlowDB extends Dexie {
   linkSuggestions!: EntityTable<LinkSuggestion, "id">;
   parsedContents!: EntityTable<ParsedContent, "id">;
   aiUndo!: EntityTable<AiUndo, "id">;
+  embeddings!: EntityTable<EmbeddingRow, "id">;
 
   constructor() {
     super("masarflow");
@@ -228,6 +230,11 @@ export class MasarFlowDB extends Dexie {
             .add({ id: uuid(), projectId: p.id, name: label, createdAt: now() });
         }
       });
+    // v11: local semantic index (additive). Vectors are produced in-browser by the
+    // embedding worker; the table is rebuildable and excluded from backups.
+    this.version(11).stores({
+      embeddings: "id, projectId, [projectId+kind], [projectId+entityId]",
+    });
   }
 }
 
