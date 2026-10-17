@@ -4,13 +4,19 @@
  * noise in the chat. `createEchoStripper` builds a stateful stripper that
  * removes a leading verbatim copy of the user's message from a streaming
  * reply, tolerating case, punctuation, and whitespace differences, and chunk
- * boundaries (a delta can end mid-word). Once the echo is fully consumed (or
- * provably diverged), all later text passes through untouched. `reset()`
- * re-arms it for a fresh stream (e.g. a resume replaying a snapshot).
+ * boundaries (a delta can end mid-word). Only a COMPLETE echo is removed:
+ * text that matches the start of the message and then diverges was never an
+ * echo, so everything held back while matching is released verbatim (a reply
+ * "STUB-REPLY …" to "status of …" must not lose its "ST"). Once the echo is
+ * consumed or has diverged, all later text passes through untouched.
+ * `flush()` releases text still held when the stream ends mid-match;
+ * `reset()` re-arms it for a fresh stream (e.g. a resume replaying a snapshot).
  */
 
 export interface EchoStripper {
   strip: (delta: string) => string;
+  /** Text held back by a match still in progress; disarms the stripper. */
+  flush: () => string;
   reset: () => void;
 }
 
@@ -37,6 +43,8 @@ export function createEchoStripper(userText: string): EchoStripper {
   // content and must pass through untouched (otherwise a later delta whose
   // start happens to continue the stale target loses characters).
   let dead = false;
+  // Original text consumed while matching, released if the match diverges.
+  let held = "";
 
   return {
     strip: (delta: string) => {
@@ -70,6 +78,13 @@ export function createEchoStripper(userText: string): EchoStripper {
         break;
       }
 
+      if (dead) {
+        // Not an echo after all: release everything held, unchanged.
+        const released = held + delta;
+        held = "";
+        return released;
+      }
+
       // Boundary phase: the echo is consumed. Skip whitespace and the echo's
       // trailing punctuation (the "?" in "What can you see?") so the answer
       // starts clean; anything else is real content.
@@ -81,17 +96,26 @@ export function createEchoStripper(userText: string): EchoStripper {
         break;
       }
 
-      if (pos >= target.length && i < delta.length) {
+      if (pos >= target.length) {
+        // The echo is complete: drop it and pass the rest through.
+        held = "";
         out += delta.slice(i);
-      } else if (pos < target.length) {
-        // Diverged mid-echo — keep everything from the mismatch onward.
-        out += delta.slice(i);
+      } else {
+        // Still matching: hold this delta until the echo completes or diverges.
+        held += delta;
       }
       return out;
+    },
+    flush: () => {
+      const released = pos < target.length ? held : "";
+      held = "";
+      dead = true;
+      return released;
     },
     reset: () => {
       pos = 0;
       dead = false;
+      held = "";
     },
   };
 }

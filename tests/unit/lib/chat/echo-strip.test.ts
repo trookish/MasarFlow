@@ -67,9 +67,9 @@ describe("createEchoStripper", () => {
     expect(s.strip("anything")).toBe("anything");
   });
 
-  it("stops stripping once the echo diverges", () => {
+  it("stops stripping once the echo diverges, and keeps the reply whole", () => {
     const s = createEchoStripper("What can you see?");
-    expect(s.strip("What can you fix?")).toBe("fix?");
+    expect(s.strip("What can you fix?")).toBe("What can you fix?");
   });
 
   it("strips an echo in a non-Latin script (Arabic)", () => {
@@ -84,16 +84,40 @@ describe("createEchoStripper", () => {
     expect(s.strip("والتفاصيل")).toBe("والتفاصيل");
   });
 
+  // A partial match that diverges was never an echo: the held-back text is
+  // real content and comes back verbatim. Dropping it mangled answers such as
+  // "STUB-REPLY …" to "status of …" (the "ST" matched, then "U" diverged).
+  it("keeps the matched letters when the reply only shares a prefix", () => {
+    const s = createEchoStripper("status of the narrow panel");
+    expect(s.strip("STUB-REPLY status o")).toBe("STUB-REPLY status o");
+    expect(s.strip("f the narrow panel")).toBe("f the narrow panel");
+  });
+
   it("never touches later deltas once the echo diverges", () => {
     const s = createEchoStripper("What can you see?");
-    expect(s.strip("What can you fix?")).toBe("fix?");
+    expect(s.strip("What can you fix?")).toBe("What can you fix?");
     expect(s.strip("seen any bugs?")).toBe("seen any bugs?");
   });
 
-  it("disarms permanently when a partial echo diverges", () => {
+  it("releases text held across deltas when a partial echo diverges", () => {
     const s = createEchoStripper("What can you see?");
     expect(s.strip("What can yo")).toBe("");
-    expect(s.strip("u help")).toBe("help"); // "u " still matched as echo, then divergence
+    expect(s.strip("u help")).toBe("What can you help");
     expect(s.strip(" me please")).toBe(" me please"); // disarmed — untouched
+  });
+
+  it("flush() returns a reply that ended mid-echo", () => {
+    const s = createEchoStripper("yes, go ahead");
+    expect(s.strip("Yes")).toBe("");
+    expect(s.flush()).toBe("Yes");
+    expect(s.flush()).toBe("");
+    expect(s.strip(" go ahead")).toBe(" go ahead"); // disarmed after flush
+  });
+
+  it("flush() is empty after a complete echo", () => {
+    const s = createEchoStripper("What can you see?");
+    expect(s.strip("What can you see? ")).toBe("");
+    expect(s.flush()).toBe("");
+    expect(s.strip("The board.")).toBe("The board.");
   });
 });

@@ -53,14 +53,24 @@ test.afterAll(async () => {
   await stopAllStubs();
 });
 
+/**
+ * Selects the seeded Pulse thread. Below the chat view's 600 px breakpoint
+ * the thread list sits behind the "Show conversations" toggle, so open it
+ * first when the row is not on screen.
+ */
+async function pickThread(page: Page): Promise<void> {
+  const row = chatPanel(page).getByRole("button", { name: DEMO_THREAD, exact: true });
+  const toggle = chatPanel(page).getByRole("button", { name: "Show conversations" });
+  if (await toggle.isVisible()) await toggle.click();
+  await row.click();
+  await expect(composer(page)).toBeVisible();
+}
+
 /** Opens the seeded Pulse thread and repoints it at the stub connection. */
 async function openStubThread(page: Page): Promise<void> {
   await navigateTo(page, "Chat");
   await expect(chatPanel(page)).toHaveCount(1);
-  await chatPanel(page)
-    .getByRole("button", { name: DEMO_THREAD, exact: true })
-    .click();
-  await expect(composer(page)).toBeVisible();
+  await pickThread(page);
   await composer(page).fill(`/model ${STUB_LABEL}:${STUB_MODEL}`);
   await chatPanel(page).getByRole("button", { name: "Send" }).click();
   await expect(
@@ -103,18 +113,11 @@ test("/chat: chat knows the open page", async () => {
 
     await addStubConnection(page, stub.baseUrl, STUB_LABEL);
 
-    // /chat FIRST, while its panel is still wide and focused: select the
-    // seeded thread, repoint it at the stub, and watch the /model notice land
-    // in the chat panel. Each route opens its own dock group; opening /docs
-    // first would push the chat group into a quarter of the window, where the
-    // chat's own threads sidebar starves the conversation column to 0 px and
-    // the notice would never be visible.
+    // /chat first: select the seeded thread, repoint it at the stub, and
+    // watch the /model notice land in the chat panel.
     await navigateTo(page, "Chat");
     await expect(chatPanel(page)).toHaveCount(1);
-    await chatPanel(page)
-      .getByRole("button", { name: DEMO_THREAD, exact: true })
-      .click();
-    await expect(composer(page)).toBeVisible();
+    await pickThread(page);
     await composer(page).fill(`/model ${STUB_LABEL}:${STUB_MODEL}`);
     await chatPanel(page).getByRole("button", { name: "Send" }).click();
     await expect(
@@ -142,9 +145,11 @@ test("/chat: chat knows the open page", async () => {
     await expect(composer(page)).toBeVisible();
     await sendTurn(page, "what am I looking at?");
 
-    // The turn completed: the reply round-tripped through the stub and is
-    // persisted. Read from the app's own IndexedDB — the chat panel is narrow
-    // by now, so a visible-text assertion would measure layout, not the wire.
+    // The turn completed: the reply round-tripped through the stub, is
+    // visible in the (narrow) chat panel, and is persisted.
+    await expect(
+      chatPanel(page).getByText(/STUB-REPLY what am I looking at/).first(),
+    ).toBeVisible({ timeout: 30_000 });
     await expect(async () => {
       const messages = await readTable<{ role: string; content: string }>(
         page,
@@ -203,7 +208,9 @@ test("/chat: create task from message", async () => {
     await openStubThread(page);
     await sendTurn(page, "refactor the auth module");
 
-    const reply = page.getByText(/STUB-REPLY refactor the auth module/).first();
+    const reply = chatPanel(page)
+      .getByText(/STUB-REPLY refactor the auth module/)
+      .first();
     await expect(reply).toBeVisible({ timeout: 30_000 });
 
     // The hover actions are opacity-gated until the message row is hovered.
@@ -231,6 +238,74 @@ test("/chat: create task from message", async () => {
         { timeout: 15_000 },
       )
       .toBe(true);
+  } finally {
+    await app.close();
+    await stub.stop();
+  }
+});
+
+test("/chat: the conversation stays usable in a narrow panel", async () => {
+  test.setTimeout(240_000);
+  const stub = await startStubProvider();
+  const app = await launchApp({ seed: "demo" });
+  const { page } = app;
+  try {
+    // The seed docks /dashboard and /chat side by side; adding the stub
+    // connection opens /agents in half the window and squeezes /chat to a
+    // quarter (~356 px at 1440): below the view's 600 px breakpoint, and the
+    // narrow panel this bug is about.
+    await addStubConnection(page, stub.baseUrl, STUB_LABEL);
+    await navigateTo(page, "Chat");
+    await expect(chatPanel(page)).toHaveCount(1);
+    const panelBox = await chatPanel(page).boundingBox();
+    expect(panelBox?.width ?? 0).toBeLessThan(600);
+    expect(panelBox?.width ?? 0).toBeGreaterThanOrEqual(300);
+
+    // The bug: the fixed w-64 thread list starved the conversation column
+    // (flex-1 min-w-0) to a sliver.
+    const column = chatPanel(page).locator("div.min-w-0.flex-1.flex-col").first();
+    const columnBox = await column.boundingBox();
+    console.log(`[narrow chat] panel=${panelBox?.width} column=${columnBox?.width}`);
+    expect(columnBox?.width ?? 0).toBeGreaterThanOrEqual(280);
+
+    // Below the breakpoint the thread list is an overlay behind a toggle.
+    // Choosing a thread closes it.
+    await chatPanel(page).getByRole("button", { name: "Show conversations" }).click();
+    const row = chatPanel(page).getByRole("button", { name: DEMO_THREAD, exact: true });
+    await expect(row).toBeVisible();
+    await row.click();
+    await expect(
+      chatPanel(page).getByRole("button", { name: "Close conversations" }),
+    ).toHaveCount(0);
+    await expect(composer(page)).toBeVisible();
+    const composerBox = await composer(page).boundingBox();
+    console.log(`[narrow chat] composer=${composerBox?.width}`);
+    // The textarea shares its row with the attach/voice/send buttons, so it
+    // is measured against the panel: it was ~12 px before the fix.
+    expect(composerBox?.width ?? 0).toBeGreaterThanOrEqual((panelBox?.width ?? 0) * 0.6);
+
+    // Still a working chat: repoint the thread at the stub, send, and the
+    // reply is VISIBLE in the narrow panel (not only persisted).
+    await composer(page).fill(`/model ${STUB_LABEL}:${STUB_MODEL}`);
+    await chatPanel(page).getByRole("button", { name: "Send" }).click();
+    await expect(
+      chatPanel(page).getByText(`Now using ${STUB_LABEL}:${STUB_MODEL}`),
+    ).toBeVisible({ timeout: 15_000 });
+    await sendTurn(page, "status of the narrow panel");
+    await expect(
+      chatPanel(page).getByText(/STUB-REPLY status of the narrow panel/).first(),
+    ).toBeVisible({ timeout: 30_000 });
+
+    // The overlay also closes from its backdrop (its exposed right edge: the
+    // 256 px list covers the rest).
+    await chatPanel(page).getByRole("button", { name: "Show conversations" }).click();
+    await expect(row).toBeVisible();
+    const backdrop = chatPanel(page).getByRole("button", { name: "Close conversations" });
+    const backdropBox = await backdrop.boundingBox();
+    await backdrop.click({
+      position: { x: (backdropBox?.width ?? 300) - 12, y: (backdropBox?.height ?? 200) / 2 },
+    });
+    await expect(row).toBeHidden();
   } finally {
     await app.close();
     await stub.stop();

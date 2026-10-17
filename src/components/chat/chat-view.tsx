@@ -21,6 +21,7 @@ import {
   ChevronRight,
   Search,
   MessageSquare,
+  PanelLeftOpen,
   Bot,
   AlertCircle,
   Wrench,
@@ -213,6 +214,9 @@ export function ChatView() {
   const [input, setInput] = useState("");
   const [interim, setInterim] = useState("");
   const [threadQuery, setThreadQuery] = useState("");
+  // Narrow panels: the conversation list overlays the chat, opened from the
+  // toggle, instead of taking a fixed 256px column away from it.
+  const [threadsOpen, setThreadsOpen] = useState(false);
   const [pending, setPending] = useState<PreparedAttachment[]>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
   const [stream, setStream] = useState<LiveStream | null>(null);
@@ -358,6 +362,7 @@ export function ChatView() {
   }, [threads, threadQuery]);
 
   function select(id: string | null) {
+    setThreadsOpen(false);
     router.replace(id ? `/chat?thread=${id}` : "/chat", { scroll: false });
   }
 
@@ -851,7 +856,7 @@ export function ChatView() {
             },
           ];
 
-          return runWorkspaceChat({
+          const result = await runWorkspaceChat({
             provider: ctx.provider,
             apiKey: ctx.apiKey,
             baseUrl: ctx.baseUrl,
@@ -902,6 +907,10 @@ export function ChatView() {
                   reasoningAcc += e.text;
                   break;
                 case "round":
+                  // A later round starts fresh content: release any text the
+                  // echo stripper was still holding from the previous one.
+                  // (Round 0 opens the turn, before any text arrives.)
+                  if (e.round > 0) acc += echoStripper.flush();
                   if (e.round > 0 && acc) acc += "\n\n";
                   break;
                 case "notice":
@@ -929,6 +938,11 @@ export function ChatView() {
               push();
             },
           });
+          // The stream ended: a reply that was still matching the echo (e.g.
+          // "Yes" to "yes, go ahead") is real content, not an echo.
+          acc += echoStripper.flush();
+          push();
+          return result;
         },
         {
           onSwitch: (_from, to, reason) => {
@@ -1215,14 +1229,36 @@ export function ChatView() {
     (!input.trim() && pending.length === 0) || Boolean(stream);
 
   return (
-    <div className="flex h-full min-h-0">
-      {/* Threads sidebar */}
-      <div className="flex w-64 shrink-0 flex-col border-r border-border">
+    <div className="@container relative flex h-full min-h-0">
+      {/* Narrow panels: a backdrop closes the conversation-list overlay. */}
+      {threadsOpen && (
+        <button
+          type="button"
+          aria-label="Close conversations"
+          onClick={() => setThreadsOpen(false)}
+          className="absolute inset-0 z-30 bg-background/60 @max-[600px]:block @min-[600px]:hidden"
+        />
+      )}
+      {/* Threads sidebar. A fixed 256px column while the panel is wide; below
+          600px it overlays the conversation (opened from the toolbar toggle),
+          so the messages and composer keep a usable width. The fixed w-64
+          column used to starve them to a sliver in a ~360px dock panel. */}
+      <div
+        className={cn(
+          "w-64 shrink-0 flex-col border-r border-border",
+          threadsOpen
+            ? "flex @max-[600px]:absolute @max-[600px]:inset-y-0 @max-[600px]:left-0 @max-[600px]:z-40 @max-[600px]:bg-background @max-[600px]:shadow-xl"
+            : "@min-[600px]:flex @max-[600px]:hidden",
+        )}
+      >
         <div className="flex items-center gap-2 border-b border-border p-2">
           <Button
             size="sm"
             className="flex-1"
-            onClick={newChat}
+            onClick={() => {
+              setThreadsOpen(false);
+              void newChat();
+            }}
             disabled={!projectId}
           >
             <Plus className="h-4 w-4" /> New chat
@@ -1260,6 +1296,22 @@ export function ChatView() {
 
       {/* Conversation */}
       <div className="flex min-w-0 flex-1 flex-col">
+        {/* Narrow-only toolbar: brings the conversation list back as an
+            overlay. */}
+        <div className="@max-[600px]:flex @min-[600px]:hidden h-9 shrink-0 items-center gap-2 border-b border-border px-2">
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label="Show conversations"
+            title="Show conversations"
+            onClick={() => setThreadsOpen(true)}
+          >
+            <PanelLeftOpen className="h-4 w-4" />
+          </Button>
+          <span className="truncate text-sm font-medium">
+            {thread?.title ?? "Conversations"}
+          </span>
+        </div>
         {!thread ? (
           <EmptyState
             icon={MessageSquare}
