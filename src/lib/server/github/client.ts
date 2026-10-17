@@ -141,7 +141,7 @@ export function createGithubClient(options: GithubClientOptions) {
         sort: "updated",
         direction: "desc",
       });
-      const all = (res.data as unknown as Raw[]).map(normalizeIssue);
+      const all = (Array.isArray(res.data) ? (res.data as unknown as Raw[]) : []).map(normalizeIssue);
       return {
         issues: all.filter((i) => !i.isPullRequest),
         pullCount: all.filter((i) => i.isPullRequest).length,
@@ -184,7 +184,7 @@ export function createGithubClient(options: GithubClientOptions) {
         sort: "updated",
         direction: "desc",
       });
-      const raws = res.data as unknown as Raw[];
+      const raws = Array.isArray(res.data) ? (res.data as unknown as Raw[]) : [];
       const limit = Math.min(args.checkLimit ?? 10, raws.length);
       const checksByIndex: GithubCheck[][] = [];
       for (let i = 0; i < limit; i++) {
