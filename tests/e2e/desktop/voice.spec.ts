@@ -1,14 +1,26 @@
 import { test, expect, writeEvidence, navigateTo } from "./_harness";
 
 /**
- * F7: does webkitSpeechRecognition work in Electron 43?
+ * F7 / P9.T13: speech input in the packaged shell is HIDDEN, not disabled.
  *
- * The probe runs INSIDE the packaged renderer, starts a real recognition
- * session and records what happens. The invariant we ship is asserted on top
- * of it: either the microphone control is absent, or starting it must not
- * error. Evidence: reports/p9/voice-probe.json (decision in voice-probe.md).
+ * The probe below still runs INSIDE the packaged renderer and records what
+ * webkitSpeechRecognition actually does in Electron 43 — evidence:
+ * reports/p9/voice-probe.json (decision recorded in reports/p9/voice-probe.md).
+ * The probe has never produced a usable session (Electron ships no speech
+ * service; the app's permission policy denies the microphone), so the shipped
+ * invariant is unconditional after the P9.T13 decision ("hide"):
+ *
+ *   the packaged app must render NO dictation control, ever.
+ *
+ * Implemented by src/lib/hooks/use-speech.ts (speechAvailability() is false
+ * whenever the desktop bridge is present) and
+ * src/components/chat/chat-view.tsx (`{speech.supported && …}`). This spec
+ * pins the outcome; the probe result explains WHY the runtime can't support
+ * it, but the assertion does not depend on the probe — a future Electron that
+ * ships speech keeps this spec red until the P9.T13 decision is revisited
+ * deliberately.
  */
-test("voice: the shipped control matches what the runtime can do", async ({ desktop }) => {
+test("voice: the packaged shell renders no dictation control", async ({ desktop }) => {
   const { page } = desktop;
 
   const probe = await page.evaluate(async () => {
@@ -66,13 +78,6 @@ test("voice: the shipped control matches what the runtime can do", async ({ desk
 
   writeEvidence("voice-probe.json", probe);
 
-  // Decision rule (record both the probe and the decision in the same file):
-  //  - probe.events contains "start" and no "error:*" → recognition works: the
-  //    mic button may stay, and it must then actually start listening.
-  //  - probe.events contains an "error:*" (expected: network / service-not-allowed
-  //    / not-allowed) → the button must not be rendered in the desktop shell.
-  const usable = probe.events.includes("start") && !probe.events.some((e) => e.startsWith("error:"));
-
   // The dock's AI group holds the /chat destination (the plan's plain
   // `getByRole("link", { name: /Chat/i })` assumes a sidebar rail; the packaged
   // shell defaults to the bottom floating dock — see reports/p9/00-baseline.md).
@@ -86,12 +91,9 @@ test("voice: the shipped control matches what the runtime can do", async ({ desk
   await expect(
     page.getByRole("textbox", { name: /Ask about|Message the model/ }).first(),
   ).toBeVisible();
-  // The control's accessible name is "Start dictation" / "Stop dictation"
+  // The control's accessible name would be "Start dictation" / "Stop dictation"
   // (src/components/chat/chat-view.tsx:1548 gates it on speech.supported).
-  const mic = page.getByRole("button", { name: /dictation/i });
-  if (usable) {
-    await expect(mic.first()).toBeVisible();
-  } else {
-    await expect(mic).toHaveCount(0);
-  }
+  // P9.T13: absent — not greyed out, not disabled. The probe above only
+  // explains why the runtime can't support it; this assertion is the contract.
+  await expect(page.getByRole("button", { name: /dictation/i })).toHaveCount(0);
 });
