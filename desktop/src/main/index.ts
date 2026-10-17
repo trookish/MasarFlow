@@ -1,10 +1,12 @@
-import { app, BrowserWindow, dialog, Menu, nativeImage, shell, Tray } from "electron";
+import { app, BrowserWindow, dialog, Menu, nativeImage, session, shell, Tray } from "electron";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CH } from "@shared/channels";
 import { installAppProtocol, registerAppScheme } from "./backend/protocol";
 import { startBackend, type BackendHandle } from "./backend/server";
 import { registerIpc } from "./ipc";
+import { buildCsp } from "./security/csp";
+import { isPermissionAllowed } from "./security/permissions";
 import { createMainWindow } from "./windows/main-window";
 
 app.setName("MasarFlow");
@@ -111,8 +113,18 @@ if (!app.requestSingleInstanceLock()) {
   app.on("second-instance", () => showWindow());
   app.whenReady().then(() => {
     Menu.setApplicationMenu(null);
+    // Hardening: deny-by-default permissions; in dev the Next dev server needs
+    // eval and its HMR websocket, so it gets a looser CSP than the packaged app.
+    session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(isPermissionAllowed(permission)));
+    session.defaultSession.setPermissionCheckHandler((_wc, permission) => isPermissionAllowed(permission));
+    if (DEV_URL) {
+      session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
+        cb({ responseHeaders: { ...details.responseHeaders, "Content-Security-Policy": [buildCsp({ dev: true })] } });
+      });
+    }
     void boot();
   });
+  app.on("web-contents-created", (_e, contents) => contents.on("will-attach-webview", (ev) => ev.preventDefault()));
   app.on("before-quit", () => {
     quitting = true;
     void backend?.stop();

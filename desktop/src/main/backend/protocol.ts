@@ -1,6 +1,7 @@
 import { net, protocol } from "electron";
 import { Readable } from "node:stream";
 import { APP_SCHEME, TOKEN_HEADER } from "@shared/security";
+import { buildCsp } from "../security/csp";
 import { isNullBodyStatus, rewriteRedirectToApp, rewriteRequestToServer } from "./protocol-url";
 
 /** MUST be called before `app` is ready. */
@@ -67,6 +68,11 @@ export function installAppProtocol(opts: AppProtocolOptions): void {
         const responseHeaders: Record<string, string> = {};
         for (const [key, value] of Object.entries(resp.headers)) {
           responseHeaders[key] = Array.isArray(value) ? value.join(", ") : value;
+        }
+        // HTML documents come from the loopback server; stamp the renderer CSP on them.
+        const contentType = Object.entries(responseHeaders).find(([k]) => k.toLowerCase() === "content-type")?.[1] ?? "";
+        if (contentType.includes("text/html")) {
+          responseHeaders["content-security-policy"] = buildCsp({ dev: false });
         }
         const init = { status: resp.statusCode, statusText: resp.statusMessage, headers: responseHeaders };
         // 204/304 etc. must not carry a body or `new Response` throws (Next sends 304 for cached assets).
