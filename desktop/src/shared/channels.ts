@@ -47,4 +47,5 @@ export const CH = {
   terminalExit: "terminal:exit",
   logsList: "logs:list",
   logsTail: "logs:tail",
+  appEnv: "app:env",
 } as const;

@@ -2,6 +2,7 @@ import { app, BrowserWindow, clipboard, dialog, ipcMain, safeStorage, shell } fr
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { CH } from "@shared/channels";
+import { envForDisplay } from "@shared/redact";
 import { isRootAllowed } from "@shared/roots";
 import { addRootToFile, readRootsFile } from "../security/roots";
 import { isSafeExternalUrl } from "../security/url-policy";
@@ -24,6 +25,9 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     packaged: app.isPackaged,
   }));
   ipcMain.handle(CH.appOpenLogs, () => shell.openPath(join(app.getPath("userData"), "logs")));
+  // The system panel may show MasarFlow's own environment — whitelisted and
+  // redacted here, so no token ever crosses this boundary (P8.T15).
+  ipcMain.handle(CH.appEnv, () => envForDisplay(process.env));
   ipcMain.on(CH.appRelaunch, () => {
     app.relaunch();
     app.exit(0);

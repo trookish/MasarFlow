@@ -1,4 +1,5 @@
 import type { GitBranchInfo, GitCommitInfo, GitDiffFile, GitRepoStatus, GitResult } from "./git";
+import type { EnvRow } from "./redact";
 import type { SessionInfo } from "./types";
 
 /**
@@ -23,6 +24,8 @@ export interface MasarflowApi {
   platform: Platform;
   app: {
     info(): Promise<{ version: string; displayVersion: string; userData: string; packaged: boolean }>;
+    /** MasarFlow's own environment (whitelisted keys), secret values already redacted in main. */
+    env(): Promise<EnvRow[]>;
     openLogs(): Promise<void>;
     relaunch(): void;
   };

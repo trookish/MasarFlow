@@ -6,6 +6,7 @@ const api: MasarflowApi = {
   platform: process.platform,
   app: {
     info: () => ipcRenderer.invoke(CH.appInfo),
+    env: () => ipcRenderer.invoke(CH.appEnv),
     openLogs: () => ipcRenderer.invoke(CH.appOpenLogs),
     relaunch: () => ipcRenderer.send(CH.appRelaunch),
   },
