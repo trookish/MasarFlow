@@ -76,7 +76,12 @@ function runSmoke(win: BrowserWindow): void {
         clearTimeout(timer);
         // The POST must get past the guard (token + Host + Origin) and be refused by the ROOT allow-list.
         const guardOk = info.guard.status === 403 && /not been linked/.test(info.guard.error);
-        finish({ ok: guardOk, ...info }, guardOk ? 0 : 1);
+        // Denial proof: a direct request to the app's own loopback port without the
+        // launch token must be refused (the renderer only ever talks to the app protocol).
+        const unauthed = await fetch(`${backend?.origin ?? ""}/api/health`).catch(() => null);
+        const denial = { status: unauthed?.status ?? 0 };
+        const deniedOk = denial.status === 401 || denial.status === 403;
+        finish({ ok: guardOk && deniedOk, ...info, denial }, guardOk && deniedOk ? 0 : 1);
       }
     } catch (e) {
       finish({ ok: false, error: String(e) }, 1);
