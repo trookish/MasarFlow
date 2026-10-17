@@ -3,7 +3,7 @@
 // and asserts the denial matrix. Run: pnpm build:app && node scripts/security-check.mjs
 // (the `security:check` package.json script lands with the next package.json edit.)
 import { spawn } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import http from "node:http";
 import net from "node:net";
 import os from "node:os";
