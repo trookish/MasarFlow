@@ -8,9 +8,7 @@ import { CommandPalette } from "@/components/shell/command-palette";
 import { GlobalSearch } from "@/components/shell/global-search";
 import { ShortcutsDialog } from "@/components/shell/shortcuts-dialog";
 import { NewProjectDialog } from "@/components/shell/new-project-dialog";
-import { PythonRequiredScreen } from "@/components/shell/python-required-screen";
 import { useGlobalHotkeys } from "@/lib/hooks/use-hotkeys";
-import { usePythonHealth } from "@/lib/hooks/use-python-health";
 import { useProjectStore } from "@/lib/stores/project";
 import { useUIStore } from "@/lib/stores/ui";
 import { useActiveProject } from "@/lib/hooks/use-project";
@@ -41,7 +39,6 @@ export default function WorkspaceLayout({
 }) {
   useGlobalHotkeys();
   const mounted = useMounted();
-  const { state: pythonState } = usePythonHealth();
   const taskbarDirection = useUIStore((s) => s.taskbarDirection);
   const dockEnabled = useUIStore((s) => s.dockEnabled);
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
@@ -88,9 +85,8 @@ export default function WorkspaceLayout({
     setActiveProjectId(id);
   }
 
-  // Background reindex of the local AI service's vector index. A no-op while
-  // the service is down; the boot gate below keeps the user out of the shell
-  // until it's reachable anyway.
+  // Background reindex of the local semantic index (runs in a worker, never
+  // blocks the UI).
   useEffect(() => {
     startPeriodicEmbeddingSync(
       () => useProjectStore.getState().activeProjectId,
@@ -106,12 +102,6 @@ export default function WorkspaceLayout({
       void useUpdatesStore.getState().check();
     }
   }, []);
-
-  // Hard boot gate: Python is a required runtime. Hold the shell until the
-  // service is green (the hook auto-polls while down/checking).
-  if (pythonState !== "ok") {
-    return <PythonRequiredScreen />;
-  }
 
   // Hydration-safe: server + first client render put the sidebar on the
   // left; the "right" direction moves it after mount.
