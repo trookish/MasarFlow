@@ -19,6 +19,7 @@ import { useActiveProject } from "@/lib/hooks/use-project";
 import { useMounted } from "@/lib/hooks/use-mounted";
 import { useUpdatesStore } from "@/lib/stores/updates";
 import { useDockSync } from "@/lib/hooks/use-dock-sync";
+import { useActivityTracking } from "@/lib/hooks/use-activity-tracking";
 import { DockWorkspace } from "@/components/dock/dock-workspace";
 import { projectsRepo } from "@/lib/db/repos";
 import {
@@ -42,6 +43,8 @@ export default function WorkspaceLayout({
   children: React.ReactNode;
 }) {
   useGlobalHotkeys();
+  // Runs in dock and classic mode alike (useDockSync only mounts with the dock).
+  useActivityTracking();
   const mounted = useMounted();
   const taskbarDirection = useUIStore((s) => s.taskbarDirection);
   const dockEnabled = useUIStore((s) => s.dockEnabled);
