@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
+import { useCallback, useEffect, Suspense, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
@@ -10,6 +10,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { GlobalSearch } from "@/components/shell/global-search";
 import { ShortcutsDialog } from "@/components/shell/shortcuts-dialog";
 import { NewProjectDialog } from "@/components/shell/new-project-dialog";
+import { SetupWizard } from "@/components/onboarding/setup-wizard";
 import { SecretsBootstrap } from "@/components/shell/secrets-bootstrap";
 import { AutoBackup } from "@/components/shell/auto-backup";
 import { DbGate } from "@/components/shell/db-gate";
@@ -22,6 +23,8 @@ import { useUpdatesStore } from "@/lib/stores/updates";
 import { useDockSync } from "@/lib/hooks/use-dock-sync";
 import { useActivityTracking } from "@/lib/hooks/use-activity-tracking";
 import { DockWorkspace } from "@/components/dock/dock-workspace";
+import { getDesktop } from "@/lib/desktop/bridge";
+import { shouldShowWizard } from "@/lib/onboarding/state";
 import { projectsRepo } from "@/lib/db/repos";
 import {
   startPeriodicEmbeddingSync,
@@ -64,10 +67,54 @@ export default function WorkspaceLayout({
         }
       : null;
 
-  // First run: no projects yet — prompt the user to create one. Closing the
-  // dialog (backdrop/Escape) falls back to a default project so the workspace
-  // always resolves to a real project. Re-appears after "Reset all data".
-  const firstRunOpen = projectCount === 0;
+  // First run (P10): the wizard replaces the bare project dialog when the
+  // desktop app has never finished setup. `?setup=1` forces it (the Control
+  // Center button and e2e). Read from window.location, not useSearchParams:
+  // this is the root client layout and a searchParams read here would force
+  // every page into a CSR bailout (see the dock Suspense below).
+  const [wizardForced, setWizardForced] = useState(false);
+  const [installSettings, setInstallSettings] = useState<{ onboardingCompletedAt: string | null } | null>(null);
+  const loadInstallState = useCallback(() => {
+    setWizardForced(new URLSearchParams(window.location.search).get("setup") === "1");
+    const d = getDesktop();
+    if (d) {
+      void d.settings.get().then((s) =>
+        setInstallSettings({ onboardingCompletedAt: (s.onboardingCompletedAt as string | null) ?? null }),
+      );
+    } else {
+      setInstallSettings({ onboardingCompletedAt: null });
+    }
+  }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of browser + main-process state
+    loadInstallState();
+  }, [loadInstallState]);
+
+  // The decision is latched: creating the first project mid-flow changes
+  // projectCount, and an un-latched wizard would unmount at the project step.
+  // A forced wizard (?setup=1) also has to stay open until it is finished —
+  // shouldShowWizard() keeps returning true for as long as the URL says so.
+  const wizardDecision =
+    installSettings !== null &&
+    shouldShowWizard({
+      desktop: getDesktop() !== null,
+      completedAt: installSettings.onboardingCompletedAt,
+      projectCount: projectCount ?? 0,
+      forced: wizardForced,
+    });
+  const [wizardOpen, setWizardOpen] = useState(false);
+  if (wizardDecision && !wizardOpen) setWizardOpen(true); // render-time latch (adjust state during render)
+  const closeWizard = (): void => {
+    setWizardOpen(false);
+    setWizardForced(false);
+    setInstallSettings({ onboardingCompletedAt: new Date().toISOString() });
+  };
+
+  // First run, browser case (unchanged): no projects yet — prompt the user to
+  // create one. Closing the dialog (backdrop/Escape) falls back to a default
+  // project so the workspace always resolves to a real project. Re-appears
+  // after "Reset all data". Never shown at the same time as the wizard.
+  const firstRunOpen = !wizardOpen && projectCount === 0;
 
   // Guarantee an active, existing project (skipped while the first-run prompt
   // is shown — creating/skipping the prompt handles that state).
@@ -151,6 +198,7 @@ export default function WorkspaceLayout({
         <Toaster />
         <GlobalSearch />
         <ShortcutsDialog />
+        {wizardOpen ? <SetupWizard onDone={closeWizard} /> : null}
         <NewProjectDialog
           key={String(firstRunOpen)}
           open={firstRunOpen}

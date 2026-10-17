@@ -6,7 +6,7 @@
   "/brain/graph": [],
   "/brain/templates": [],
   "/chat": [],
-  "/dashboard": ["a corrupt database shows the recovery screen"],
+  "/dashboard": ["a corrupt database shows the recovery screen", "first-run setup wizard"],
   "/devlogs": [],
   "/docs": [],
   "/files": [],
