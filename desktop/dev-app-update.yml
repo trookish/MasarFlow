@@ -1,0 +1,17 @@
+# P10.T10 local update-path proof — used only when MASARFLOW_UPDATER_DEV_FEED=1.
+#
+# This is the *manual* fallback the plan documents: serve a feed directory on
+# port 8123 and point electron-updater at it:
+#
+#   npx http-server -p 8123 desktop/dist
+#   MASARFLOW_UPDATER_DEV_FEED=1 desktop/dist/win-unpacked/MasarFlow.exe
+#
+# The automated proof (desktop/scripts/proof-update-local.mjs, `pnpm
+# proof:update-local`) generates its own feed in a temp dir and passes the file
+# through MASARFLOW_UPDATER_FEED_FILE, so it never depends on this port.
+#
+# Never shipped: electron-builder only packages out/** and resources/**.
+provider: generic
+url: http://127.0.0.1:8123/
+channel: latest
+updaterCacheDirName: masarflow-updater-proof

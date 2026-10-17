@@ -1,0 +1,87 @@
+{
+  "at": "2026-10-17T08:30:42.898Z",
+  "mode": "local generic feed (no github.com)",
+  "app": "C:\\Users\\trookish\\Dev\\Web-Projects\\MasarFlow\\desktop\\dist\\win-unpacked\\MasarFlow.exe",
+  "portableApp": "C:\\Users\\trookish\\Dev\\Web-Projects\\MasarFlow\\desktop\\dist\\MasarFlow 0.2.0-alpha.0.exe",
+  "feed": {
+    "url": "http://127.0.0.1:51749/",
+    "version": "0.2.1",
+    "installer": "MasarFlow Setup 0.2.1.exe",
+    "bytes": 1500034
+  },
+  "ok": true,
+  "scenarios": {
+    "aLocalFeed": {
+      "ok": true,
+      "result": {
+        "origin": "masarflow://app",
+        "before": {
+          "phase": "available",
+          "currentVersion": "0.2.0-alpha.0",
+          "availableVersion": "0.2.1",
+          "percent": 0,
+          "message": null,
+          "disabledReason": null
+        },
+        "afterCheck": {
+          "phase": "available",
+          "currentVersion": "0.2.0-alpha.0",
+          "availableVersion": "0.2.1",
+          "percent": 0,
+          "message": null,
+          "disabledReason": null
+        },
+        "afterDownload": {
+          "phase": "ready",
+          "currentVersion": "0.2.0-alpha.0",
+          "availableVersion": "0.2.1",
+          "percent": 100,
+          "message": null,
+          "disabledReason": null
+        },
+        "events": [
+          {
+            "phase": "checking",
+            "percent": 0,
+            "availableVersion": "0.2.1"
+          },
+          {
+            "phase": "available",
+            "percent": 0,
+            "availableVersion": "0.2.1"
+          },
+          {
+            "phase": "downloading",
+            "percent": 100,
+            "availableVersion": "0.2.1"
+          },
+          {
+            "phase": "ready",
+            "percent": 100,
+            "availableVersion": "0.2.1"
+          }
+        ]
+      },
+      "error": null
+    },
+    "bOffline": {
+      "ok": true,
+      "result": {
+        "phase": "error",
+        "message": "net::ERR_CONNECTION_REFUSED",
+        "after": "error",
+        "alive": true
+      },
+      "error": null
+    },
+    "cPortable": {
+      "ok": true,
+      "result": {
+        "phase": "disabled",
+        "disabledReason": "The portable build cannot update itself — download the new version from the releases page.",
+        "currentVersion": "0.2.0-alpha.0"
+      },
+      "error": null
+    }
+  }
+}
