@@ -154,10 +154,12 @@ test("/chat: create task from message", async () => {
     await expect(reply).toBeVisible({ timeout: 30_000 });
 
     // The hover actions are opacity-gated until the message row is hovered.
+    // The reply is the LAST message — the seeded thread's earlier messages
+    // also carry this button in the DOM, so take the last one, not the first.
     await reply.hover();
     await page
       .getByRole("button", { name: "Create task from this message" })
-      .first()
+      .last()
       .click();
 
     // The app opened the new task in the Task Boards panel (openEntity).
