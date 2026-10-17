@@ -65,6 +65,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { VaultPanel } from "@/components/vault/vault-panel";
 
 const AUTO_SYNC_MS: Record<string, number> = {
   "15m": 15 * 60_000,
@@ -724,6 +725,11 @@ export function SyncView() {
 
       {/* Obsidian connection + setup guide */}
       {mode === "obsidian" && <ObsidianPanel pushMsg={pushMsg} />}
+
+      {/* P7: the on-disk markdown mirror (works independently of the sync mode) */}
+      <div className="shrink-0 px-4 py-3">
+        <VaultPanel />
+      </div>
 
       {rows.length === 0 ? (
         <EmptyState
