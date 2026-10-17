@@ -22,6 +22,7 @@ import {
   PLACEHOLDER_NODE_ID,
 } from "./tree";
 import { joinPanelId, pageIdOf, paramsOf } from "./types";
+import { dockNodeSchema, DOCK_STATE_VERSION } from "./serde";
 
 /** Default floater geometry when a panel is undocked. */
 const FLOATER_W = 560;
@@ -463,6 +464,100 @@ export function resetWorkspace(
   presetTree: DockNode,
 ): ProjectDockState {
   return withWs(s, normalizeTree(presetTree), {});
+}
+
+// ── Workspace lifecycle: delete / export / import ───────────────────────────
+
+/**
+ * Delete a named workspace. The last surviving workspace is never deleted
+ * (the dock must always have somewhere to live); deleting the active one
+ * switches to the first survivor.
+ */
+export function deleteWorkspace(
+  s: ProjectDockState,
+  name: string,
+): ProjectDockState {
+  const names = Object.keys(s.workspaces);
+  if (names.length <= 1 || !s.workspaces[name]) return s;
+  const workspaces = { ...s.workspaces };
+  delete workspaces[name];
+  const activeWorkspace =
+    s.activeWorkspace === name ? Object.keys(workspaces)[0] : s.activeWorkspace;
+  return { ...s, activeWorkspace, workspaces };
+}
+
+/** The on-disk shape of a shared/copied layout (T11 puts it on the clipboard). */
+export interface LayoutFile {
+  version: number;
+  name: string;
+  tree: DockNode;
+  params: Record<string, string | undefined>;
+}
+
+/** Serialize the ACTIVE workspace as a portable layout file. */
+export function exportLayout(s: ProjectDockState): string {
+  const entry = ws(s);
+  const file: LayoutFile = {
+    version: DOCK_STATE_VERSION,
+    name: s.activeWorkspace,
+    tree: entry.tree,
+    params: entry.params,
+  };
+  return JSON.stringify(file, null, 2);
+}
+
+/**
+ * Parse a layout file produced by exportLayout (or hand-written with the same
+ * shape). Returns null when the tree is not a valid dock tree — the caller
+ * shows "That is not a MasarFlow layout file." instead of corrupting the dock.
+ */
+export function importLayout(text: string): LayoutFile | null {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text) as unknown;
+  } catch {
+    return null;
+  }
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return null;
+  const record = raw as Record<string, unknown>;
+  const parsed = dockNodeSchema.safeParse(record.tree);
+  if (!parsed.success) return null;
+
+  const params: Record<string, string | undefined> = {};
+  if (record.params && typeof record.params === "object" && !Array.isArray(record.params)) {
+    for (const [key, value] of Object.entries(record.params as Record<string, unknown>)) {
+      if (typeof value !== "string") continue;
+      params[key] = value.startsWith("?") ? value.slice(1) : value;
+    }
+  }
+  const name =
+    typeof record.name === "string" && record.name.trim().length > 0
+      ? record.name.trim()
+      : "Imported";
+  return {
+    version: DOCK_STATE_VERSION,
+    name,
+    tree: normalizeTree(parsed.data),
+    params,
+  };
+}
+
+/** Install an imported layout under a free workspace name and switch to it. */
+export function applyLayout(s: ProjectDockState, layout: LayoutFile): ProjectDockState {
+  let name = layout.name;
+  let n = 2;
+  while (s.workspaces[name]) {
+    name = `${layout.name} ${n}`;
+    n += 1;
+  }
+  return {
+    ...s,
+    activeWorkspace: name,
+    workspaces: {
+      ...s.workspaces,
+      [name]: { tree: normalizeTree(layout.tree), params: { ...layout.params } },
+    },
+  };
 }
 
 // === PART 5: helpers ===
