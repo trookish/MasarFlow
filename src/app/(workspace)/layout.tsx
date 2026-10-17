@@ -10,6 +10,7 @@ import { ShortcutsDialog } from "@/components/shell/shortcuts-dialog";
 import { NewProjectDialog } from "@/components/shell/new-project-dialog";
 import { SecretsBootstrap } from "@/components/shell/secrets-bootstrap";
 import { AutoBackup } from "@/components/shell/auto-backup";
+import { DbGate } from "@/components/shell/db-gate";
 import { useGlobalHotkeys } from "@/lib/hooks/use-hotkeys";
 import { useProjectStore } from "@/lib/stores/project";
 import { useUIStore } from "@/lib/stores/ui";
@@ -110,48 +111,50 @@ export default function WorkspaceLayout({
   const sidebarOnLeft = !mounted || taskbarDirection !== "right";
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <SecretsBootstrap />
-      <AutoBackup />
-      {sidebarOnLeft && <Sidebar />}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar />
-        <main className="relative min-h-0 flex-1 overflow-hidden">
-          {projectBackground ? (
-            <div
-              aria-hidden
-              className="absolute inset-0 bg-cover bg-center"
-              style={{
-                backgroundImage: `url(${projectBackground.image})`,
-                filter: `blur(${projectBackground.blur}px) brightness(${projectBackground.brightness}%)`,
-              }}
-            />
-          ) : null}
-          <div className="relative z-10 h-full">
-            {dockEnabled ? (
-              <Suspense fallback={null}>
-                <DockWorkspaceLive />
-              </Suspense>
-            ) : (
-              children
-            )}
-          </div>
-        </main>
+    <DbGate>
+      <div className="flex h-screen overflow-hidden">
+        <SecretsBootstrap />
+        <AutoBackup />
+        {sidebarOnLeft && <Sidebar />}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Topbar />
+          <main className="relative min-h-0 flex-1 overflow-hidden">
+            {projectBackground ? (
+              <div
+                aria-hidden
+                className="absolute inset-0 bg-cover bg-center"
+                style={{
+                  backgroundImage: `url(${projectBackground.image})`,
+                  filter: `blur(${projectBackground.blur}px) brightness(${projectBackground.brightness}%)`,
+                }}
+              />
+            ) : null}
+            <div className="relative z-10 h-full">
+              {dockEnabled ? (
+                <Suspense fallback={null}>
+                  <DockWorkspaceLive />
+                </Suspense>
+              ) : (
+                children
+              )}
+            </div>
+          </main>
+        </div>
+        {!sidebarOnLeft && <Sidebar />}
+        <CommandPalette />
+        <GlobalSearch />
+        <ShortcutsDialog />
+        <NewProjectDialog
+          key={String(firstRunOpen)}
+          open={firstRunOpen}
+          mode="first-run"
+          onOpenChange={(open) => {
+            if (!open && firstRunOpen) void firstRunSkip();
+          }}
+          onCreated={(id) => setActiveProjectId(id)}
+          onFirstRunSkip={() => void firstRunSkip()}
+        />
       </div>
-      {!sidebarOnLeft && <Sidebar />}
-      <CommandPalette />
-      <GlobalSearch />
-      <ShortcutsDialog />
-      <NewProjectDialog
-        key={String(firstRunOpen)}
-        open={firstRunOpen}
-        mode="first-run"
-        onOpenChange={(open) => {
-          if (!open && firstRunOpen) void firstRunSkip();
-        }}
-        onCreated={(id) => setActiveProjectId(id)}
-        onFirstRunSkip={() => void firstRunSkip()}
-      />
-    </div>
+    </DbGate>
   );
 }

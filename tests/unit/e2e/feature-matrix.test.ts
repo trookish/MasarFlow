@@ -36,7 +36,6 @@ const ROUTES_WITHOUT_FEATURES = [
   "/brain/graph",
   "/brain/templates",
   "/chat",
-  "/dashboard",
   "/devlogs",
   "/docs",
   "/files",
