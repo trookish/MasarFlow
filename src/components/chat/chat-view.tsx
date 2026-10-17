@@ -67,20 +67,14 @@ import type {
 import { buildAgentSystemPrompt } from "@/lib/ai/agent";
 import { newRequestId } from "@/lib/ai/agent/logger";
 import {
-  sendTurn,
-  ensureChatSession,
-  abortChatTurn,
-  approvePermission,
   answerQuestion,
   rejectQuestion,
-  undoChatMessage,
   fetchOpenCodeModels,
   fetchOpenCodeTools,
   checkOpenCodeHealth,
   type OpenCodeModelsPayload,
   type OpenCodeToolInfo,
 } from "@/lib/ai/opencode-client";
-import type { OpenCodeFrontendEvent } from "@/lib/opencode/types";
 import type { OpenCodeQuestionInfo } from "@/lib/opencode/types";
 import {
   prepareAttachment,
@@ -233,8 +227,6 @@ export function ChatView() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [ocTools, setOcTools] = useState<OpenCodeToolInfo[]>([]);
   const [opencodeHealthy, setOpencodeHealthy] = useState(true);
-  /** The OpenCode session of the in-flight legacy turn, if any. */
-  const [bridgeSession, setBridgeSession] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [interim, setInterim] = useState("");
   const [threadQuery, setThreadQuery] = useState("");
@@ -246,25 +238,11 @@ export function ChatView() {
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
   const [linkDialog, setLinkDialog] = useState(false);
   const [connDialog, setConnDialog] = useState(false);
-  const [pendingApproval, setPendingApproval] = useState<{
-    permissionId: string;
-    sessionId: string;
-    type: string;
-    title: string;
-    pattern?: string;
-  } | null>(null);
   /** In-browser fs/shell approval (API/Ollama backends): resolve the promise. */
   const [legacyApproval, setLegacyApproval] = useState<{
     request: ApprovalRequest;
     resolve: (allowed: boolean) => void;
   } | null>(null);
-  /** OpenCode `question` tool request — the dialog the AI waits on. */
-  const [pendingQuestion, setPendingQuestion] = useState<{
-    questionId: string;
-    sessionId: string;
-    questions: OpenCodeQuestionInfo[];
-  } | null>(null);
-  const [questionError, setQuestionError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   /**
    * Synchronous busy flag — unlike `stream` state it flips before the first
@@ -490,34 +468,6 @@ export function ChatView() {
     select(t.id);
   }
 
-  /** Create (or repair) the OpenCode session backing a thread. */
-  async function ensureSessionForThread(
-    threadId: string,
-    directory?: string,
-  ): Promise<string | null> {
-    const t = threads.find((x) => x.id === threadId) ?? thread;
-    if (!t) return null;
-    try {
-      const result = await ensureChatSession(threadId, directory);
-      if (!result) return null;
-      setBridgeSession(result.opencodeSessionId);
-      await chatThreadsRepo.update(threadId, {
-        opencodeSessionId: result.opencodeSessionId,
-        opencodeDirectory: directory ?? t.opencodeDirectory ?? "",
-      });
-      return result.opencodeSessionId;
-    } catch (e) {
-      console.error("[chat] session ensure failed", e);
-      return null;
-    }
-  }
-
-  /** The working directory for a thread's OpenCode session. */
-  function sessionDirectoryFor(): string | undefined {
-    if (linkedRoots?.length === 1) return linkedRoots[0].rootPath;
-    return thread?.opencodeDirectory || undefined;
-  }
-
   /**
    * Switch a thread between the API and Ollama backends. Keeps the
    * conversation (messages persist in the DB) and fills sensible defaults
@@ -563,50 +513,17 @@ export function ChatView() {
     });
   }
 
-  /* ── Approval flow for OpenCode permission requests (fs/shell tools) ─── */
+  /* ── In-browser fs/shell approval (API / Ollama backends) ────────────── */
 
   /**
-   * Reject any in-flight approval / question (Stop / thread switch / unmount).
-   * Without this the agent would sit suspended forever on a request nothing
-   * answers — the "stuck after a tool call" failure. Covers the OpenCode
-   * permission flow, the OpenCode `question` tool, and the in-browser
-   * fs/shell approval promise.
+   * Reject any in-flight approval (Stop / thread switch / unmount). Without
+   * this the agent would sit suspended forever on a request nothing answers —
+   * the "stuck after a tool call" failure.
    */
   function rejectPendingApproval() {
-    setPendingQuestion((q) => {
-      if (q) {
-        void rejectQuestion(q.questionId).catch(() => undefined);
-      }
-      return null;
-    });
-    setQuestionError(null);
     setLegacyApproval((p) => {
       if (p) p.resolve(false);
       return null;
-    });
-    setPendingApproval((p) => {
-      if (p) {
-        void approvePermission(p.sessionId, p.permissionId, "reject").catch(
-          () => undefined,
-        );
-      }
-      return null;
-    });
-  }
-
-  function settleApproval(allowed: boolean, remember: boolean) {
-    const p = pendingApproval;
-    if (!p) return;
-    setPendingApproval(null);
-    void approvePermission(
-      p.sessionId,
-      p.permissionId,
-      allowed ? (remember ? "always" : "once") : "reject",
-    ).catch((e) => {
-      console.error("[chat] approval reply failed", e);
-      setSendError(
-        `The approval reply failed: ${(e as Error).message} — the AI may be stuck; press Stop and retry.`,
-      );
     });
   }
 
@@ -744,356 +661,23 @@ export function ChatView() {
   /* ── Sending ──────────────────────────────────────────────────────── */
 
   /**
-   * Run one assistant turn through the thread's backend: the OpenCode server
-   * (tools executed server-side), or the in-browser Agent Loop for the API /
-   * Ollama backends.
+   * Run one assistant turn through the in-browser Agent Loop (API or local
+   * Ollama backend).
    */
   async function runTurn(
     userText: string,
     attachments: ChatAttachment[],
-    opts: { replaceId?: string; resume?: string } = {},
+    opts: { replaceId?: string } = {},
   ) {
-    if (thread?.backend === "api" || thread?.backend === "ollama") {
-      return runLegacyTurn(userText, attachments, opts);
-    }
-    return runOpencodeTurn(userText, attachments, opts);
-  }
-
-  /**
-   * Run one assistant turn through the OpenCode backend. OpenCode keeps the
-   * conversation history itself (persistent session per chat), so only the
-   * new user text, attachments, and the workspace briefing travel here.
-   */
-  async function runOpencodeTurn(
-    userText: string,
-    attachments: ChatAttachment[],
-    opts: { replaceId?: string; resume?: string } = {},
-  ) {
-    if (!thread) {
-      busyRef.current = false;
-      return;
-    }
-    busyRef.current = true;
-    userCancelledRef.current = false;
-    const gen = ++turnGenRef.current;
-    const assistant = opts.resume
-      ? await chatMessagesRepo.get(opts.resume).then(
-          (m) =>
-            m ??
-            chatMessagesRepo.create({
-              threadId: thread.id,
-              role: "assistant",
-              content: "",
-              status: "streaming",
-            }),
-        )
-      : await chatMessagesRepo.create({
-          threadId: thread.id,
-          role: "assistant",
-          content: "",
-          status: "streaming",
-        });
-    activeAssistantRef.current = assistant.id;
-    setStream({
-      id: assistant.id,
-      text: "",
-      reasoning: "",
-      tools: [],
-      notices: [],
-      files: [],
-    });
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    // Accumulators live outside the try so a failed/stopped turn can still
-    // persist whatever already streamed (partial answers and thinking stay
-    // visible instead of vanishing when the error is saved).
-    let acc = "";
-    let reasoningAcc = "";
-    let tools: ToolActivity[] = [];
-    let notices: string[] = [];
-    let files: string[] = [];
-    let opencodeMessageId = "";
-    let lastError: string | null = null;
-    let sessionId = thread.opencodeSessionId;
-
-    // Some models restate the user's message before answering — strip that
-    // leading echo from the streamed reply so the chat shows the answer, not
-    // a repeat of the question.
-    const echoStripper = createEchoStripper(userText);
-
-    /** Only the current generation may touch live UI state. */
-    const finishState = () => {
-      if (gen !== turnGenRef.current) return;
-      setStream(null);
-      abortRef.current = null;
-      busyRef.current = false;
-      activeAssistantRef.current = null;
-    };
-
-    /** Persist the turn's terminal state exactly once, then settle the UI. */
-    const saveTerminal = async (patch: Partial<ChatMessage>) => {
-      try {
-        await chatMessagesRepo.update(assistant.id, patch);
-        if (opts.replaceId && opts.replaceId !== assistant.id) {
-          await chatMessagesRepo.remove(opts.replaceId);
-        }
-      } catch (e) {
-        console.error("[chat] failed to persist terminal message state", e);
-      } finally {
-        finishState();
-      }
-    };
-
-    const toolIndexById = new Map<string, number>();
-    const summarize = (args: Record<string, unknown>): string => {
-      const s = (k: string): string | undefined => {
-        const v = args[k];
-        return typeof v === "string" && v.trim() ? v : undefined;
-      };
-      const title = s("title") ?? s("name") ?? s("command") ?? s("path");
-      if (title) return title.slice(0, 80);
-      if (s("query")) return `"${s("query")!.slice(0, 60)}"`;
-      return "";
-    };
-
-    const push = () => {
-      if (gen !== turnGenRef.current) return;
-      setStream({
-        id: assistant.id,
-        text: acc,
-        reasoning: reasoningAcc,
-        tools: [...tools],
-        notices: [...notices],
-        files: [...files],
-      });
-    };
-
-    const onEvent = (e: OpenCodeFrontendEvent) => {
-      if (gen !== turnGenRef.current || !thread) return;
-      switch (e.type) {
-        case "text":
-          acc += echoStripper.strip(e.text);
-          break;
-        case "reasoning":
-          reasoningAcc += e.text;
-          break;
-        case "step":
-          if (e.step > 1 && acc) acc += "\n\n";
-          break;
-        case "notice":
-          notices.push(e.message);
-          break;
-        case "tool_call":
-          toolIndexById.set(e.id, tools.length);
-          tools.push({
-            name: e.name,
-            summary: summarize(e.arguments),
-            ok: true,
-            running: true,
-          });
-          break;
-        case "tool_running": {
-          const i = toolIndexById.get(e.id);
-          if (i !== undefined && e.title)
-            tools[i] = { ...tools[i], summary: e.title };
-          break;
-        }
-        case "tool_result": {
-          const i = toolIndexById.get(e.id);
-          if (i !== undefined)
-            tools[i] = { ...tools[i], ok: e.ok, running: false };
-          break;
-        }
-        case "file":
-          if (!files.includes(e.path)) files.push(e.path);
-          break;
-        case "approval":
-          setPendingApproval({
-            permissionId: e.permissionId,
-            sessionId,
-            type: e.permissionType,
-            title: e.title,
-            pattern: e.pattern,
-          });
-          break;
-        case "question":
-          setQuestionError(null);
-          setPendingQuestion({
-            questionId: e.questionId,
-            sessionId: e.sessionId,
-            questions: e.questions,
-          });
-          break;
-        case "question_dismissed":
-          setPendingQuestion(null);
-          setQuestionError(null);
-          break;
-        case "session_created":
-          sessionId = e.sessionId;
-          setBridgeSession(e.sessionId);
-          void chatThreadsRepo.update(thread.id, {
-            opencodeSessionId: e.sessionId,
-            opencodeDirectory: sessionDirectoryFor() ?? "",
-          });
-          break;
-        case "message_id":
-          opencodeMessageId = e.messageId;
-          break;
-        case "resumed":
-          // Re-attached to a running turn: fresh snapshot replaces the UI.
-          acc = "";
-          reasoningAcc = "";
-          tools = [];
-          files = [];
-          notices = [];
-          echoStripper.reset();
-          break;
-        case "error":
-          lastError = e.message;
-          break;
-        default:
-          break;
-      }
-      push();
-    };
-
-    try {
-      const agentic = mode === "agentic";
-      const directory = sessionDirectoryFor();
-      // Ensure the session (or repair a stale id) before sending. When the
-      // stored id is gone the backend recreates it and emits session_created.
-      if (!sessionId) {
-        const ensured = await ensureSessionForThread(thread.id, directory);
-        if (ensured) sessionId = ensured;
-      }
-      // Agentic turns are grounded in the live workspace briefing; chat turns
-      // talk to the model directly (OpenCode still supplies its own rules).
-      // The toolbelt describes exactly what the server can execute: the
-      // workspace functions (mutate the project DB via the bridge) when they
-      // are registered, plus the real filesystem tools OpenCode exposes —
-      // never phantom tools the model cannot actually call.
-      const context = agentic
-        ? await buildAgentSystemPrompt({
-            projectId: projectId!,
-            query: userText,
-            withTools: true,
-            toolbelt: registeredWorkspaceTools.length ? "hybrid" : "filesystem",
-            linkedRoots: (linkedRoots ?? []).map((r) => ({
-              name: r.name,
-              rootPath: r.rootPath,
-            })),
-            workspaceTools: registeredWorkspaceTools,
-            filesystemTools: nativeFsTools,
-            filesystemNote: linkedRoots?.length
-              ? undefined
-              : "The filesystem/shell tools are rooted in the MasarFlow workspace folder. To work on an external folder (e.g. a web app, a Unity game, or any other codebase), the user must link it from the chat header (folder icon) — until then you cannot reach other folders on the machine.",
-            signal: controller.signal,
-          })
-        : null;
-      if (context?.trimmed) {
-        notices.push(
-          "Workspace briefing trimmed to fit the model context window.",
-        );
-      }
-
-      await sendTurn({
-        chatId: thread.id,
-        sessionId: sessionId || undefined,
-        directory,
-        providerId: thread.providerId || undefined,
-        modelId: thread.modelId || undefined,
-        system: context?.system ?? undefined,
-        text: userText,
-        attachments: attachments.length
-          ? attachments.map((a) => ({
-              name: a.name,
-              mimeType: a.mimeType,
-              kind: a.kind,
-              dataUrl: a.dataUrl,
-              textContent: a.textContent,
-            }))
-          : undefined,
-        toolsEnabled: agentic,
-        resume: Boolean(opts.resume),
-        requestId: newRequestId(),
-        signal: controller.signal,
-        onEvent,
-      });
-
-      if (gen !== turnGenRef.current) return;
-      const userCancelled =
-        userCancelledRef.current || controller.signal.aborted;
-      if (userCancelled) {
-        await saveTerminal({
-          content: acc,
-          reasoning: reasoningAcc,
-          toolActivity: tools,
-          notices,
-          files,
-          opencodeMessageId,
-          status: "cancelled",
-          error: "Stopped.",
-        });
-        return;
-      }
-      if (lastError) {
-        await saveTerminal({
-          content: acc,
-          reasoning: reasoningAcc,
-          toolActivity: tools,
-          notices,
-          files,
-          opencodeMessageId,
-          status: "error",
-          error: lastError,
-        });
-        return;
-      }
-      // Never leave a silent blank bubble: no text, no tools, no edits →
-      // a retryable error.
-      const didWork =
-        Boolean(acc.trim()) || tools.length > 0 || files.length > 0;
-      await saveTerminal({
-        content: acc,
-        reasoning: reasoningAcc,
-        toolActivity: tools,
-        notices,
-        files,
-        opencodeMessageId,
-        status: didWork ? "done" : "error",
-        error: didWork
-          ? null
-          : "The model returned an empty response — Retry, or pick a different model.",
-      });
-    } catch (e) {
-      // Only the user pressing Stop is a cancellation; everything else —
-      // timeouts, network failures, service errors, unmount/thread aborts —
-      // is a real error the user can Retry.
-      const userCancelled =
-        userCancelledRef.current || controller.signal.aborted;
-      const message = userCancelled
-        ? "Stopped."
-        : (e as Error).message || "The AI request failed — Retry to continue.";
-      await saveTerminal({
-        content: acc,
-        reasoning: reasoningAcc,
-        toolActivity: tools,
-        notices,
-        files,
-        opencodeMessageId,
-        status: userCancelled ? "cancelled" : "error",
-        error: message,
-      });
-    }
+    return runLegacyTurn(userText, attachments, opts);
   }
 
   /**
    * Run one assistant turn through the in-browser Agent Loop (API connection
    * or local Ollama): history is rebuilt from the stored messages, the
    * workspace tools + linked-folder fs/shell tools execute in the browser
-   * with per-action approval, and everything streams through the same
-   * NDJSON event shapes the OpenCode path emits.
+   * with per-action approval, and everything streams through the shared
+   * streaming event shapes.
    */
   async function runLegacyTurn(
     userText: string,
@@ -1507,38 +1091,7 @@ export function ChatView() {
       return;
     }
 
-    if (backend === "opencode") {
-      if (!models) {
-        setSendError("Loading AI providers from OpenCode…");
-        return;
-      }
-      if (models.providers.length === 0) {
-        setSendError(
-          "No AI providers are configured in OpenCode. Run `opencode auth` to add one, then try again.",
-        );
-        return;
-      }
-      // Agentic mode needs a model that can actually call tools — otherwise
-      // the chat is honest but useless ("I can't touch the filesystem").
-      if (
-        mode === "agentic" &&
-        opencodeModel &&
-        !opencodeModel.capabilities.toolcall
-      ) {
-        setSendError(
-          "This model can't call tools, so agentic mode can't act on files. Pick a tool-capable model (wrench icon) or switch to Chat mode.",
-        );
-        return;
-      }
-      // A thread created before providers existed needs a default selection.
-      if (!thread.providerId || !thread.modelId) {
-        const firstProvider = models.providers[0];
-        await chatThreadsRepo.update(thread.id, {
-          providerId: thread.providerId || firstProvider.providerId,
-          modelId: thread.modelId || firstProvider.models[0]?.id || "",
-        });
-      }
-    } else if (backend === "api") {
+    if (backend === "api") {
       if (!catalog) {
         setSendError(
           "AI providers are still loading — wait a moment and retry.",
@@ -1678,20 +1231,6 @@ export function ChatView() {
     });
   }
 
-  /** Undo an assistant message's file changes (OpenCode snapshot revert). */
-  async function undoAssistant(assistantId: string) {
-    if (!thread || !thread.opencodeSessionId) return;
-    const m = messages.find((x) => x.id === assistantId);
-    if (!m?.opencodeMessageId) return;
-    const result = await undoChatMessage(
-      thread.opencodeSessionId,
-      m.opencodeMessageId,
-    );
-    if (!result.ok) {
-      setSendError(result.error ?? "Undo failed.");
-    }
-  }
-
   /**
    * Accept a fallback switch: repoint the thread at the target the turn
    * actually succeeded on (persisted only now, on the user's click).
@@ -1716,7 +1255,6 @@ export function ChatView() {
     console.info("[chat] turn cancelled by user");
     rejectPendingApproval();
     abortRef.current?.abort();
-    void abortChatTurn(thread?.opencodeSessionId || undefined);
   }
 
   const sendDisabled =
@@ -1932,11 +1470,6 @@ export function ChatView() {
                     onDelete={() => chatMessagesRepo.remove(m.id)}
                     onRegenerate={() => void regenerate(m.id)}
                     onSaveCodeAsNote={saveCodeAsNote}
-                    onUndoFiles={
-                      m.opencodeMessageId && thread.opencodeSessionId
-                        ? () => void undoAssistant(m.id)
-                        : undefined
-                    }
                     onKeepModel={(tid, target) => void keepModel(tid, target)}
                   />
                 ))}
@@ -1947,14 +1480,6 @@ export function ChatView() {
             {/* Composer */}
             <div className="shrink-0 border-t border-border p-3">
               <div className="mx-auto max-w-3xl">
-                {pendingApproval && (
-                  <ApprovalCard
-                    type={pendingApproval.type}
-                    title={pendingApproval.title}
-                    pattern={pendingApproval.pattern}
-                    onSettle={settleApproval}
-                  />
-                )}
                 {legacyApproval && (
                   <ApprovalCard
                     type={legacyApproval.request.name}
@@ -2221,19 +1746,6 @@ export function ChatView() {
         <ConnectionsDialog
           catalog={catalog ?? {}}
           onClose={() => setConnDialog(false)}
-        />
-      )}
-      {pendingQuestion && (
-        <QuestionDialog
-          requestId={pendingQuestion.questionId}
-          questions={pendingQuestion.questions}
-          error={questionError}
-          onError={setQuestionError}
-          onAnswered={() => setPendingQuestion(null)}
-          onDismiss={() => {
-            setPendingQuestion(null);
-            void rejectQuestion(pendingQuestion.questionId).catch(() => {});
-          }}
         />
       )}
     </div>
