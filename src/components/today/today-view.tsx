@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TodayTaskList } from "./today-task-list";
 import { TodayActivity } from "./today-activity";
+import { TodayGit } from "./today-git";
 import type { Task } from "@/lib/db/schema";
 
 /** groupTasks against the real clock. Module-level so the component body calls
@@ -109,6 +110,7 @@ export function TodayView() {
           emptyText="No high-priority work waiting."
         />
 
+        <TodayGit />
         <TodayActivity projectId={projectId} />
       </div>
 
