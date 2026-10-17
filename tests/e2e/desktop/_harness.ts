@@ -35,6 +35,12 @@ import { fileURLToPath } from "node:url";
 export const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 
 /**
+ * Folders this spec process already linked, per app profile (see linkFolder).
+ * A module-level memo, not a DB read: the app owns its IndexedDB.
+ */
+const linkedFoldersByProfile = new Map<string, Set<string>>();
+
+/**
  * The packaged binary. productName is read from desktop/electron-builder.yml;
  * if that changes, this resolves it from the config instead of failing with a
  * confusing ENOENT.
@@ -338,27 +344,52 @@ export function userDataDir(handle: AppHandle): string {
  * Idempotent: returns early when the folder is already linked and allowed.
  */
 export async function linkFolder(page: Page, handle: AppHandle, folder: string): Promise<void> {
-  const linked = await readTable<{ rootPath: string }>(page, "linkedProjects");
-  const allowed = await page.evaluate(async (dir) => {
-    const api = (window as unknown as { masarflow?: { roots: { covers(p: string): Promise<boolean> } } }).masarflow;
-    return api ? api.roots.covers(dir) : false;
-  }, folder);
-  if (linked.some((r) => r.rootPath === folder) && allowed) return;
+  // Per-profile memo, not a DB read: touching the app's IndexedDB from the spec
+  // disturbs its Dexie connection and remounts the dock (the git panel then
+  // re-resolves its root mid-flow). The UI itself proves the link landed.
+  const done = linkedFoldersByProfile.get(handle.profileDir) ?? new Set<string>();
+  if (done.has(folder)) return;
 
   await stubFolderPicker(handle, folder);
   await navigateTo(page, "Git");
   const panel = page.locator('[data-testid="dock-panel"][data-dock-url="/git"]');
   await expect(panel).toBeVisible({ timeout: 30_000 });
+  // The dock-panel div exists before the git view mounts; its header button is
+  // the first thing GitView renders, so this is the "content is settled" wait
+  // that `locator.count()` (which never waits) must not replace.
+  await expect(panel.getByRole("button", { name: "Refresh" })).toBeVisible({ timeout: 30_000 });
+
+  // The picker's IPC writes the allow-list synchronously; wait for the file.
+  // roots.json stores JSON (Windows backslashes escaped), so compare parsed,
+  // normalised paths — never a raw substring of the file.
+  const rootsPath = path.join(userDataDir(handle), "roots.json");
+  const allowedInFile = (): boolean => {
+    try {
+      const parsed = JSON.parse(readFileSync(rootsPath, "utf8")) as { roots?: string[] };
+      return (parsed.roots ?? []).some(
+        (r) => path.resolve(r).toLowerCase() === path.resolve(folder).toLowerCase(),
+      );
+    } catch {
+      return false;
+    }
+  };
 
   const choose = panel.getByRole("button", { name: "Choose a folder…" });
   if ((await choose.count()) > 0) {
     await choose.click(); // pickRoot → real dialog:choose-folder IPC → roots.json
-    await expect(panel.getByText(folder).first()).toBeVisible({ timeout: 20_000 });
+  } else if (!allowedInFile()) {
+    // A root is already selected but the folder is no longer on the allow-list
+    // (an earlier run dropped it): re-pick through the panel's own Folder
+    // button — same IPC, same file.
+    await panel.getByRole("button", { name: "Folder", exact: true }).click();
   }
+  await expect(panel.getByText(folder).first()).toBeVisible({ timeout: 20_000 });
+  await expect.poll(allowedInFile, { timeout: 10_000 }).toBe(true);
   // The state the recovery dialog exists for: the folder is no longer allowed.
-  rmSync(path.join(handle.profileDir, "profile", "roots.json"), { force: true });
+  rmSync(rootsPath, { force: true });
+  await expect(panel.getByRole("button", { name: "Refresh" })).toBeVisible();
   await panel.getByRole("button", { name: "Refresh" }).click();
-  await panel.getByRole("button", { name: "Open Linked Projects" }).click();
+  await panel.getByRole("button", { name: "Open Linked Projects" }).click({ timeout: 30_000 });
 
   const dialog = page.getByRole("dialog", { name: "Linked projects" });
   await expect(dialog).toBeVisible({ timeout: 15_000 });
@@ -370,6 +401,8 @@ export async function linkFolder(page: Page, handle: AppHandle, folder: string):
   }
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0, { timeout: 15_000 });
+  done.add(folder);
+  linkedFoldersByProfile.set(handle.profileDir, done);
 }
 
 /**
@@ -449,8 +482,9 @@ export function removeProfile(profileDir: string): void {
 /** Writes JSON evidence into reports/p9/ and returns the path. */
 export function writeEvidence(name: string, data: unknown): string {
   const dir = path.join(REPO_ROOT, "reports", "p9");
-  mkdirSync(dir, { recursive: true });
   const file = path.join(dir, name);
+  // Nested names ("a11y/summary.json") need their own directory first.
+  mkdirSync(path.dirname(file), { recursive: true });
   writeFileSync(file, JSON.stringify(data, null, 2) + "\n", "utf8");
   return file;
 }

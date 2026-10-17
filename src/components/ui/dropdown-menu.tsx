@@ -55,16 +55,39 @@ export function DropdownMenuTrigger({
   className?: string;
 }) {
   const { open, setOpen } = useDropdown();
-  return (
-    <div
-      className={cn("inline-flex", className)}
-      aria-haspopup="menu"
-      aria-expanded={open}
-      onClick={() => setOpen(!open)}
-    >
-      {children}
-    </div>
-  );
+  const toggle = () => setOpen(!open);
+
+  // The trigger semantics belong on the trigger element itself. A wrapper div
+  // carries the generic role, where aria-haspopup/aria-expanded are invalid
+  // (axe: aria-allowed-attr, wcag2a); making the wrapper focusable instead
+  // nests an interactive control inside another one (axe: nested-interactive,
+  // wcag412). Every call site passes exactly one element child — a Button, a
+  // <button> or a span[role=button] — so the attributes go on that child.
+  if (React.isValidElement(children)) {
+    const child = children as React.ReactElement<React.HTMLAttributes<HTMLElement>>;
+    return React.cloneElement(child, {
+      "aria-haspopup": "menu",
+      "aria-expanded": open,
+      onClick: (event: React.MouseEvent<HTMLElement>) => {
+        child.props.onClick?.(event);
+        if (!event.defaultPrevented) toggle();
+      },
+      onKeyDown: (event: React.KeyboardEvent<HTMLElement>) => {
+        child.props.onKeyDown?.(event);
+        if (event.defaultPrevented) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          toggle();
+        }
+      },
+      tabIndex: child.props.tabIndex ?? 0,
+      className: cn(child.props.className, className),
+    });
+  }
+
+  // No single element child (no call site does this): a plain wrapper, with no
+  // aria that would be invalid on it.
+  return <div className={cn("inline-flex", className)}>{children}</div>;
 }
 
 export function DropdownMenuContent({

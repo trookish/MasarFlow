@@ -1,0 +1,1175 @@
+{
+  "generatedAt": "2026-10-17T11:44:11.439Z",
+  "routes": {
+    "Dashboard": {
+      "engine": "injected",
+      "tags": [
+        "wcag2a",
+        "wcag2aa"
+      ],
+      "violations": [
+        {
+          "id": "aria-required-children",
+          "impact": "critical",
+          "help": "Certain ARIA roles must contain particular children",
+          "nodes": [
+            {
+              "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": "li:nth-child(3) > .-mx-2.py-1\\.5.hover\\:bg-accent\\/50 > .bg-node-system\\/15.text-node-system.py-0\\.5",
+              "html": "<span class=\"shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium bg-node-system/15 text-node-system\">To do</span>"
+            },
+            {
+              "target": "li:nth-child(4) > .-mx-2.py-1\\.5.hover\\:bg-accent\\/50 > .bg-node-system\\/15.text-node-system.py-0\\.5",
+              "html": "<span class=\"shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium bg-node-system/15 text-node-system\">To do</span>"
+            },
+            {
+              "target": ".bg-node-research\\/15",
+              "html": "<span class=\"shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium bg-node-research/15 text-node-research\">Implementing</span>"
+            }
+          ]
+        }
+      ],
+      "namelessControls": [
+        {
+          "id": "custom:nameless-control",
+          "impact": "critical",
+          "help": "Every interactive element must expose an accessible name",
+          "nodes": [
+            {
+              "target": "input[placeholder=\"Owner (user or org)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Repository name\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Branch (default)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Personal access token\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            }
+          ]
+        }
+      ],
+      "allowListed": [
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "bg-node-system",
+          "owner": "A — src/components/dashboard/** and src/components/tasks/**",
+          "target": "li:nth-child(3) > .-mx-2.py-1\\.5.hover\\:bg-accent\\/50 > .bg-node-system\\/15.text-node-system.py-0\\.5"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "bg-node-system",
+          "owner": "A — src/components/dashboard/** and src/components/tasks/**",
+          "target": "li:nth-child(4) > .-mx-2.py-1\\.5.hover\\:bg-accent\\/50 > .bg-node-system\\/15.text-node-system.py-0\\.5"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "bg-node-research",
+          "owner": "A — src/components/dashboard/** (task status badges)",
+          "target": ".bg-node-research\\/15"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Owner (user or org)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Owner (user or org)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Repository name\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Repository name\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Branch (default)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Branch (default)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Personal access token\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Personal access token\"]"
+        }
+      ],
+      "failing": []
+    },
+    "Brain": {
+      "engine": "injected",
+      "tags": [
+        "wcag2a",
+        "wcag2aa"
+      ],
+      "violations": [
+        {
+          "id": "aria-required-children",
+          "impact": "critical",
+          "help": "Certain ARIA roles must contain particular children",
+          "nodes": [
+            {
+              "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": ".tracking-wider",
+              "html": "<span class=\"text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase\">Folders</span>"
+            }
+          ]
+        }
+      ],
+      "namelessControls": [
+        {
+          "id": "custom:nameless-control",
+          "impact": "critical",
+          "help": "Every interactive element must expose an accessible name",
+          "nodes": [
+            {
+              "target": "input[placeholder=\"Owner (user or org)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Repository name\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Branch (default)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Personal access token\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Search notes…\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            }
+          ]
+        }
+      ],
+      "allowListed": [
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "text-muted-foreground/70",
+          "owner": "A — src/components/brain/folder-tree.tsx",
+          "target": ".tracking-wider"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Owner (user or org)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Owner (user or org)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Repository name\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Repository name\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Branch (default)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Branch (default)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Personal access token\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Personal access token\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Search notes…\"",
+          "owner": "A — src/components/brain/notes-view.tsx",
+          "target": "input[placeholder=\"Search notes…\"]"
+        }
+      ],
+      "failing": []
+    },
+    "Tasks": {
+      "engine": "injected",
+      "tags": [
+        "wcag2a",
+        "wcag2aa"
+      ],
+      "violations": [
+        {
+          "id": "aria-required-children",
+          "impact": "critical",
+          "help": "Certain ARIA roles must contain particular children",
+          "nodes": [
+            {
+              "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_3d4cefb4fa1e\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": ".tracking-wider",
+              "html": "<span class=\"text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase\">Folders</span>"
+            },
+            {
+              "target": ".p-2\\.5.shadow-sm.transition-opacity:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap",
+              "html": "<span class=\"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap bg-node-system/15 text-node-system\">Medium</span>"
+            }
+          ]
+        }
+      ],
+      "namelessControls": [
+        {
+          "id": "custom:nameless-control",
+          "impact": "critical",
+          "help": "Every interactive element must expose an accessible name",
+          "nodes": [
+            {
+              "target": "input[placeholder=\"Owner (user or org)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Repository name\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Branch (default)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Personal access token\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Search notes…\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            }
+          ]
+        }
+      ],
+      "allowListed": [
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_3d4cefb4fa1e\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "text-muted-foreground/70",
+          "owner": "A — src/components/brain/folder-tree.tsx",
+          "target": ".tracking-wider"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "bg-node-system",
+          "owner": "A — src/components/dashboard/** and src/components/tasks/**",
+          "target": ".p-2\\.5.shadow-sm.transition-opacity:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Owner (user or org)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Owner (user or org)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Repository name\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Repository name\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Branch (default)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Branch (default)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Personal access token\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Personal access token\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Search notes…\"",
+          "owner": "A — src/components/brain/notes-view.tsx",
+          "target": "input[placeholder=\"Search notes…\"]"
+        }
+      ],
+      "failing": []
+    },
+    "Chat": {
+      "engine": "injected",
+      "tags": [
+        "wcag2a",
+        "wcag2aa"
+      ],
+      "violations": [
+        {
+          "id": "aria-required-children",
+          "impact": "critical",
+          "help": "Certain ARIA roles must contain particular children",
+          "nodes": [
+            {
+              "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_3d4cefb4fa1e\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": ".tracking-wider",
+              "html": "<span class=\"text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase\">Folders</span>"
+            },
+            {
+              "target": ".p-2\\.5.shadow-sm.transition-opacity:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap",
+              "html": "<span class=\"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap bg-node-system/15 text-node-system\">Medium</span>"
+            }
+          ]
+        }
+      ],
+      "namelessControls": [
+        {
+          "id": "custom:nameless-control",
+          "impact": "critical",
+          "help": "Every interactive element must expose an accessible name",
+          "nodes": [
+            {
+              "target": "input[placeholder=\"Owner (user or org)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Repository name\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Branch (default)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Personal access token\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Search notes…\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            }
+          ]
+        }
+      ],
+      "allowListed": [
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_3d4cefb4fa1e\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "text-muted-foreground/70",
+          "owner": "A — src/components/brain/folder-tree.tsx",
+          "target": ".tracking-wider"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "bg-node-system",
+          "owner": "A — src/components/dashboard/** and src/components/tasks/**",
+          "target": ".p-2\\.5.shadow-sm.transition-opacity:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Owner (user or org)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Owner (user or org)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Repository name\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Repository name\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Branch (default)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Branch (default)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Personal access token\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Personal access token\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Search notes…\"",
+          "owner": "A — src/components/brain/notes-view.tsx",
+          "target": "input[placeholder=\"Search notes…\"]"
+        }
+      ],
+      "failing": []
+    },
+    "Settings": {
+      "engine": "injected",
+      "tags": [
+        "wcag2a",
+        "wcag2aa"
+      ],
+      "violations": [
+        {
+          "id": "aria-required-children",
+          "impact": "critical",
+          "help": "Certain ARIA roles must contain particular children",
+          "nodes": [
+            {
+              "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_3d4cefb4fa1e\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_64e9bd3cfef7\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": ".text-muted-foreground\\/70",
+              "html": "<span class=\"text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase\">Folders</span>"
+            },
+            {
+              "target": ".p-2\\.5.shadow-sm.transition-opacity:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap",
+              "html": "<span class=\"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap bg-node-system/15 text-node-system\">Medium</span>"
+            },
+            {
+              "target": ".w-72.bg-muted\\/30.rounded-lg:nth-child(4) > .pb-2.overflow-y-auto.scrollbar-thin > .p-2\\.5.shadow-sm.transition-opacity > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap",
+              "html": "<span class=\"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap bg-node-system/15 text-node-system\">Medium</span>"
+            },
+            {
+              "target": ".mb-4:nth-child(2) > .text-muted-foreground\\/60.uppercase.tracking-wider",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">Global</p>"
+            },
+            {
+              "target": ".mb-4:nth-child(3) > .text-muted-foreground\\/60.uppercase.tracking-wider",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">Capture</p>"
+            },
+            {
+              "target": ".mb-4:nth-child(4) > .text-muted-foreground\\/60.uppercase.tracking-wider",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">Planning</p>"
+            },
+            {
+              "target": ".mb-4:nth-child(5) > .text-muted-foreground\\/60.uppercase.tracking-wider",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">Work</p>"
+            },
+            {
+              "target": ".mb-4:nth-child(6) > .text-muted-foreground\\/60.uppercase.tracking-wider",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">Structure</p>"
+            },
+            {
+              "target": ".mb-4:nth-child(7) > .text-muted-foreground\\/60.uppercase.tracking-wider",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">AI</p>"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodes": [
+            {
+              "target": ".w-40",
+              "html": "<input min=\"0\" max=\"1.5\" step=\"0.0625\" class=\"h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-muted accent-primary\" type=\"range\" value=\"0.625\">"
+            }
+          ]
+        }
+      ],
+      "namelessControls": [
+        {
+          "id": "custom:nameless-control",
+          "impact": "critical",
+          "help": "Every interactive element must expose an accessible name",
+          "nodes": [
+            {
+              "target": "input[placeholder=\"Owner (user or org)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Repository name\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Branch (default)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Personal access token\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Search notes…\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"#dedede\"]",
+              "html": "<input class=\"rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visibl"
+            },
+            {
+              "target": "input.h-1.5.w-40",
+              "html": "<input min=\"0\" max=\"1.5\" step=\"0.0625\" class=\"h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-muted accent-primary\" type=\"range\" value=\"0.625\">"
+            }
+          ]
+        }
+      ],
+      "allowListed": [
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_3d4cefb4fa1e\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_64e9bd3cfef7\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "text-muted-foreground/70",
+          "owner": "A — src/components/brain/folder-tree.tsx",
+          "target": ".text-muted-foreground\\/70"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "bg-node-system",
+          "owner": "A — src/components/dashboard/** and src/components/tasks/**",
+          "target": ".p-2\\.5.shadow-sm.transition-opacity:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "bg-node-system",
+          "owner": "A — src/components/dashboard/** and src/components/tasks/**",
+          "target": ".w-72.bg-muted\\/30.rounded-lg:nth-child(4) > .pb-2.overflow-y-auto.scrollbar-thin > .p-2\\.5.shadow-sm.transition-opacity > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(2) > .text-muted-foreground\\/60.uppercase.tracking-wider"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(3) > .text-muted-foreground\\/60.uppercase.tracking-wider"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(4) > .text-muted-foreground\\/60.uppercase.tracking-wider"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(5) > .text-muted-foreground\\/60.uppercase.tracking-wider"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(6) > .text-muted-foreground\\/60.uppercase.tracking-wider"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(7) > .text-muted-foreground\\/60.uppercase.tracking-wider"
+        },
+        {
+          "rule": "label",
+          "selector": "h-1.5 w-40",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".w-40"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Owner (user or org)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Owner (user or org)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Repository name\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Repository name\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Branch (default)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Branch (default)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Personal access token\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Personal access token\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Search notes…\"",
+          "owner": "A — src/components/brain/notes-view.tsx",
+          "target": "input[placeholder=\"Search notes…\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"#dedede\"",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": "input[placeholder=\"#dedede\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "h-1.5 w-40",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": "input.h-1.5.w-40"
+        }
+      ],
+      "failing": []
+    },
+    "Plugins": {
+      "engine": "injected",
+      "tags": [
+        "wcag2a",
+        "wcag2aa"
+      ],
+      "violations": [
+        {
+          "id": "aria-required-children",
+          "impact": "critical",
+          "help": "Certain ARIA roles must contain particular children",
+          "nodes": [
+            {
+              "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_3d4cefb4fa1e\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_64e9bd3cfef7\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_0bf90a003c23\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": ".text-muted-foreground\\/70",
+              "html": "<span class=\"text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase\">Folders</span>"
+            },
+            {
+              "target": ".p-2\\.5.shadow-sm.transition-opacity:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap",
+              "html": "<span class=\"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap bg-node-system/15 text-node-system\">Medium</span>"
+            },
+            {
+              "target": ".w-72.bg-muted\\/30.rounded-lg:nth-child(4) > .pb-2.overflow-y-auto.scrollbar-thin > .p-2\\.5.shadow-sm.transition-opacity > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap",
+              "html": "<span class=\"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap bg-node-system/15 text-node-system\">Medium</span>"
+            },
+            {
+              "target": ".mb-4:nth-child(2) > .text-muted-foreground\\/60.uppercase.tracking-wider",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">Global</p>"
+            },
+            {
+              "target": ".mb-4:nth-child(3) > .text-muted-foreground\\/60.uppercase.tracking-wider",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">Capture</p>"
+            },
+            {
+              "target": ".mb-4:nth-child(4) > .text-muted-foreground\\/60.uppercase.tracking-wider",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">Planning</p>"
+            },
+            {
+              "target": ".mb-4:nth-child(5) > .text-muted-foreground\\/60.uppercase.tracking-wider",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">Work</p>"
+            },
+            {
+              "target": ".mb-4:nth-child(6) > .text-muted-foreground\\/60.uppercase.tracking-wider",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">Structure</p>"
+            },
+            {
+              "target": ".mb-4:nth-child(7) > .text-muted-foreground\\/60.uppercase.tracking-wider",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">AI</p>"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodes": [
+            {
+              "target": ".w-40",
+              "html": "<input min=\"0\" max=\"1.5\" step=\"0.0625\" class=\"h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-muted accent-primary\" type=\"range\" value=\"0.625\">"
+            }
+          ]
+        }
+      ],
+      "namelessControls": [
+        {
+          "id": "custom:nameless-control",
+          "impact": "critical",
+          "help": "Every interactive element must expose an accessible name",
+          "nodes": [
+            {
+              "target": "input[placeholder=\"Owner (user or org)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Repository name\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Branch (default)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Personal access token\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Search notes…\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"#dedede\"]",
+              "html": "<input class=\"rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visibl"
+            },
+            {
+              "target": "input.h-1.5.w-40",
+              "html": "<input min=\"0\" max=\"1.5\" step=\"0.0625\" class=\"h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-muted accent-primary\" type=\"range\" value=\"0.625\">"
+            },
+            {
+              "target": "input[placeholder=\"Search plugins…\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            }
+          ]
+        }
+      ],
+      "allowListed": [
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_3d4cefb4fa1e\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_64e9bd3cfef7\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_0bf90a003c23\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "text-muted-foreground/70",
+          "owner": "A — src/components/brain/folder-tree.tsx",
+          "target": ".text-muted-foreground\\/70"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "bg-node-system",
+          "owner": "A — src/components/dashboard/** and src/components/tasks/**",
+          "target": ".p-2\\.5.shadow-sm.transition-opacity:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "bg-node-system",
+          "owner": "A — src/components/dashboard/** and src/components/tasks/**",
+          "target": ".w-72.bg-muted\\/30.rounded-lg:nth-child(4) > .pb-2.overflow-y-auto.scrollbar-thin > .p-2\\.5.shadow-sm.transition-opacity > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(2) > .text-muted-foreground\\/60.uppercase.tracking-wider"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(3) > .text-muted-foreground\\/60.uppercase.tracking-wider"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(4) > .text-muted-foreground\\/60.uppercase.tracking-wider"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(5) > .text-muted-foreground\\/60.uppercase.tracking-wider"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(6) > .text-muted-foreground\\/60.uppercase.tracking-wider"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(7) > .text-muted-foreground\\/60.uppercase.tracking-wider"
+        },
+        {
+          "rule": "label",
+          "selector": "h-1.5 w-40",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".w-40"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Owner (user or org)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Owner (user or org)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Repository name\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Repository name\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Branch (default)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Branch (default)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Personal access token\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Personal access token\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Search notes…\"",
+          "owner": "A — src/components/brain/notes-view.tsx",
+          "target": "input[placeholder=\"Search notes…\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"#dedede\"",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": "input[placeholder=\"#dedede\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "h-1.5 w-40",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": "input.h-1.5.w-40"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Search plugins…\"",
+          "owner": "unowned this wave — src/components/plugins/plugins-view.tsx",
+          "target": "input[placeholder=\"Search plugins…\"]"
+        }
+      ],
+      "failing": []
+    }
+  },
+  "allowList": [
+    {
+      "rule": "aria-required-children",
+      "selector": "aria-label=\"Dock panel tabs\"",
+      "owner": "C — src/components/dock/dock-group.tsx",
+      "reason": "The tab strip is role=tablist but its role=tab children sit inside a wrapper div, so axe sees no tab children. Fix: put role=tablist on the inner wrapper that directly holds the tabs."
+    },
+    {
+      "rule": "color-contrast",
+      "selector": "bg-node-system",
+      "owner": "A — src/components/dashboard/** and src/components/tasks/**",
+      "reason": "node-status badges: text-node-system on a 15%-tinted background at 10-12px is under 4.5:1 (dashboard task list and board cards)."
+    },
+    {
+      "rule": "color-contrast",
+      "selector": "bg-node-research",
+      "owner": "A — src/components/dashboard/** (task status badges)",
+      "reason": "Same badge pattern as bg-node-system, on the dashboard task list."
+    },
+    {
+      "rule": "color-contrast",
+      "selector": "text-muted-foreground/70",
+      "owner": "A — src/components/brain/folder-tree.tsx",
+      "reason": "The 'Folders' section label (10px, muted-foreground at 70%) is under 4.5:1."
+    },
+    {
+      "rule": "color-contrast",
+      "selector": "tracking-wider text-muted-foreground/60",
+      "owner": "C — src/components/settings/settings-view.tsx",
+      "reason": "The settings nav-section headings ('Global', 'Capture', …) are muted-foreground at 60%, under 4.5:1."
+    },
+    {
+      "rule": "label",
+      "selector": "h-1.5 w-40",
+      "owner": "C — src/components/settings/settings-view.tsx",
+      "reason": "axe's label rule on the same unlabelled range slider (add an aria-label or a <label>)."
+    },
+    {
+      "rule": "custom:nameless-control",
+      "selector": "placeholder=\"Owner (user or org)\"",
+      "owner": "A — src/components/dashboard/commits-panel.tsx",
+      "reason": "The repository-connect form labels its inputs with placeholders only. Fix: an aria-label on each input."
+    },
+    {
+      "rule": "custom:nameless-control",
+      "selector": "placeholder=\"Repository name\"",
+      "owner": "A — src/components/dashboard/commits-panel.tsx",
+      "reason": "Same form, same fix."
+    },
+    {
+      "rule": "custom:nameless-control",
+      "selector": "placeholder=\"Branch (default)\"",
+      "owner": "A — src/components/dashboard/commits-panel.tsx",
+      "reason": "Same form, same fix."
+    },
+    {
+      "rule": "custom:nameless-control",
+      "selector": "placeholder=\"Personal access token\"",
+      "owner": "A — src/components/dashboard/commits-panel.tsx",
+      "reason": "Same form, same fix (an unlabelled password field is read as a nameless edit box)."
+    },
+    {
+      "rule": "custom:nameless-control",
+      "selector": "placeholder=\"Search notes…\"",
+      "owner": "A — src/components/brain/notes-view.tsx",
+      "reason": "The notes-list filter has only a placeholder; the panel is visible in the default dock layout."
+    },
+    {
+      "rule": "custom:nameless-control",
+      "selector": "placeholder=\"#dedede\"",
+      "owner": "C — src/components/settings/settings-view.tsx",
+      "reason": "The theme hex-colour field has no label (aria-label on the Input would fix it)."
+    },
+    {
+      "rule": "custom:nameless-control",
+      "selector": "h-1.5 w-40",
+      "owner": "C — src/components/settings/settings-view.tsx",
+      "reason": "The theme opacity/amount range slider has no label (it is the RangeField above the hex field)."
+    },
+    {
+      "rule": "custom:nameless-control",
+      "selector": "placeholder=\"Search plugins…\"",
+      "owner": "unowned this wave — src/components/plugins/plugins-view.tsx",
+      "reason": "The plugin search has only a placeholder, same pattern as the other list filters."
+    }
+  ]
+}

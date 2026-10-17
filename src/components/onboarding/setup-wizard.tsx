@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { getDesktop } from "@/lib/desktop/bridge";
 import { projectsRepo } from "@/lib/db/repos";
 import { useProjectStore } from "@/lib/stores/project";
+import { useFocusTrap } from "@/lib/hooks/use-focus-trap";
 import {
   WIZARD_STEPS,
   canAdvance,
@@ -34,6 +35,10 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
   const projectCount = useLiveQuery(() => projectsRepo.count(), []) ?? 0;
+  // The wizard is a modal overlay: without a trap, Tab walks into the shell
+  // behind it (axe/keyboard journeys flag this).
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, true);
 
   const update = useCallback((patch: Partial<WizardProgress>) => setProgress((p) => ({ ...p, ...patch })), []);
 
@@ -53,7 +58,13 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
   }[step];
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-background/95 p-6 backdrop-blur" role="dialog" aria-label="Set up MasarFlow">
+    <div
+      ref={dialogRef}
+      className="fixed inset-0 z-50 grid place-items-center bg-background/95 p-6 backdrop-blur"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Set up MasarFlow"
+    >
       <div className="flex w-full max-w-2xl flex-col rounded-xl border border-border bg-card shadow-xl">
         <ol className="flex items-center gap-2 border-b border-border px-6 py-4 text-xs text-muted-foreground">
           {WIZARD_STEPS.map((s, i) => (
