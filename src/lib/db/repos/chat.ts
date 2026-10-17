@@ -8,13 +8,25 @@ import {
   type ChatMessage,
 } from "@/lib/db/schema";
 import { uuid, now } from "@/lib/utils/ids";
+import { setSecret, secretsAvailable } from "@/lib/secrets";
+import {
+  aiKeySecret,
+  hydrateConnection,
+  removeConnectionSecret,
+  stripConnectionSecret,
+} from "./chat-secrets";
 
 export const aiConnectionsRepo = {
-  list(): Promise<AiConnection[]> {
-    return db.aiConnections.orderBy("updatedAt").reverse().toArray();
+  async list(): Promise<AiConnection[]> {
+    return Promise.all(
+      (await db.aiConnections.orderBy("updatedAt").reverse().toArray()).map(
+        hydrateConnection,
+      ),
+    );
   },
-  get(id: string): Promise<AiConnection | undefined> {
-    return db.aiConnections.get(id);
+  async get(id: string): Promise<AiConnection | undefined> {
+    const c = await db.aiConnections.get(id);
+    return c ? hydrateConnection(c) : undefined;
   },
   async create(
     input: Partial<AiConnection> & Pick<AiConnection, "providerId" | "label">,
@@ -26,13 +38,20 @@ export const aiConnectionsRepo = {
       createdAt: input.createdAt ?? ts,
       updatedAt: ts,
     });
-    await db.aiConnections.add(conn);
+    await db.aiConnections.add(await stripConnectionSecret(conn));
     return conn;
   },
   async update(id: string, patch: Partial<AiConnection>): Promise<void> {
-    await db.aiConnections.update(id, { ...patch, updatedAt: now() });
+    let next = patch;
+    if (secretsAvailable() && "apiKey" in patch) {
+      if (patch.apiKey) await setSecret(aiKeySecret(id), patch.apiKey);
+      else await removeConnectionSecret(id);
+      next = { ...patch, apiKey: "" };
+    }
+    await db.aiConnections.update(id, { ...next, updatedAt: now() });
   },
   async remove(id: string): Promise<void> {
+    await removeConnectionSecret(id);
     await db.aiConnections.delete(id);
   },
 };
