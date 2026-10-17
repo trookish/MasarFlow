@@ -69,7 +69,6 @@ import { newRequestId } from "@/lib/ai/agent/logger";
 import {
   sendTurn,
   ensureChatSession,
-  getChatState,
   abortChatTurn,
   approvePermission,
   answerQuestion,
@@ -78,23 +77,11 @@ import {
   fetchOpenCodeModels,
   fetchOpenCodeTools,
   checkOpenCodeHealth,
-  subscribeBridge,
-  claimBridgeCall,
-  postBridgeResult,
-  postBridgeError,
-  type BridgeWsToolCall,
   type OpenCodeModelsPayload,
   type OpenCodeToolInfo,
 } from "@/lib/ai/opencode-client";
 import type { OpenCodeFrontendEvent } from "@/lib/opencode/types";
-import type {
-  OpenCodePart,
-  OpenCodePatchPart,
-  OpenCodeQuestionInfo,
-  OpenCodeReasoningPart,
-  OpenCodeTextPart,
-  OpenCodeToolPart,
-} from "@/lib/opencode/types";
+import type { OpenCodeQuestionInfo } from "@/lib/opencode/types";
 import {
   prepareAttachment,
   type PreparedAttachment,
@@ -246,15 +233,8 @@ export function ChatView() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [ocTools, setOcTools] = useState<OpenCodeToolInfo[]>([]);
   const [opencodeHealthy, setOpencodeHealthy] = useState(true);
-  /**
-   * The opencode session this browser answers workspace-tool calls for. Kept
-   * in sync with the active thread's session (created/ensured per turn), so
-   * the SSE bridge only delivers calls that belong to this chat.
-   */
+  /** The OpenCode session of the in-flight legacy turn, if any. */
   const [bridgeSession, setBridgeSession] = useState<string | null>(null);
-  const bridgeSessionRef = useRef<string | null>(null);
-  /** Latest handler for bridge tool calls (stable across reconnects). */
-  const bridgeHandlerRef = useRef<(call: BridgeWsToolCall) => void>(() => {});
   const [input, setInput] = useState("");
   const [interim, setInterim] = useState("");
   const [threadQuery, setThreadQuery] = useState("");
@@ -297,8 +277,6 @@ export function ChatView() {
   const userCancelledRef = useRef(false);
   /** The assistant message of the in-flight turn (for interrupted marks). */
   const activeAssistantRef = useRef<string | null>(null);
-  /** Streaming messages already handed to the resume/reconcile path. */
-  const recoveryHandledRef = useRef(new Set<string>());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -356,10 +334,6 @@ export function ChatView() {
     [ocTools],
   );
 
-  useEffect(() => {
-    bridgeSessionRef.current = bridgeSession;
-  }, [bridgeSession]);
-
   const threadsRaw = useLiveQuery(
     () => chatThreadsRepo.listByProject(projectId),
     [projectId],
@@ -378,60 +352,6 @@ export function ChatView() {
   const connections = useLiveQuery(() => aiConnectionsRepo.list(), []) ?? [];
 
   const thread = threads.find((t) => t.id === threadId) ?? null;
-
-  // The session this browser answers workspace-tool calls for: the explicit
-  // one created/ensured this session wins over the thread's stored id.
-  const activeBridgeSession =
-    bridgeSession ?? thread?.opencodeSessionId ?? null;
-
-  // Keep the ref the (reconnect-stable) executor reads in step.
-  useEffect(() => {
-    bridgeSessionRef.current = activeBridgeSession;
-  }, [activeBridgeSession]);
-
-  // The bridge executor: claim → execute → post result. Exactly one tab
-  // claims each call, so duplicate subscriptions never double-mutate.
-  useEffect(() => {
-    bridgeHandlerRef.current = (call) => {
-      const sid = bridgeSessionRef.current;
-      if (!sid || !projectId) {
-        void postBridgeError(
-          call.correlationId,
-          sid ?? "",
-          "No active MasarFlow project — open a chat inside a project first.",
-        );
-        return;
-      }
-      void (async () => {
-        const claimed = await claimBridgeCall(call.correlationId, sid);
-        if (!claimed) return; // another tab owns this call
-        try {
-          const result = await executeWorkspaceToolWithUndo(
-            projectId,
-            { id: call.correlationId, name: call.name, arguments: call.args },
-            activeAssistantRef.current ?? "",
-          );
-          void postBridgeResult(call.correlationId, sid, result);
-        } catch (e) {
-          void postBridgeError(call.correlationId, sid, (e as Error).message);
-        }
-      })();
-    };
-  }, [projectId]);
-
-  // SSE subscription: opencode server → Next → this browser. Re-subscribes
-  // whenever the active session changes (thread switch, fresh load, repair,
-  // or a newly created session via the session_created event handler).
-  useEffect(() => {
-    if (!projectId || !activeBridgeSession) return;
-    const controller = new AbortController();
-    subscribeBridge({
-      sessionId: activeBridgeSession,
-      signal: controller.signal,
-      onCall: (call) => bridgeHandlerRef.current(call),
-    });
-    return () => controller.abort();
-  }, [projectId, activeBridgeSession]);
 
   const mode = thread?.mode ?? "agentic";
   const backend: ChatBackend = thread?.backend ?? "opencode";
@@ -513,93 +433,6 @@ export function ChatView() {
     },
     [],
   );
-
-  // Refresh / navigation recovery: a message left mid-stream must resolve to
-  // a real state, never a permanent spinner. Check the OpenCode session: if
-  // it is still working, attach to the live turn (no duplicate request); if
-  // it finished while we were away, reconstruct the reply from history; if
-  // the session is gone, mark the message interrupted.
-  useEffect(() => {
-    if (!thread || !thread.opencodeSessionId) return;
-    if (busyRef.current || stream) return;
-    const streamingMsg = messages.find(
-      (m) => m.role === "assistant" && m.status === "streaming",
-    );
-    if (!streamingMsg || recoveryHandledRef.current.has(streamingMsg.id))
-      return;
-    recoveryHandledRef.current.add(streamingMsg.id);
-    void (async () => {
-      const state = await getChatState(thread.opencodeSessionId);
-      if (state.status === "busy") {
-        await runTurn("", [], { resume: streamingMsg.id });
-      } else if (state.status === "missing") {
-        await chatMessagesRepo.markInterruptedIfStreaming(streamingMsg.id);
-      } else {
-        // idle: the turn already finished server-side — reconstruct it.
-        try {
-          const res = await fetch(
-            `/api/opencode/history?sessionId=${encodeURIComponent(thread.opencodeSessionId)}&limit=5`,
-            { cache: "no-store" },
-          );
-          if (res.ok) {
-            const data = (await res.json()) as {
-              messages?: {
-                info: { id: string; role: string; finish?: string };
-                parts: OpenCodePart[];
-              }[];
-            };
-            const lastAssistant = (data.messages ?? [])
-              .filter((m) => m.info.role === "assistant")
-              .at(-1);
-            if (lastAssistant?.info.finish) {
-              const text = lastAssistant.parts
-                .filter((p) => p.type === "text")
-                .map((p) => (p as OpenCodeTextPart).text ?? "")
-                .join("");
-              const reasoning = lastAssistant.parts
-                .filter((p) => p.type === "reasoning")
-                .map((p) => (p as OpenCodeReasoningPart).text ?? "")
-                .join("");
-              const tools = lastAssistant.parts
-                .filter(
-                  (p) =>
-                    p.type === "tool" &&
-                    (p as OpenCodeToolPart).state.status !== "pending",
-                )
-                .map((p) => {
-                  const t = p as OpenCodeToolPart;
-                  return {
-                    name: t.tool,
-                    summary: "",
-                    ok: t.state.status === "completed",
-                    running: false,
-                  };
-                });
-              const files = lastAssistant.parts
-                .filter((p) => p.type === "patch")
-                .flatMap((p) => (p as OpenCodePatchPart).files ?? []);
-              const didWork = Boolean(text.trim()) || tools.length > 0;
-              await chatMessagesRepo.update(streamingMsg.id, {
-                content: text,
-                reasoning,
-                toolActivity: tools,
-                files,
-                opencodeMessageId: lastAssistant.info.id,
-                status: didWork ? "done" : "error",
-                error: didWork
-                  ? null
-                  : "The response finished with no answer — Retry.",
-              });
-              return;
-            }
-          }
-        } catch {
-          // Fall through to the interrupted mark.
-        }
-        await chatMessagesRepo.markInterruptedIfStreaming(streamingMsg.id);
-      }
-    })();
-  }, [threadId, thread, messages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const visibleThreads = useMemo(() => {
     const q = threadQuery.trim().toLowerCase();
