@@ -1,0 +1,113 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to build (must already exist)
+        required: true
+
+permissions:
+  contents: write
+
+# `inputs.tag` is set only on workflow_dispatch; on a tag push the ref itself is
+# the tag. One variable keeps both entry points consistent (a bare
+# `github.ref_name` would run the dispatch path against the branch name).
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.21.0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Version consistency
+        shell: bash
+        run: node scripts/release-verify.mjs "$RELEASE_TAG"
+
+      - name: Build and package (no publish from electron-builder)
+        shell: bash
+        env:
+          # Q3: we ship unsigned on purpose; stop electron-builder hunting for a cert.
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: pnpm desktop:dist
+
+      - name: Assert the updater feed and installer exist
+        shell: bash
+        run: |
+          # bash: each glob match becomes ONE word, spaces included — do not quote the glob,
+          # and never paste this snippet into PowerShell (it would split "MasarFlow Setup 0.2.0.exe").
+          ls -la desktop/dist/*.exe desktop/dist/latest.yml desktop/dist/*.blockmap
+          test -s desktop/dist/latest.yml
+
+      - name: Release notes from CHANGELOG
+        shell: bash
+        run: node scripts/release-notes.mjs "$RELEASE_TAG"
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: masarflow-windows-${{ env.RELEASE_TAG }}
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/latest.yml
+            desktop/dist/*.blockmap
+          retention-days: 30
+
+      - name: Create the GitHub Release (draft)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            --draft --title "MasarFlow $RELEASE_TAG" --notes-file release-notes.md \
+            desktop/dist/*.exe desktop/dist/latest.yml desktop/dist/*.blockmap
+          gh release view "$RELEASE_TAG" --json isDraft,tagName,assets --jq '{isDraft,tagName,assets:[.assets[].name]}'
+
+  # Diagnostic only — the authoritative packaged gate is run locally on the
+  # release commit (see the release checklist). A green CI smoke is NOT release
+  # evidence; promote this job only after it proves reliable over two releases.
+  packaged-smoke:
+    runs-on: windows-latest
+    needs: build
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - uses: pnpm/action-setup@v6
+        with: { version: 11.21.0 }
+
+      - uses: actions/setup-node@v7
+        with: { node-version: 24, cache: pnpm }
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm desktop:dist:dir
+
+      - name: Packaged smoke (diagnostic)
+        shell: bash
+        run: |
+          pnpm smoke:desktop 2>&1 | tee smoke-ci.log
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: { name: smoke-ci-log, path: smoke-ci.log, if-no-files-found: ignore }
