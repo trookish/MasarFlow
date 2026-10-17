@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import type { PropValue } from "@/lib/db/schema";
 import {
@@ -19,10 +19,14 @@ export function PropertiesPanel({
   disabled?: boolean;
 }) {
   const [rows, setRows] = useState<PropRow[]>(() => toPropRows(props));
-
-  useEffect(() => {
+  // Re-sync when the `props` prop changes identity from outside (React's
+  // "adjusting state when props change" pattern — setState during render, not
+  // in an effect, which the hooks lint forbids).
+  const [syncedProps, setSyncedProps] = useState(props);
+  if (props !== syncedProps) {
+    setSyncedProps(props);
     setRows(toPropRows(props));
-  }, [props]);
+  }
 
   const commit = (next: PropRow[]): void => {
     setRows(next);
