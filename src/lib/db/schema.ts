@@ -526,10 +526,10 @@ const chatThreadObject = z.object({
   /**
    * api    — a saved AI connection through /api/chat (Agent Loop, default);
    * ollama — the local Ollama server (no API key).
-   * Legacy "opencode" threads map to "api". Not indexed.
+   * Any legacy/unknown value maps to "api". Not indexed.
    */
   backend: z.preprocess(
-    (v) => (v === "opencode" ? "api" : v),
+    (v) => (v === "api" || v === "ollama" ? v : "api"),
     z.enum(["api", "ollama"]).default("api"),
   ),
   /**
@@ -655,15 +655,10 @@ export const chatMessageSchema = z.object({
   /** Degradation notices from the proxy (e.g. "tools disabled"). Not indexed. */
   notices: z.array(z.string()).default([]),
   /**
-   * Files the assistant edited while producing this message (OpenCode agent
+   * Files the assistant edited while producing this message (agentic chat
    * turns). Not indexed — added without a Dexie version bump.
    */
   files: z.array(z.string()).default([]),
-  /**
-   * The OpenCode message id backing this assistant message — used for the
-   * file-change Undo (revert) action. Not indexed.
-   */
-  opencodeMessageId: z.string().default(""),
   createdAt: z.number(),
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;

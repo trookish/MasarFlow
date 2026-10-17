@@ -3,7 +3,7 @@ import { devLogsRepo } from "@/lib/db/repos";
 import type { WorkspaceToolDef, ToolCallRequest } from "./tools";
 
 /**
- * Filesystem & shell tools for the agentic chat — opencode-style agency over
+ * Filesystem & shell tools for the agentic chat — scoped agency over
  * external project folders the user explicitly linked to the workspace
  * project (e.g. a web app, a Unity game, or a desktop tool sitting next to
  * its notes/specs/docs).

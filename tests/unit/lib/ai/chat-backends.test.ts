@@ -23,7 +23,6 @@ function msg(
     attachments: [],
     notices: [],
     files: [],
-    opencodeMessageId: "",
     ...overrides,
   };
 }

@@ -312,7 +312,7 @@ function buildPayload(
             }))
           : undefined,
       // Explicit choice: some OpenAI-compatible gateways (aggregators like
-      // OpenCode Go / OpenRouter) silently ignore tools unless tool_choice
+      // OpenRouter) silently ignore tools unless tool_choice
       // is set — without it the model answers but never calls functions.
       tool_choice: flags.withTools && tools?.length ? choice : undefined,
       // Ask OpenAI-compatible reasoning models (o-series, Gemini 2.5, R1
@@ -816,7 +816,7 @@ function transformSSE(
     const json = JSON.parse(data) as Json;
 
     // Auto-detect Anthropic format even on OpenAI endpoints (some providers
-    // like OpenCode Zen pass through Claude formats raw).
+    // pass through Claude-format events raw).
     const isAnthropic =
       format === "anthropic" ||
       json.type === "message_start" ||

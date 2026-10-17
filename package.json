@@ -10,7 +10,6 @@
     "dev:full": "node scripts/start.mjs --dev",
     "build": "next build",
     "start": "node scripts/start.mjs",
-    "tools:install": "node scripts/install-opencode-tools.mjs",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",

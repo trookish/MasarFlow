@@ -9,8 +9,8 @@ import {
 } from "../_shared";
 
 // Write (create or overwrite) a UTF-8 text file inside a linked project root.
-// Reached only after explicit user approval on the client (opencode-style
-// permission flow) — this route still re-validates the path server-side.
+// Reached only after explicit user approval on the client (the chat approval
+// card) — this route still re-validates the path server-side.
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

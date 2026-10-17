@@ -280,32 +280,6 @@ export const FALLBACK_CATALOG: Catalog = {
       },
     },
   },
-  opencode: {
-    id: "opencode",
-    name: "OpenCode Zen",
-    api: "https://opencode.ai/zen/v1",
-    doc: "https://opencode.ai/docs/zen",
-    npm: "@ai-sdk/openai-compatible",
-    env: ["OPENCODE_API_KEY"],
-    models: {
-      "claude-sonnet-4-6": {
-        id: "claude-sonnet-4-6",
-        name: "Claude Sonnet 4.6 (via OpenCode)",
-        tool_call: true,
-        reasoning: true,
-        attachment: true,
-        limit: { context: 1000000, output: 64000 },
-      },
-      "gpt-5.1-codex-mini": {
-        id: "gpt-5.1-codex-mini",
-        name: "GPT-5.1 Codex Mini (via OpenCode)",
-        tool_call: true,
-        reasoning: true,
-        attachment: true,
-        limit: { context: 400000, output: 128000 },
-      },
-    },
-  },
   ollama: {
     id: "ollama",
     name: "Local (Ollama)",
