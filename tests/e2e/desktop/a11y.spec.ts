@@ -22,12 +22,18 @@ import {
 
 const ROUTES: [string, string][] = [
   // [navigateTo label, human label]
+  // docs/ui-budget.md names /today, /dashboard, /tools/logs, /tools/system and
+  // the palette open; the rest cover the other shipped routes.
   ["Dashboard", "Dashboard"],
   ["Brain", "Brain"],
   ["Task Boards", "Tasks"],
   ["Chat", "Chat"],
   ["Settings", "Settings"],
   ["Plugins", "Plugins"],
+  ["Today", "Today"],
+  ["Logs", "Tools / Logs"],
+  // The dock label is "System Info" (src/lib/commands/registry.ts TOOL_PAGES).
+  ["System Info", "Tools / System"],
 ];
 
 function describe(violations: AxeViolation[]): string {
@@ -80,6 +86,39 @@ test("a11y: no serious or critical axe violations in the packaged shell", async 
       failures.push(`${human} (${scan.engine}): ${describe(failing)}`);
     }
   }
+
+  // docs/ui-budget.md also names "the palette open" as a scan target.
+  await navigateTo(page, "Dashboard");
+  await page.keyboard.press("Control+k");
+  const palette = page.getByRole("dialog", { name: "Command palette" });
+  await expect(palette).toBeVisible();
+  await page.waitForTimeout(400);
+  const paletteScan = await axeScan(page);
+  const paletteNameless = await namelessControls(page);
+  const paletteApplied = applyAllowList(
+    [...paletteScan.violations, ...paletteNameless],
+    ALLOW_LIST,
+  );
+  for (const entry of ALLOW_LIST) {
+    if (!paletteApplied.unmatched.includes(entry)) matchedSelectors.add(entry.selector);
+  }
+  routes["Command palette (open)"] = {
+    engine: paletteScan.engine,
+    tags: paletteScan.tags,
+    violations: paletteScan.violations,
+    namelessControls: paletteNameless,
+    allowListed: paletteApplied.allowed,
+    failing: paletteApplied.failing,
+  };
+  writeEvidence("a11y/summary.json", {
+    generatedAt: new Date().toISOString(),
+    routes,
+    allowList: ALLOW_LIST,
+  });
+  if (paletteApplied.failing.length > 0) {
+    failures.push(`Command palette (open) (${paletteScan.engine}): ${describe(paletteApplied.failing)}`);
+  }
+  await page.keyboard.press("Escape");
 
   // A stale allow-list entry is a failure too: it means the finding is gone
   // (fix it for real) or the selector drifted (update it).

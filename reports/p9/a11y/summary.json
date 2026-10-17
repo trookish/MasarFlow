@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-17T11:44:11.439Z",
+  "generatedAt": "2026-10-17T12:38:41.997Z",
   "routes": {
     "Dashboard": {
       "engine": "injected",
@@ -14,11 +14,11 @@
           "help": "Certain ARIA roles must contain particular children",
           "nodes": [
             {
-              "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             }
           ]
@@ -73,13 +73,13 @@
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "color-contrast",
@@ -139,15 +139,15 @@
           "help": "Certain ARIA roles must contain particular children",
           "nodes": [
             {
-              "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             }
           ]
@@ -198,19 +198,19 @@
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "color-contrast",
@@ -264,19 +264,19 @@
           "help": "Certain ARIA roles must contain particular children",
           "nodes": [
             {
-              "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_3d4cefb4fa1e\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_0062b611a651\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             }
           ]
@@ -291,7 +291,7 @@
               "html": "<span class=\"text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase\">Folders</span>"
             },
             {
-              "target": ".p-2\\.5.shadow-sm.transition-opacity:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap",
+              "target": ".w-72.bg-muted\\/30.rounded-lg:nth-child(2) > .pb-2.overflow-y-auto.scrollbar-thin > .p-2\\.5.shadow-sm.transition-opacity:nth-child(1) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap",
               "html": "<span class=\"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap bg-node-system/15 text-node-system\">Medium</span>"
             }
           ]
@@ -331,25 +331,25 @@
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_3d4cefb4fa1e\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_0062b611a651\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "color-contrast",
@@ -361,7 +361,7 @@
           "rule": "color-contrast",
           "selector": "bg-node-system",
           "owner": "A — src/components/dashboard/** and src/components/tasks/**",
-          "target": ".p-2\\.5.shadow-sm.transition-opacity:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap"
+          "target": ".w-72.bg-muted\\/30.rounded-lg:nth-child(2) > .pb-2.overflow-y-auto.scrollbar-thin > .p-2\\.5.shadow-sm.transition-opacity:nth-child(1) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap"
         },
         {
           "rule": "custom:nameless-control",
@@ -409,19 +409,19 @@
           "help": "Certain ARIA roles must contain particular children",
           "nodes": [
             {
-              "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_3d4cefb4fa1e\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_0062b611a651\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             }
           ]
@@ -436,7 +436,7 @@
               "html": "<span class=\"text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase\">Folders</span>"
             },
             {
-              "target": ".p-2\\.5.shadow-sm.transition-opacity:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap",
+              "target": ".w-72.bg-muted\\/30.rounded-lg:nth-child(2) > .pb-2.overflow-y-auto.scrollbar-thin > .p-2\\.5.shadow-sm.transition-opacity:nth-child(1) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap",
               "html": "<span class=\"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap bg-node-system/15 text-node-system\">Medium</span>"
             }
           ]
@@ -476,25 +476,25 @@
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_3d4cefb4fa1e\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_0062b611a651\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "color-contrast",
@@ -506,7 +506,7 @@
           "rule": "color-contrast",
           "selector": "bg-node-system",
           "owner": "A — src/components/dashboard/** and src/components/tasks/**",
-          "target": ".p-2\\.5.shadow-sm.transition-opacity:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap"
+          "target": ".w-72.bg-muted\\/30.rounded-lg:nth-child(2) > .pb-2.overflow-y-auto.scrollbar-thin > .p-2\\.5.shadow-sm.transition-opacity:nth-child(1) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap"
         },
         {
           "rule": "custom:nameless-control",
@@ -554,23 +554,23 @@
           "help": "Certain ARIA roles must contain particular children",
           "nodes": [
             {
-              "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_3d4cefb4fa1e\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_0062b611a651\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_64e9bd3cfef7\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_ca44a2762c48\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             }
           ]
@@ -585,11 +585,7 @@
               "html": "<span class=\"text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase\">Folders</span>"
             },
             {
-              "target": ".p-2\\.5.shadow-sm.transition-opacity:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap",
-              "html": "<span class=\"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap bg-node-system/15 text-node-system\">Medium</span>"
-            },
-            {
-              "target": ".w-72.bg-muted\\/30.rounded-lg:nth-child(4) > .pb-2.overflow-y-auto.scrollbar-thin > .p-2\\.5.shadow-sm.transition-opacity > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap",
+              "target": ".w-72.bg-muted\\/30.rounded-lg:nth-child(2) > .pb-2.overflow-y-auto.scrollbar-thin > .p-2\\.5.shadow-sm.transition-opacity:nth-child(1) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap",
               "html": "<span class=\"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap bg-node-system/15 text-node-system\">Medium</span>"
             },
             {
@@ -672,31 +668,31 @@
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_3d4cefb4fa1e\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_0062b611a651\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_64e9bd3cfef7\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_ca44a2762c48\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "color-contrast",
@@ -708,13 +704,7 @@
           "rule": "color-contrast",
           "selector": "bg-node-system",
           "owner": "A — src/components/dashboard/** and src/components/tasks/**",
-          "target": ".p-2\\.5.shadow-sm.transition-opacity:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap"
-        },
-        {
-          "rule": "color-contrast",
-          "selector": "bg-node-system",
-          "owner": "A — src/components/dashboard/** and src/components/tasks/**",
-          "target": ".w-72.bg-muted\\/30.rounded-lg:nth-child(4) > .pb-2.overflow-y-auto.scrollbar-thin > .p-2\\.5.shadow-sm.transition-opacity > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap"
+          "target": ".w-72.bg-muted\\/30.rounded-lg:nth-child(2) > .pb-2.overflow-y-auto.scrollbar-thin > .p-2\\.5.shadow-sm.transition-opacity:nth-child(1) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap"
         },
         {
           "rule": "color-contrast",
@@ -816,27 +806,27 @@
           "help": "Certain ARIA roles must contain particular children",
           "nodes": [
             {
-              "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_3d4cefb4fa1e\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_0062b611a651\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_64e9bd3cfef7\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_ca44a2762c48\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             },
             {
-              "target": "div[data-dock-node=\"page_0bf90a003c23\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "target": "div[data-dock-node=\"page_df240713deb4\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
               "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
             }
           ]
@@ -849,14 +839,6 @@
             {
               "target": ".text-muted-foreground\\/70",
               "html": "<span class=\"text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase\">Folders</span>"
-            },
-            {
-              "target": ".p-2\\.5.shadow-sm.transition-opacity:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap",
-              "html": "<span class=\"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap bg-node-system/15 text-node-system\">Medium</span>"
-            },
-            {
-              "target": ".w-72.bg-muted\\/30.rounded-lg:nth-child(4) > .pb-2.overflow-y-auto.scrollbar-thin > .p-2\\.5.shadow-sm.transition-opacity > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap",
-              "html": "<span class=\"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap bg-node-system/15 text-node-system\">Medium</span>"
             },
             {
               "target": ".mb-4:nth-child(2) > .text-muted-foreground\\/60.uppercase.tracking-wider",
@@ -942,55 +924,43 @@
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_24920efd2c2a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_e7c037f020b8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_de7a01f8fb52\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_3d4cefb4fa1e\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_0062b611a651\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_64e9bd3cfef7\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_ca44a2762c48\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "aria-required-children",
           "selector": "aria-label=\"Dock panel tabs\"",
           "owner": "C — src/components/dock/dock-group.tsx",
-          "target": "div[data-dock-node=\"page_0bf90a003c23\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+          "target": "div[data-dock-node=\"page_df240713deb4\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "color-contrast",
           "selector": "text-muted-foreground/70",
           "owner": "A — src/components/brain/folder-tree.tsx",
           "target": ".text-muted-foreground\\/70"
-        },
-        {
-          "rule": "color-contrast",
-          "selector": "bg-node-system",
-          "owner": "A — src/components/dashboard/** and src/components/tasks/**",
-          "target": ".p-2\\.5.shadow-sm.transition-opacity:nth-child(2) > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap"
-        },
-        {
-          "rule": "color-contrast",
-          "selector": "bg-node-system",
-          "owner": "A — src/components/dashboard/** and src/components/tasks/**",
-          "target": ".w-72.bg-muted\\/30.rounded-lg:nth-child(4) > .pb-2.overflow-y-auto.scrollbar-thin > .p-2\\.5.shadow-sm.transition-opacity > .flex-wrap.gap-1\\.5.items-center > .bg-node-system\\/15.text-node-system.whitespace-nowrap"
         },
         {
           "rule": "color-contrast",
@@ -1027,6 +997,913 @@
           "selector": "tracking-wider text-muted-foreground/60",
           "owner": "C — src/components/settings/settings-view.tsx",
           "target": ".mb-4:nth-child(7) > .text-muted-foreground\\/60.uppercase.tracking-wider"
+        },
+        {
+          "rule": "label",
+          "selector": "h-1.5 w-40",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".w-40"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Owner (user or org)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Owner (user or org)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Repository name\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Repository name\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Branch (default)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Branch (default)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Personal access token\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Personal access token\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Search notes…\"",
+          "owner": "A — src/components/brain/notes-view.tsx",
+          "target": "input[placeholder=\"Search notes…\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"#dedede\"",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": "input[placeholder=\"#dedede\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "h-1.5 w-40",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": "input.h-1.5.w-40"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Search plugins…\"",
+          "owner": "unowned this wave — src/components/plugins/plugins-view.tsx",
+          "target": "input[placeholder=\"Search plugins…\"]"
+        }
+      ],
+      "failing": []
+    },
+    "Today": {
+      "engine": "injected",
+      "tags": [
+        "wcag2a",
+        "wcag2aa"
+      ],
+      "violations": [
+        {
+          "id": "aria-required-children",
+          "impact": "critical",
+          "help": "Certain ARIA roles must contain particular children",
+          "nodes": [
+            {
+              "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_0062b611a651\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_ca44a2762c48\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_df240713deb4\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_4bc0e7900f1d\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            }
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": ".text-muted-foreground\\/70",
+              "html": "<span class=\"text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase\">Folders</span>"
+            },
+            {
+              "target": ".mb-4:nth-child(2) > .text-muted-foreground\\/60.tracking-wider.uppercase",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">Global</p>"
+            },
+            {
+              "target": ".mb-4:nth-child(3) > .text-muted-foreground\\/60.tracking-wider.uppercase",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">Capture</p>"
+            },
+            {
+              "target": ".mb-4:nth-child(4) > .text-muted-foreground\\/60.tracking-wider.uppercase",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">Planning</p>"
+            },
+            {
+              "target": ".mb-4:nth-child(5) > .text-muted-foreground\\/60.tracking-wider.uppercase",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">Work</p>"
+            },
+            {
+              "target": ".mb-4:nth-child(6) > .text-muted-foreground\\/60.tracking-wider.uppercase",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">Structure</p>"
+            },
+            {
+              "target": ".mb-4:nth-child(7) > .text-muted-foreground\\/60.tracking-wider.uppercase",
+              "html": "<p class=\"mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60\">AI</p>"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodes": [
+            {
+              "target": ".w-40",
+              "html": "<input min=\"0\" max=\"1.5\" step=\"0.0625\" class=\"h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-muted accent-primary\" type=\"range\" value=\"0.625\">"
+            }
+          ]
+        }
+      ],
+      "namelessControls": [
+        {
+          "id": "custom:nameless-control",
+          "impact": "critical",
+          "help": "Every interactive element must expose an accessible name",
+          "nodes": [
+            {
+              "target": "input[placeholder=\"Owner (user or org)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Repository name\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Branch (default)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Personal access token\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Search notes…\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"#dedede\"]",
+              "html": "<input class=\"rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visibl"
+            },
+            {
+              "target": "input.h-1.5.w-40",
+              "html": "<input min=\"0\" max=\"1.5\" step=\"0.0625\" class=\"h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-muted accent-primary\" type=\"range\" value=\"0.625\">"
+            },
+            {
+              "target": "input[placeholder=\"Search plugins…\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            }
+          ]
+        }
+      ],
+      "allowListed": [
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_0062b611a651\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_ca44a2762c48\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_df240713deb4\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_4bc0e7900f1d\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "text-muted-foreground/70",
+          "owner": "A — src/components/brain/folder-tree.tsx",
+          "target": ".text-muted-foreground\\/70"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(2) > .text-muted-foreground\\/60.tracking-wider.uppercase"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(3) > .text-muted-foreground\\/60.tracking-wider.uppercase"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(4) > .text-muted-foreground\\/60.tracking-wider.uppercase"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(5) > .text-muted-foreground\\/60.tracking-wider.uppercase"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(6) > .text-muted-foreground\\/60.tracking-wider.uppercase"
+        },
+        {
+          "rule": "color-contrast",
+          "selector": "tracking-wider text-muted-foreground/60",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".mb-4:nth-child(7) > .text-muted-foreground\\/60.tracking-wider.uppercase"
+        },
+        {
+          "rule": "label",
+          "selector": "h-1.5 w-40",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".w-40"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Owner (user or org)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Owner (user or org)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Repository name\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Repository name\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Branch (default)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Branch (default)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Personal access token\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Personal access token\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Search notes…\"",
+          "owner": "A — src/components/brain/notes-view.tsx",
+          "target": "input[placeholder=\"Search notes…\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"#dedede\"",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": "input[placeholder=\"#dedede\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "h-1.5 w-40",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": "input.h-1.5.w-40"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Search plugins…\"",
+          "owner": "unowned this wave — src/components/plugins/plugins-view.tsx",
+          "target": "input[placeholder=\"Search plugins…\"]"
+        }
+      ],
+      "failing": []
+    },
+    "Tools / Logs": {
+      "engine": "injected",
+      "tags": [
+        "wcag2a",
+        "wcag2aa"
+      ],
+      "violations": [
+        {
+          "id": "aria-required-children",
+          "impact": "critical",
+          "help": "Certain ARIA roles must contain particular children",
+          "nodes": [
+            {
+              "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_0062b611a651\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_ca44a2762c48\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_df240713deb4\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_4bc0e7900f1d\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_d47e3c3577b3\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodes": [
+            {
+              "target": ".w-40",
+              "html": "<input min=\"0\" max=\"1.5\" step=\"0.0625\" class=\"h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-muted accent-primary\" type=\"range\" value=\"0.625\">"
+            }
+          ]
+        }
+      ],
+      "namelessControls": [
+        {
+          "id": "custom:nameless-control",
+          "impact": "critical",
+          "help": "Every interactive element must expose an accessible name",
+          "nodes": [
+            {
+              "target": "input[placeholder=\"Owner (user or org)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Repository name\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Branch (default)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Personal access token\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Search notes…\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"#dedede\"]",
+              "html": "<input class=\"rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visibl"
+            },
+            {
+              "target": "input.h-1.5.w-40",
+              "html": "<input min=\"0\" max=\"1.5\" step=\"0.0625\" class=\"h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-muted accent-primary\" type=\"range\" value=\"0.625\">"
+            },
+            {
+              "target": "input[placeholder=\"Search plugins…\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            }
+          ]
+        }
+      ],
+      "allowListed": [
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_0062b611a651\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_ca44a2762c48\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_df240713deb4\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_4bc0e7900f1d\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_d47e3c3577b3\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "label",
+          "selector": "h-1.5 w-40",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".w-40"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Owner (user or org)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Owner (user or org)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Repository name\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Repository name\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Branch (default)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Branch (default)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Personal access token\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Personal access token\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Search notes…\"",
+          "owner": "A — src/components/brain/notes-view.tsx",
+          "target": "input[placeholder=\"Search notes…\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"#dedede\"",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": "input[placeholder=\"#dedede\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "h-1.5 w-40",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": "input.h-1.5.w-40"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Search plugins…\"",
+          "owner": "unowned this wave — src/components/plugins/plugins-view.tsx",
+          "target": "input[placeholder=\"Search plugins…\"]"
+        }
+      ],
+      "failing": []
+    },
+    "Tools / System": {
+      "engine": "injected",
+      "tags": [
+        "wcag2a",
+        "wcag2aa"
+      ],
+      "violations": [
+        {
+          "id": "aria-required-children",
+          "impact": "critical",
+          "help": "Certain ARIA roles must contain particular children",
+          "nodes": [
+            {
+              "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_0062b611a651\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_ca44a2762c48\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_df240713deb4\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_4bc0e7900f1d\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_d47e3c3577b3\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_6d24a5614e2c\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodes": [
+            {
+              "target": ".w-40",
+              "html": "<input min=\"0\" max=\"1.5\" step=\"0.0625\" class=\"h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-muted accent-primary\" type=\"range\" value=\"0.625\">"
+            }
+          ]
+        }
+      ],
+      "namelessControls": [
+        {
+          "id": "custom:nameless-control",
+          "impact": "critical",
+          "help": "Every interactive element must expose an accessible name",
+          "nodes": [
+            {
+              "target": "input[placeholder=\"Owner (user or org)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Repository name\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Branch (default)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Personal access token\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Search notes…\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"#dedede\"]",
+              "html": "<input class=\"rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visibl"
+            },
+            {
+              "target": "input.h-1.5.w-40",
+              "html": "<input min=\"0\" max=\"1.5\" step=\"0.0625\" class=\"h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-muted accent-primary\" type=\"range\" value=\"0.625\">"
+            },
+            {
+              "target": "input[placeholder=\"Search plugins…\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            }
+          ]
+        }
+      ],
+      "allowListed": [
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_0062b611a651\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_ca44a2762c48\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_df240713deb4\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_4bc0e7900f1d\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_d47e3c3577b3\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_6d24a5614e2c\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "label",
+          "selector": "h-1.5 w-40",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": ".w-40"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Owner (user or org)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Owner (user or org)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Repository name\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Repository name\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Branch (default)\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Branch (default)\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Personal access token\"",
+          "owner": "A — src/components/dashboard/commits-panel.tsx",
+          "target": "input[placeholder=\"Personal access token\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Search notes…\"",
+          "owner": "A — src/components/brain/notes-view.tsx",
+          "target": "input[placeholder=\"Search notes…\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"#dedede\"",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": "input[placeholder=\"#dedede\"]"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "h-1.5 w-40",
+          "owner": "C — src/components/settings/settings-view.tsx",
+          "target": "input.h-1.5.w-40"
+        },
+        {
+          "rule": "custom:nameless-control",
+          "selector": "placeholder=\"Search plugins…\"",
+          "owner": "unowned this wave — src/components/plugins/plugins-view.tsx",
+          "target": "input[placeholder=\"Search plugins…\"]"
+        }
+      ],
+      "failing": []
+    },
+    "Command palette (open)": {
+      "engine": "injected",
+      "tags": [
+        "wcag2a",
+        "wcag2aa"
+      ],
+      "violations": [
+        {
+          "id": "aria-required-children",
+          "impact": "critical",
+          "help": "Certain ARIA roles must contain particular children",
+          "nodes": [
+            {
+              "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_0062b611a651\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_ca44a2762c48\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_df240713deb4\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_4bc0e7900f1d\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_d47e3c3577b3\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            },
+            {
+              "target": "div[data-dock-node=\"page_6d24a5614e2c\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]",
+              "html": "<div role=\"tablist\" aria-label=\"Dock panel tabs\" class=\"flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5\">"
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodes": [
+            {
+              "target": ".w-40",
+              "html": "<input min=\"0\" max=\"1.5\" step=\"0.0625\" class=\"h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-muted accent-primary\" type=\"range\" value=\"0.625\">"
+            }
+          ]
+        }
+      ],
+      "namelessControls": [
+        {
+          "id": "custom:nameless-control",
+          "impact": "critical",
+          "help": "Every interactive element must expose an accessible name",
+          "nodes": [
+            {
+              "target": "input[placeholder=\"Owner (user or org)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Repository name\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Branch (default)\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Personal access token\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"Search notes…\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            },
+            {
+              "target": "input[placeholder=\"#dedede\"]",
+              "html": "<input class=\"rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visibl"
+            },
+            {
+              "target": "input.h-1.5.w-40",
+              "html": "<input min=\"0\" max=\"1.5\" step=\"0.0625\" class=\"h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-muted accent-primary\" type=\"range\" value=\"0.625\">"
+            },
+            {
+              "target": "input[placeholder=\"Search plugins…\"]",
+              "html": "<input class=\"w-full rounded-md border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus"
+            }
+          ]
+        }
+      ],
+      "allowListed": [
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_0c3a70394af8\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_755e4635ac4a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_b0c5c7dcfe0a\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_0062b611a651\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_ca44a2762c48\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_df240713deb4\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_4bc0e7900f1d\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_d47e3c3577b3\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
+        },
+        {
+          "rule": "aria-required-children",
+          "selector": "aria-label=\"Dock panel tabs\"",
+          "owner": "C — src/components/dock/dock-group.tsx",
+          "target": "div[data-dock-node=\"page_6d24a5614e2c\"] > .bg-sidebar\\/40[role=\"tablist\"][aria-label=\"Dock panel tabs\"]"
         },
         {
           "rule": "label",
