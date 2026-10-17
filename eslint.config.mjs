@@ -20,6 +20,9 @@ const eslintConfig = defineConfig([
     "python-service/**",
     // Desktop launcher — separate Vite app with its own toolchain.
     "desktop/**",
+    // Vendored ONNX runtime WASM/JS copied into public/ort by scripts/copy-ort.mjs
+    // (generated, gitignored — never linted).
+    "public/ort/**",
   ]),
   {
     // Local-first app: these components render blob:/data: URLs (IndexedDB

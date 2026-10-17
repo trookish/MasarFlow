@@ -22,6 +22,8 @@
 
 # downloaded embedding models (see scripts/fetch-embedding-model.mjs)
 /public/models/
+# ONNX runtime WASM assets (see scripts/copy-ort.mjs)
+/public/ort/
 
 # production
 /build
