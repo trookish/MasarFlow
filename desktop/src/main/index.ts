@@ -11,6 +11,7 @@ import { isPermissionAllowed } from "./security/permissions";
 import { settings } from "./settings";
 import { installLogBuffer, logDir, pruneRotatedLogs, rotateServerLogs } from "./logging";
 import { checkForUpdates, initUpdater } from "./updater";
+import { sendToWindow } from "./window-send";
 import { createMainWindow } from "./windows/main-window";
 
 app.setName("MasarFlow");
@@ -77,7 +78,7 @@ function showWindow(): void {
 /** Focus the window and ask the renderer to navigate (the shell listens for this). */
 function sendWindowRoute(route: string): void {
   showWindow();
-  mainWindow?.webContents.send(CH.appNavigate, route);
+  sendToWindow(mainWindow, CH.appNavigate, route);
 }
 
 const SMOKE_ROOT = process.platform === "win32" ? "C:\\msf-smoke-unregistered" : "/msf-smoke-unregistered";
@@ -167,8 +168,8 @@ async function boot(): Promise<void> {
       }
     },
   });
-  mainWindow.on("maximize", () => mainWindow?.webContents.send(CH.winMaximized, true));
-  mainWindow.on("unmaximize", () => mainWindow?.webContents.send(CH.winMaximized, false));
+  mainWindow.on("maximize", () => sendToWindow(mainWindow, CH.winMaximized, true));
+  mainWindow.on("unmaximize", () => sendToWindow(mainWindow, CH.winMaximized, false));
   if (SMOKE) runSmoke(mainWindow);
   else {
     createTray();

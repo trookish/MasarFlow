@@ -1,4 +1,5 @@
 import { app, BrowserWindow } from "electron";
+import { sendToWindow } from "./window-send";
 import { join } from "node:path";
 import { autoUpdater, type UpdateInfo } from "electron-updater";
 import { CH } from "@shared/channels";
@@ -22,7 +23,7 @@ export function updaterSnapshot(): UpdaterStatus {
 
 function emit(event: UpdaterEvent, win: () => BrowserWindow | null): UpdaterStatus {
   status = reduceUpdaterEvent(status, event);
-  win()?.webContents.send(CH.updaterStatus, status);
+  sendToWindow(win(), CH.updaterStatus, status);
   return status;
 }
 

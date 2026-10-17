@@ -11,11 +11,12 @@ import { CH } from "@shared/channels";
 import { resolveShell, validateTerminalStart } from "@shared/terminal";
 import { readRootsFile } from "../security/roots";
 import { ptyManager } from "../pty";
+import { sendToWindow } from "../window-send";
 
 export function registerTerminalIpc(getWindow: () => BrowserWindow | null): void {
   const rootsFilePath = (): string => join(app.getPath("userData"), "roots.json");
   const send = (channel: string, payload: unknown): void => {
-    getWindow()?.webContents.send(channel, payload);
+    sendToWindow(getWindow(), channel, payload);
   };
 
   ipcMain.handle(CH.terminalStart, (_event, request: unknown) => {
