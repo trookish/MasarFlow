@@ -89,6 +89,9 @@ import {
 import { GradientEditorDialog } from "@/components/settings/gradient-editor-dialog";
 import { SemanticIndexCard } from "@/components/settings/semantic-index-card";
 import { DataBackupCard } from "@/components/settings/data-backup-card";
+import { AutoBackupsCard } from "@/components/settings/auto-backups-card";
+import { backupNow } from "@/lib/db/auto-backup";
+import { getDesktop } from "@/lib/desktop/bridge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -812,6 +815,8 @@ function ProjectSection() {
 
 function DataSection() {
   const router = useRouter();
+  const mounted = useMounted();
+  const desktop = mounted ? getDesktop() : null;
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
   const [confirmReset, setConfirmReset] = useState(false);
   const [seeding, setSeeding] = useState(false);
@@ -865,6 +870,9 @@ function DataSection() {
         <div className="py-3.5">
           <DataBackupCard />
         </div>
+        <div className="py-3.5">
+          <AutoBackupsCard />
+        </div>
         <SettingRow
           label="Reset"
           description="Permanently delete every project, note, spec, and task in this browser."
@@ -888,7 +896,8 @@ function DataSection() {
           <DialogTitle>Reset all data?</DialogTitle>
           <DialogDescription>
             This permanently deletes every project, note, spec, task, and canvas
-            in this browser. This cannot be undone.
+            in this browser.{" "}
+            {desktop ? "A backup is saved first. " : ""}This cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -898,6 +907,8 @@ function DataSection() {
           <Button
             variant="destructive"
             onClick={async () => {
+              // Desktop: keep a disk copy before the wipe (a no-op in a browser).
+              await backupNow().catch(() => null);
               await resetData();
               setActiveProjectId(null);
               setConfirmReset(false);
