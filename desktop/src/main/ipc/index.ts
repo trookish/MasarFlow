@@ -1,10 +1,12 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, safeStorage, shell } from "electron";
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { CH } from "@shared/channels";
 import { isRootAllowed } from "@shared/roots";
 import { addRootToFile, readRootsFile } from "../security/roots";
 import { isSafeExternalUrl } from "../security/url-policy";
 import { SecretStore, createSafeStorageCodec, isValidSecretKey } from "../secrets";
+import { listBackups, readBackup, writeBackup } from "../backups";
 
 const DISPLAY_VERSION = "0.2.0.0"; // single source for UI; package.json holds the semver
 
@@ -77,4 +79,21 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     secrets.set(checkedKey(key), value);
   });
   ipcMain.handle(CH.secretsDelete, (_e, key: unknown) => secrets.delete(checkedKey(key)));
+
+  // Automatic backups: gzipped JSON under userData/backups. Only file names
+  // matching the app's own pattern are ever read back.
+  const backupsDir = (): string => join(app.getPath("userData"), "backups");
+  ipcMain.handle(CH.backupsWrite, (_e, json: unknown) => {
+    if (typeof json !== "string" || json.length >= 512 * 1024 * 1024) throw new Error("Invalid backup payload");
+    return writeBackup(backupsDir(), json);
+  });
+  ipcMain.handle(CH.backupsList, () => listBackups(backupsDir()));
+  ipcMain.handle(CH.backupsRead, (_e, name: unknown) => {
+    if (typeof name !== "string") throw new Error("Invalid backup name");
+    return readBackup(backupsDir(), name);
+  });
+  ipcMain.handle(CH.backupsOpenFolder, async () => {
+    mkdirSync(backupsDir(), { recursive: true });
+    await shell.openPath(backupsDir());
+  });
 }

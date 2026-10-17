@@ -19,4 +19,8 @@ export const CH = {
   secretsGet: "secrets:get",
   secretsSet: "secrets:set",
   secretsDelete: "secrets:delete",
+  backupsWrite: "backups:write",
+  backupsList: "backups:list",
+  backupsRead: "backups:read",
+  backupsOpenFolder: "backups:open-folder",
 } as const;

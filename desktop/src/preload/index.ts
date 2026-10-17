@@ -39,6 +39,12 @@ const api: MasarflowApi = {
     set: (key, value) => ipcRenderer.invoke(CH.secretsSet, key, value),
     delete: (key) => ipcRenderer.invoke(CH.secretsDelete, key),
   },
+  backups: {
+    write: (json) => ipcRenderer.invoke(CH.backupsWrite, json),
+    list: () => ipcRenderer.invoke(CH.backupsList),
+    read: (name) => ipcRenderer.invoke(CH.backupsRead, name),
+    openFolder: () => ipcRenderer.invoke(CH.backupsOpenFolder),
+  },
 };
 
 contextBridge.exposeInMainWorld("masarflow", api);

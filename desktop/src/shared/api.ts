@@ -53,4 +53,10 @@ export interface MasarflowApi {
     set(key: string, value: string): Promise<void>;
     delete(key: string): Promise<void>;
   };
+  backups: {
+    write(json: string): Promise<{ name: string; mtimeMs: number }>;
+    list(): Promise<Array<{ name: string; mtimeMs: number }>>;
+    read(name: string): Promise<string>;
+    openFolder(): Promise<void>;
+  };
 }
