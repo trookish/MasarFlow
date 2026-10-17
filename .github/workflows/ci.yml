@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [main, release/v0.2.0]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    # The whole suite is Windows-only by design (D12): the packaged app, the
+    # guard checks and the smoke harness all target win32.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.21.0 # must match package.json "packageManager"
+
+      - name: Install Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck (workspace)
+        run: pnpm typecheck
+
+      - name: Typecheck (desktop main/preload)
+        run: pnpm desktop:typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build (Next)
+        run: pnpm build
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-failure-logs
+          path: |
+            desktop/dist/*.yml
+            .next/*.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Browser-mode e2e (the dev-convenience suite; the authoritative packaged
+  # gate is `pnpm e2e:desktop`). Cheap: one Chromium download plus the build.
+  # If this job proves flaky, delete it — `verify` above is the PR gate.
+  e2e-browser:
+    runs-on: windows-latest
+    needs: verify
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11.21.0
+
+      - name: Install Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (Next)
+        run: pnpm build
+
+      - name: Install Playwright (Chromium)
+        run: pnpm exec playwright install chromium
+
+      - name: Browser e2e (one retry absorbs CI flake)
+        run: pnpm exec playwright test --config tests/playwright.config.ts --retries=1
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 7
