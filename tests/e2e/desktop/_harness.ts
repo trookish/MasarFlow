@@ -277,6 +277,161 @@ export function backendPort(profileDir: string): number {
   return ports[ports.length - 1];
 }
 
+/**
+ * Makes the app's REAL "Choose folder" IPC answer with `folder` instead of
+ * opening the native picker (P9.T18: the picker cannot be driven by a spec).
+ *
+ * Only `dialog.showOpenDialog` is stubbed — the IPC handler in
+ * desktop/src/main/ipc/index.ts still runs end to end, so the picked folder is
+ * recorded in the app's own roots.json exactly as a human pick would be, and
+ * the renderer gets the same return value. No guard is bypassed.
+ *
+ * Pair with `restoreFolderPicker` when a test needs the picker to cancel
+ * again (e.g. asserting "no folder picked" paths); otherwise the stub dies
+ * with the app.
+ */
+export async function stubFolderPicker(handle: AppHandle, folder: string): Promise<void> {
+  await handle.app.evaluate(async (electron, dir) => {
+    const dialog = electron.dialog as unknown as {
+      showOpenDialog: (...args: unknown[]) => Promise<{ canceled: boolean; filePaths: string[] }>;
+    };
+    const store = globalThis as unknown as Record<string, unknown>;
+    if (!store.__msfE2EOriginalShowOpenDialog) {
+      store.__msfE2EOriginalShowOpenDialog = dialog.showOpenDialog.bind(dialog);
+    }
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [dir] });
+  }, folder);
+}
+
+/** Puts the real native folder picker back after `stubFolderPicker`. */
+export async function restoreFolderPicker(handle: AppHandle): Promise<void> {
+  await handle.app.evaluate(async (electron) => {
+    const dialog = electron.dialog as unknown as { showOpenDialog: unknown };
+    const store = globalThis as unknown as Record<string, unknown>;
+    const original = store.__msfE2EOriginalShowOpenDialog;
+    if (typeof original === "function") {
+      dialog.showOpenDialog = original;
+      delete store.__msfE2EOriginalShowOpenDialog;
+    }
+  });
+}
+
+/** userData dir of a running app (profile dir + /profile, see launchApp). */
+export function userDataDir(handle: AppHandle): string {
+  return path.join(handle.profileDir, "profile");
+}
+
+/**
+ * Links `folder` to the active project through the real UI, and registers it
+ * in the desktop app's roots.json (which the terminal, git and system panels
+ * check before they touch a folder).
+ *
+ * The chat's "Linked folders" dialog only renders in agentic mode with a
+ * thread, and a thread needs a configured AI provider — so this drives the git
+ * panel's recovery flow instead, which mounts the SAME dialog:
+ *   1. the panel's own picker selects the folder (the real IPC writes roots.json);
+ *   2. roots.json is dropped and the panel refreshed, so git reports the state
+ *      the dialog exists for ("Folder not linked" → Open Linked Projects);
+ *   3. the dialog re-links it — Browse… (native picker stubbed) → Link folder —
+ *      which writes the linkedProjects row the terminal/system panels list.
+ *
+ * Idempotent: returns early when the folder is already linked and allowed.
+ */
+export async function linkFolder(page: Page, handle: AppHandle, folder: string): Promise<void> {
+  const linked = await readTable<{ rootPath: string }>(page, "linkedProjects");
+  const allowed = await page.evaluate(async (dir) => {
+    const api = (window as unknown as { masarflow?: { roots: { covers(p: string): Promise<boolean> } } }).masarflow;
+    return api ? api.roots.covers(dir) : false;
+  }, folder);
+  if (linked.some((r) => r.rootPath === folder) && allowed) return;
+
+  await stubFolderPicker(handle, folder);
+  await navigateTo(page, "Git");
+  const panel = page.locator('[data-testid="dock-panel"][data-dock-url="/git"]');
+  await expect(panel).toBeVisible({ timeout: 30_000 });
+
+  const choose = panel.getByRole("button", { name: "Choose a folder…" });
+  if ((await choose.count()) > 0) {
+    await choose.click(); // pickRoot → real dialog:choose-folder IPC → roots.json
+    await expect(panel.getByText(folder).first()).toBeVisible({ timeout: 20_000 });
+  }
+  // The state the recovery dialog exists for: the folder is no longer allowed.
+  rmSync(path.join(handle.profileDir, "profile", "roots.json"), { force: true });
+  await panel.getByRole("button", { name: "Refresh" }).click();
+  await panel.getByRole("button", { name: "Open Linked Projects" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Linked projects" });
+  await expect(dialog).toBeVisible({ timeout: 15_000 });
+  if ((await dialog.getByText(folder, { exact: true }).count()) === 0) {
+    await dialog.getByRole("button", { name: "Browse…" }).click();
+    await expect(dialog.getByPlaceholder(/Absolute folder path/)).toHaveValue(folder);
+    await dialog.getByRole("button", { name: "Link folder" }).click();
+    await expect(dialog.getByText(folder, { exact: true })).toBeVisible({ timeout: 15_000 });
+  }
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0, { timeout: 15_000 });
+}
+
+/**
+ * Reads a whole table from the app's own IndexedDB (the "masarflow" database,
+ * src/lib/db/index.ts) inside the renderer. Used to assert what the app really
+ * persisted, not what a toast claimed.
+ */
+export async function readTable<T = Record<string, unknown>>(page: Page, table: string): Promise<T[]> {
+  return page.evaluate(async (name) => {
+    const db: IDBDatabase = await new Promise((resolve, reject) => {
+      const req = indexedDB.open("masarflow");
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    try {
+      return await new Promise<Record<string, unknown>[]>((resolve, reject) => {
+        const tx = db.transaction(name, "readonly");
+        const all = tx.objectStore(name).getAll();
+        all.onsuccess = () => resolve(all.result as Record<string, unknown>[]);
+        all.onerror = () => reject(all.error);
+      });
+    } finally {
+      db.close();
+    }
+  }, table) as Promise<T[]>;
+}
+
+/**
+ * Saves a provider connection labeled `label` (default "E2E stub") that points
+ * at `baseUrl` — a loopback stub server from _stub-provider.ts — through the
+ * real Connections dialog. The dialog is opened from the Agents page header
+ * ("AI connections"), the one call site reachable without a chat thread
+ * selected; the saved row is global (aiConnectionsRepo.list), so the chat
+ * header sees it immediately via its live query.
+ *
+ * The provider is "Local (Ollama)": it is the catalog entry with `noAuth`,
+ * so the connection needs no API key and /api/chat accepts it as-is.
+ */
+export async function addStubConnection(
+  page: Page,
+  baseUrl: string,
+  label = "E2E stub",
+): Promise<void> {
+  await navigateTo(page, "AI Agents");
+  await page.getByRole("button", { name: "AI connections" }).click();
+  const dialog = page.getByRole("dialog", { name: "AI connections" });
+  await expect(dialog).toBeVisible({ timeout: 15_000 });
+  if ((await dialog.getByText(label, { exact: true }).count()) === 0) {
+    await dialog.getByRole("button", { name: "Add", exact: true }).click();
+    await dialog.getByRole("button", { name: /Select a provider/ }).click();
+    await dialog.getByPlaceholder("Search providers…").fill("ollama");
+    await dialog.getByRole("button", { name: /Local \(Ollama\)/ }).click();
+    await dialog.getByTestId("connection-label").fill(label);
+    await dialog.getByTestId("connection-base-url").fill(baseUrl);
+    await dialog.getByTestId("connection-save").click();
+    // Back on the list: the row now shows the label.
+    await expect(dialog.getByText(label, { exact: true })).toBeVisible({ timeout: 15_000 });
+  }
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0, { timeout: 15_000 });
+}
+
 /** Best-effort profile cleanup; a just-exited app can hold handles (EPERM). */
 export function removeProfile(profileDir: string): void {
   try {
