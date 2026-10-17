@@ -6,14 +6,18 @@
  * collapse, close). Tabs start drags via the DnD controller.
  */
 
+import { useEffect, useRef } from "react";
 import { X, MoreHorizontal, PictureInPicture2, Maximize2, PanelBottomClose, PanelLeftClose } from "lucide-react";
 import { getPageDef } from "@/lib/dock/registry";
 import { pageIdOf } from "@/lib/dock/types";
 import { useDockStore } from "@/lib/stores/dock";
+import { shouldUseTabMenu, tabCounts } from "@/lib/dock/overflow";
 import { startPanelDrag } from "./use-dock-dnd";
 import { PanelContent } from "./panel-content";
 import { PAGE_COMPONENTS } from "./panel-loader";
 import { PanelErrorBoundary, PanelMissing } from "./panel-error";
+import { TabMenu } from "./tab-menu";
+import { TabActionsMenu } from "./right-click-menu";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
@@ -40,6 +44,30 @@ export function DockGroup({ nodeId, pages, activePage, collapsed }: DockGroupPro
     if (e.button !== 0) return;
     startPanelDrag(panelId, nodeId, e);
   }
+
+  const activeTabRef = useRef<HTMLDivElement>(null);
+  const counts = tabCounts(pages.length, pages.indexOf(activePage));
+
+  // WAI-ARIA tabs pattern: ←/→ move between tabs, Home/End jump, Delete closes.
+  function onTabKeyDown(e: React.KeyboardEvent, panelId: string): void {
+    const index = pages.indexOf(panelId);
+    if (e.key === "ArrowRight") focus(pages[(index + 1) % pages.length]);
+    else if (e.key === "ArrowLeft") focus(pages[(index - 1 + pages.length) % pages.length]);
+    else if (e.key === "Home") focus(pages[0]);
+    else if (e.key === "End") focus(pages[pages.length - 1]);
+    else if (e.key === "Delete") close(panelId);
+    else return;
+    e.preventDefault();
+  }
+
+  // The strip itself is not focusable; keys are handled on the active tab.
+  function onStripKeyDown(): void {
+    /* no-op: kept so the strip owns one handler for future keys */
+  }
+
+  useEffect(() => {
+    activeTabRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activePage, pages.length]);
 
   if (collapsed) {
     // Collapsed slot: a slim bar with a restore button.
@@ -73,50 +101,75 @@ export function DockGroup({ nodeId, pages, activePage, collapsed }: DockGroupPro
         role="tablist"
         aria-label="Dock panel tabs"
         className="flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-sidebar/40 px-1.5"
-        onPointerDown={(e) => {
-          // Dragging the empty strip area moves the whole group.
-          if (e.target === e.currentTarget) startTabDrag(e, activePage);
-        }}
+        onKeyDown={onStripKeyDown}
       >
-        {pages.map((panelId) => {
-          const def = getPageDef(panelId);
-          const Icon = def?.icon;
-          const active = panelId === activePage;
-          return (
-            <div
-              key={panelId}
-              role="tab"
-              aria-selected={active}
-              tabIndex={active ? 0 : -1}
-              onPointerDown={(e) => {
-                if (e.button !== 0) return;
-                startTabDrag(e, panelId);
-                if (!active) focus(panelId);
-              }}
-              className={cn(
-                "group/tab flex h-7 max-w-44 cursor-grab items-center gap-1.5 rounded-md px-2 text-xs transition-colors select-none",
-                active
-                  ? "bg-accent font-medium text-foreground"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-              )}
-            >
-              {Icon ? <Icon className="h-3.5 w-3.5 shrink-0" /> : null}
-              <span className="truncate">{def?.label ?? pageIdOf(panelId)}</span>
-              <button
-                type="button"
-                aria-label={`Close ${def?.label ?? panelId}`}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  close(panelId);
-                }}
-                className="ml-0.5 hidden h-4 w-4 shrink-0 items-center justify-center rounded hover:bg-background group-hover/tab:flex"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          );
-        })}
+        <div
+          className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          onPointerDown={(e) => {
+            // Dragging the empty strip area moves the whole group. The scroll
+            // container is the element that actually receives those clicks now
+            // that the tabs live inside it.
+            if (e.target === e.currentTarget) startTabDrag(e, activePage);
+          }}
+        >
+          {pages.map((panelId) => {
+            const def = getPageDef(panelId);
+            const Icon = def?.icon;
+            const active = panelId === activePage;
+            return (
+              <TabActionsMenu key={panelId} panelId={panelId} groupNodeId={nodeId} pages={pages}>
+                <div
+                  role="tab"
+                  aria-selected={active}
+                  tabIndex={active ? 0 : -1}
+                  ref={active ? activeTabRef : undefined}
+                  onKeyDown={(e) => onTabKeyDown(e, panelId)}
+                  onPointerDown={(e) => {
+                    if (e.button !== 0) return;
+                    startTabDrag(e, panelId);
+                    if (!active) focus(panelId);
+                  }}
+                  className={cn(
+                    "group/tab flex h-7 max-w-44 shrink-0 cursor-grab items-center gap-1.5 rounded-md px-2 text-xs transition-colors select-none",
+                    active
+                      ? "bg-accent font-medium text-foreground"
+                      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                  )}
+                >
+                  {Icon ? <Icon className="h-3.5 w-3.5 shrink-0" /> : null}
+                  <span className="truncate">{def?.label ?? pageIdOf(panelId)}</span>
+                  <button
+                    type="button"
+                    aria-label={`Close ${def?.label ?? panelId}`}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      close(panelId);
+                    }}
+                    className="ml-0.5 hidden h-4 w-4 shrink-0 items-center justify-center rounded hover:bg-background group-hover/tab:flex"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              </TabActionsMenu>
+            );
+          })}
+        </div>
+
+        {shouldUseTabMenu(pages.length) ? (
+          <TabMenu pages={pages} activePage={activePage} />
+        ) : null}
+
+        {counts.before > 0 ? (
+          <span className="shrink-0 px-1 text-[10px] text-muted-foreground" aria-hidden>
+            ‹ {counts.before}
+          </span>
+        ) : null}
+        {counts.after > 0 ? (
+          <span className="shrink-0 px-1 text-[10px] text-muted-foreground" aria-hidden>
+            {counts.after} ›
+          </span>
+        ) : null}
 
         {/* Group actions */}
         <div className="ml-auto flex items-center">
