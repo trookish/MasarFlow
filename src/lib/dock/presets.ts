@@ -76,7 +76,7 @@ export const WORKSPACE_PRESETS: Record<string, WorkspacePreset> = buildPresets()
 export function defaultProjectState(): ProjectDockState {
   const presets = buildPresets();
   return {
-    version: 1,
+    version: 2,
     activeWorkspace: "Development",
     workspaces: {
       Development: presets.Development,

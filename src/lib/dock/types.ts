@@ -36,7 +36,7 @@ export interface FloatWindow {
 }
 
 export interface ProjectDockState {
-  version: 1;
+  version: 2;
   activeWorkspace: string;
   workspaces: Record<
     string,

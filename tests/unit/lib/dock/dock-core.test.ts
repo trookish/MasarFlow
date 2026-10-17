@@ -47,7 +47,7 @@ const TASKS = page("p-tasks", "/tasks");
 
 function baseState(tree: DockNode): ProjectDockState {
   return {
-    version: 1,
+    version: 2,
     activeWorkspace: "Development",
     workspaces: { Development: { tree, params: {} } },
     floaters: [],

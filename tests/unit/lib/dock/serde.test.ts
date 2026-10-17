@@ -24,7 +24,7 @@ const TREE: DockNode = {
 };
 
 const STATE: ProjectDockState = {
-  version: 1,
+  version: 2,
   activeWorkspace: "Development",
   workspaces: {
     Development: { tree: TREE, params: { "/brain": "note=abc" } },
@@ -108,7 +108,7 @@ describe("projectDockStateSchema", () => {
 
   it("rejects a wrong version", () => {
     expect(
-      projectDockStateSchema.safeParse({ ...STATE, version: 2 }).success,
+      projectDockStateSchema.safeParse({ ...STATE, version: 3 }).success,
     ).toBe(false);
   });
 
@@ -156,8 +156,31 @@ describe("parseProjectState", () => {
 });
 
 describe("migrate", () => {
-  it("returns the payload unchanged (v1 is current)", () => {
+  it("returns the payload unchanged when nothing is repairable", () => {
     const raw = { version: 1, hello: "world" };
     expect(migrate(raw)).toBe(raw);
+  });
+});
+
+describe("olds layouts keep loading", () => {
+  it("a v1 payload written by the previous build still parses", () => {
+    const v1 = {
+      version: 1,
+      activeWorkspace: "Development",
+      workspaces: {
+        Development: {
+          tree: { type: "page", id: "p1", pageId: "/dashboard" },
+          params: {},
+        },
+      },
+      floaters: [],
+      collapsedPanels: [],
+      maximizedPanelId: null,
+      focusGroupId: null,
+    };
+    const state = parseProjectState(v1);
+    expect(state).not.toBeNull();
+    expect(state!.version).toBe(2);
+    expect(state!.workspaces.Development.tree.type).toBe("page");
   });
 });

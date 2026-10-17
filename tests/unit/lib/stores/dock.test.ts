@@ -21,7 +21,7 @@ describe("project lifecycle", () => {
   it("setProject lazily initializes a default dock state", () => {
     useDockStore.getState().setProject("p1");
     const s = project();
-    expect(s.version).toBe(1);
+    expect(s.version).toBe(2);
     expect(s.activeWorkspace).toBe("Development");
     expect(collectPages(s.workspaces.Development.tree)).toContain("/dashboard");
   });
