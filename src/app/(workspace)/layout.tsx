@@ -8,6 +8,7 @@ import { CommandPalette } from "@/components/shell/command-palette";
 import { GlobalSearch } from "@/components/shell/global-search";
 import { ShortcutsDialog } from "@/components/shell/shortcuts-dialog";
 import { NewProjectDialog } from "@/components/shell/new-project-dialog";
+import { SecretsBootstrap } from "@/components/shell/secrets-bootstrap";
 import { useGlobalHotkeys } from "@/lib/hooks/use-hotkeys";
 import { useProjectStore } from "@/lib/stores/project";
 import { useUIStore } from "@/lib/stores/ui";
@@ -109,6 +110,7 @@ export default function WorkspaceLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
+      <SecretsBootstrap />
       {sidebarOnLeft && <Sidebar />}
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />

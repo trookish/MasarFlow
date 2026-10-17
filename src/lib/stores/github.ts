@@ -1,10 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { secretsAvailable } from "@/lib/secrets";
 
 /**
- * GitHub connection settings. The PAT is stored in localStorage on the user's
- * machine only and is sent exclusively to the local /api/github proxy, which
- * talks to GitHub via Octokit.
+ * GitHub connection settings. The PAT is kept in the OS keychain (desktop) and
+ * sent only to the local /api/github proxy, which talks to GitHub via Octokit.
+ * In a plain browser (dev, no secret store) it stays in localStorage as before.
  */
 export interface GithubSettings {
   pat: string;
@@ -28,7 +29,21 @@ export const useGithub = create<GithubStore>()(
       lastSyncedAt: null,
       update: (patch) => set(patch),
     }),
-    { name: "masarflow-github" },
+    {
+      name: "masarflow-github",
+      // Desktop: the PAT lives in the OS keychain, never in localStorage.
+      // Browser (dev): no secret store — persist it exactly as before.
+      partialize: (s) =>
+        secretsAvailable()
+          ? { owner: s.owner, repo: s.repo, branch: s.branch, lastSyncedAt: s.lastSyncedAt }
+          : {
+              pat: s.pat,
+              owner: s.owner,
+              repo: s.repo,
+              branch: s.branch,
+              lastSyncedAt: s.lastSyncedAt,
+            },
+    },
   ),
 );
 

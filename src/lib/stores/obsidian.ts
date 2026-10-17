@@ -1,11 +1,12 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { secretsAvailable } from "@/lib/secrets";
 
 /**
  * Connection to the Obsidian "Local REST API" community plugin. The plugin
  * serves the vault over HTTPS on 127.0.0.1:27124 behind a bearer API key.
- * Credentials live in localStorage (this is a local-only personal app, same as
- * the AI provider keys).
+ * The key is kept in the OS keychain (desktop); in a plain browser (dev, no
+ * secret store) it stays in localStorage as before.
  */
 interface ObsidianState {
   baseUrl: string;
@@ -22,6 +23,14 @@ export const useObsidianStore = create<ObsidianState>()(
       setBaseUrl: (baseUrl) => set({ baseUrl }),
       setApiKey: (apiKey) => set({ apiKey }),
     }),
-    { name: "masarflow-obsidian" },
+    {
+      name: "masarflow-obsidian",
+      // Desktop: the API key lives in the OS keychain, never in localStorage.
+      // Browser (dev): no secret store — persist it exactly as before.
+      partialize: (s) =>
+        secretsAvailable()
+          ? { baseUrl: s.baseUrl }
+          : { baseUrl: s.baseUrl, apiKey: s.apiKey },
+    },
   ),
 );
