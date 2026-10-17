@@ -10,6 +10,7 @@ import { MasarFlowLogo } from "./logo";
 import { useUIStore } from "@/lib/stores/ui";
 import { usePageSettings } from "@/lib/stores/page-settings";
 import { useMounted } from "@/lib/hooks/use-mounted";
+import { useViewportMode } from "@/lib/hooks/use-narrow-viewport";
 import { Tooltip } from "@/components/ui/tooltip";
 
 function isActive(pathname: string, href: string, exact = false): boolean {
@@ -310,6 +311,15 @@ export function Sidebar() {
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const taskbarDirection = useUIStore((s) => s.taskbarDirection);
+  const setSidebarCollapsed = useUIStore((s) => s.setSidebarCollapsed);
+  const mode = useViewportMode();
+
+  // Compact mode (narrow window): collapse the sidebar once per crossing. The
+  // user can still expand it manually; this only fires on the transition.
+  useEffect(() => {
+    if (mode === "compact") setSidebarCollapsed(true);
+  }, [mode, setSidebarCollapsed]);
+
   const brainDefaultView = usePageSettings((s) => s.brain.defaultView);
 
   const brainHref = BRAIN_DEFAULT_HREF[brainDefaultView] ?? "/brain";
