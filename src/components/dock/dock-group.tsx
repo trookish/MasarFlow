@@ -123,10 +123,19 @@ export function DockGroup({ nodeId, pages, activePage, collapsed }: DockGroupPro
                   aria-selected={active}
                   tabIndex={active ? 0 : -1}
                   ref={active ? activeTabRef : undefined}
+                  // e2e anchors (P9.T6): the tab that focuses a panel and the
+                  // panel id it points at, so specs never depend on copy.
+                  data-dock-tab=""
+                  data-dock-url={panelId}
                   onKeyDown={(e) => onTabKeyDown(e, panelId)}
                   onPointerDown={(e) => {
                     if (e.button !== 0) return;
                     startTabDrag(e, panelId);
+                    if (!active) focus(panelId);
+                  }}
+                  // DOM `.click()` (programmatic, e.g. perf specs) fires no
+                  // pointerdown, so the focus the pointer path does lives here too.
+                  onClick={() => {
                     if (!active) focus(panelId);
                   }}
                   className={cn(
@@ -202,8 +211,10 @@ export function DockGroup({ nodeId, pages, activePage, collapsed }: DockGroupPro
         </div>
       </div>
 
-      {/* Active panel content; inactive tabs stay mounted but hidden. */}
-      <div className="min-h-0 flex-1">
+      {/* Active panel content; inactive tabs stay mounted but hidden.
+          e2e anchors (P9.T6): `dock-panel` + the focused panel's id — the
+          tab strip's active tab carries the same `data-dock-url` value. */}
+      <div className="min-h-0 flex-1" data-testid="dock-panel" data-dock-url={activePage}>
         {pages.map((panelId) => (
           <PanelTab key={panelId} panelId={panelId} active={panelId === activePage} />
         ))}

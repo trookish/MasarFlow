@@ -135,10 +135,14 @@ export function DockWorkspace() {
   // keep rendering: adjust the state during render, never in an effect.
   if (compactPanel !== null && !pages.includes(compactPanel)) setCompactPanel(null);
 
+  // e2e anchor (P9.T6): `data-testid="shell-ready"` is on this root because it
+  // is rendered only while a project is active — specs wait for "the workspace
+  // is interactive" instead of a timeout.
   return (
     <div
       ref={containerRef}
       data-dock-workspace=""
+      data-testid="shell-ready"
       onPointerMove={onPointerMove}
       className="relative h-full w-full overflow-hidden"
     >

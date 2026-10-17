@@ -17,6 +17,8 @@
     "test": "vitest run --config tests/vitest.config.ts",
     "test:watch": "vitest --config tests/vitest.config.ts",
     "e2e": "playwright test --config tests/playwright.config.ts",
+    "e2e:desktop": "playwright test --config tests/playwright.desktop.config.ts --grep-invert @slow",
+    "e2e:desktop:slow": "playwright test --config tests/playwright.desktop.config.ts --grep @slow",
     "assets:embeddings": "node scripts/fetch-embedding-model.mjs && node scripts/copy-ort.mjs",
     "build:app": "pnpm assets:embeddings && next build && node scripts/build-app-server.mjs",
     "dev:desktop": "node scripts/dev-desktop.mjs",
@@ -25,7 +27,8 @@
     "smoke:desktop": "node scripts/smoke-desktop.mjs",
     "smoke:boot-gate": "node scripts/smoke-boot-gate.mjs",
     "security:check": "node scripts/security-check.mjs",
-    "desktop:typecheck": "pnpm --dir desktop run typecheck"
+    "desktop:typecheck": "pnpm --dir desktop run typecheck",
+    "proof:update-local": "node desktop/scripts/proof-update-local.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

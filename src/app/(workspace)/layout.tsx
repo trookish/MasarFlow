@@ -161,13 +161,16 @@ export default function WorkspaceLayout({
     }
   }, []);
 
+  // P10.T9: follow the main-process updater's live phase (no-op in a browser).
+  useEffect(() => useUpdatesStore.getState().bindUpdater(), []);
+
   // Hydration-safe: server + first client render put the sidebar on the
   // left; the "right" direction moves it after mount.
   const sidebarOnLeft = !mounted || taskbarDirection !== "right";
 
   return (
     <DbGate>
-      <div className="flex h-screen overflow-hidden">
+      <div className="flex h-screen overflow-hidden" data-testid="app-shell">
         <SecretsBootstrap />
         <AutoBackup />
         {sidebarOnLeft && <Sidebar />}
