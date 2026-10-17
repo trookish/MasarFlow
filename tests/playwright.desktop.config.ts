@@ -1,4 +1,11 @@
+import path from "node:path";
 import { defineConfig } from "@playwright/test";
+
+// Playwright empties outputDir when a run starts. Parallel agents each boot a
+// private app copy (MASARFLOW_E2E_APP_DIR); give each its own results folder
+// next to that copy, or one agent's run deletes another's traces mid-test.
+const privateApp = process.env.MASARFLOW_E2E_APP_DIR?.trim();
+const outputDir = privateApp ? path.join(path.dirname(privateApp), "test-results") : "../test-results/desktop";
 
 /**
  * Desktop e2e: runs against the PACKAGED app (desktop/dist/win-unpacked).
