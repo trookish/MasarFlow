@@ -1,0 +1,32 @@
+{
+  "machine": {
+    "platform": "win32 10.0.26300 x64",
+    "cpu": "12th Gen Intel(R) Core(TM) i5-12400F",
+    "cores": 12,
+    "totalMemGb": 15.9,
+    "node": "v24.14.0"
+  },
+  "initializedProfile": {
+    "samples": [
+      1424,
+      1477,
+      1272
+    ],
+    "firstPaintSamples": [
+      1378,
+      1453,
+      1251
+    ],
+    "median": 1424,
+    "p95": 1477,
+    "budget": 9000
+  },
+  "firstRunToWizard": {
+    "samples": [
+      1336,
+      1275,
+      1319
+    ],
+    "median": 1319
+  }
+}

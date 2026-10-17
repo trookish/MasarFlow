@@ -1,0 +1,116 @@
+{
+  "machine": {
+    "platform": "win32 10.0.26300 x64",
+    "cpu": "12th Gen Intel(R) Core(TM) i5-12400F",
+    "cores": 12,
+    "totalMemGb": 15.9,
+    "node": "v24.14.0"
+  },
+  "dock": {
+    "groups": 1,
+    "groupTabs": [
+      "/dashboard",
+      "/brain"
+    ],
+    "samples": [
+      6,
+      8,
+      6,
+      13,
+      6,
+      8,
+      6,
+      8,
+      6,
+      9
+    ],
+    "attempts": [
+      {
+        "i": 0,
+        "target": "/dashboard",
+        "dt": -2,
+        "why": "already visible"
+      },
+      {
+        "i": 1,
+        "target": "/brain",
+        "dt": 5.699999988079071,
+        "why": "ok"
+      },
+      {
+        "i": 2,
+        "target": "/dashboard",
+        "dt": 8.099999994039536,
+        "why": "ok"
+      },
+      {
+        "i": 3,
+        "target": "/brain",
+        "dt": 6,
+        "why": "ok"
+      },
+      {
+        "i": 4,
+        "target": "/dashboard",
+        "dt": 13.199999988079071,
+        "why": "ok"
+      },
+      {
+        "i": 5,
+        "target": "/brain",
+        "dt": 5.800000011920929,
+        "why": "ok"
+      },
+      {
+        "i": 6,
+        "target": "/dashboard",
+        "dt": 8,
+        "why": "ok"
+      },
+      {
+        "i": 7,
+        "target": "/brain",
+        "dt": 6,
+        "why": "ok"
+      },
+      {
+        "i": 8,
+        "target": "/dashboard",
+        "dt": 8,
+        "why": "ok"
+      },
+      {
+        "i": 9,
+        "target": "/brain",
+        "dt": 5.5999999940395355,
+        "why": "ok"
+      },
+      {
+        "i": 10,
+        "target": "/dashboard",
+        "dt": 8.900000005960464,
+        "why": "ok"
+      }
+    ],
+    "median": 7,
+    "p95": 13,
+    "budget": 250
+  },
+  "routeNav": {
+    "samples": [
+      13,
+      20,
+      29,
+      18,
+      21,
+      17,
+      16,
+      15,
+      13,
+      14
+    ],
+    "median": 17,
+    "p95": 29,
+    "budget": 700
+  }
+}
