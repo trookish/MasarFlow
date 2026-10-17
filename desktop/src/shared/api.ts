@@ -1,3 +1,5 @@
+import type { GitBranchInfo, GitCommitInfo, GitDiffFile, GitRepoStatus, GitResult } from "./git";
+
 /**
  * Same union as `NodeJS.Platform` (see @types/node process.d.ts), declared locally so this
  * file also compiles under the renderer tsconfig, which does not load Node's global types.
@@ -58,5 +60,19 @@ export interface MasarflowApi {
     list(): Promise<Array<{ name: string; mtimeMs: number }>>;
     read(name: string): Promise<string>;
     openFolder(): Promise<void>;
+  };
+  git: {
+    available(): Promise<GitResult<{ version: string; raw: string; binary: string }>>;
+    status(root: string): Promise<GitResult<GitRepoStatus>>;
+    diff(root: string, options?: { staged?: boolean; path?: string; untracked?: boolean }): Promise<GitResult<GitDiffFile[]>>;
+    stage(root: string, paths: string[]): Promise<GitResult<null>>;
+    unstage(root: string, paths: string[]): Promise<GitResult<null>>;
+    commit(root: string, options: { message: string }): Promise<GitResult<{ sha: string }>>;
+    log(root: string, options?: { limit?: number; path?: string }): Promise<GitResult<GitCommitInfo[]>>;
+    branches(root: string): Promise<GitResult<GitBranchInfo[]>>;
+    switchBranch(root: string, name: string): Promise<GitResult<null>>;
+    createBranch(root: string, name: string, checkout?: boolean): Promise<GitResult<null>>;
+    init(root: string): Promise<GitResult<null>>;
+    remote(root: string): Promise<GitResult<{ url: string } | null>>;
   };
 }

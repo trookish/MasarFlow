@@ -45,6 +45,20 @@ const api: MasarflowApi = {
     read: (name) => ipcRenderer.invoke(CH.backupsRead, name),
     openFolder: () => ipcRenderer.invoke(CH.backupsOpenFolder),
   },
+  git: {
+    available: () => ipcRenderer.invoke(CH.gitAvailable),
+    status: (root) => ipcRenderer.invoke(CH.gitStatus, root),
+    diff: (root, options) => ipcRenderer.invoke(CH.gitDiff, root, options),
+    stage: (root, paths) => ipcRenderer.invoke(CH.gitStage, root, paths),
+    unstage: (root, paths) => ipcRenderer.invoke(CH.gitUnstage, root, paths),
+    commit: (root, options) => ipcRenderer.invoke(CH.gitCommit, root, options),
+    log: (root, options) => ipcRenderer.invoke(CH.gitLog, root, options),
+    branches: (root) => ipcRenderer.invoke(CH.gitBranches, root),
+    switchBranch: (root, name) => ipcRenderer.invoke(CH.gitSwitchBranch, root, name),
+    createBranch: (root, name, checkout) => ipcRenderer.invoke(CH.gitCreateBranch, root, name, checkout),
+    init: (root) => ipcRenderer.invoke(CH.gitInit, root),
+    remote: (root) => ipcRenderer.invoke(CH.gitRemote, root),
+  },
 };
 
 contextBridge.exposeInMainWorld("masarflow", api);

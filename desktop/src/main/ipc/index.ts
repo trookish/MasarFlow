@@ -7,6 +7,8 @@ import { addRootToFile, readRootsFile } from "../security/roots";
 import { isSafeExternalUrl } from "../security/url-policy";
 import { SecretStore, createSafeStorageCodec, isValidSecretKey } from "../secrets";
 import { listBackups, readBackup, writeBackup } from "../backups";
+import { createExecGit } from "../git/exec";
+import { createGitService } from "../git/service";
 
 const DISPLAY_VERSION = "0.2.0.0"; // single source for UI; package.json holds the semver
 
@@ -96,4 +98,33 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     mkdirSync(backupsDir(), { recursive: true });
     await shell.openPath(backupsDir());
   });
+
+  /* ── Git (P6) — main-process only, registered roots only ─────────────── */
+  const rootsFile = (): string => join(app.getPath("userData"), "roots.json");
+  const git = createGitService({
+    exec: createExecGit(),
+    roots: () => readRootsFile(rootsFile()),
+  });
+  const asPath = (v: unknown): string => (typeof v === "string" ? v : "");
+  const asPaths = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((p): p is string => typeof p === "string") : [];
+  type DiffLogOpts = { staged?: boolean; path?: string; untracked?: boolean; limit?: number };
+  const asOpts = (v: unknown): DiffLogOpts => (typeof v === "object" && v !== null ? (v as DiffLogOpts) : {});
+
+  ipcMain.handle(CH.gitAvailable, () => git.available());
+  ipcMain.handle(CH.gitStatus, (_e, root: unknown) => git.status(asPath(root)));
+  ipcMain.handle(CH.gitDiff, (_e, root: unknown, opts: unknown) => git.diff(asPath(root), asOpts(opts)));
+  ipcMain.handle(CH.gitStage, (_e, root: unknown, paths: unknown) => git.stage(asPath(root), asPaths(paths)));
+  ipcMain.handle(CH.gitUnstage, (_e, root: unknown, paths: unknown) => git.unstage(asPath(root), asPaths(paths)));
+  ipcMain.handle(CH.gitCommit, (_e, root: unknown, opts: unknown) =>
+    git.commit(asPath(root), { message: String((opts as { message?: unknown })?.message ?? "") }),
+  );
+  ipcMain.handle(CH.gitLog, (_e, root: unknown, opts: unknown) => git.log(asPath(root), asOpts(opts)));
+  ipcMain.handle(CH.gitBranches, (_e, root: unknown) => git.branches(asPath(root)));
+  ipcMain.handle(CH.gitSwitchBranch, (_e, root: unknown, name: unknown) => git.switchBranch(asPath(root), String(name ?? "")));
+  ipcMain.handle(CH.gitCreateBranch, (_e, root: unknown, name: unknown, checkout: unknown) =>
+    git.createBranch(asPath(root), String(name ?? ""), checkout !== false),
+  );
+  ipcMain.handle(CH.gitInit, (_e, root: unknown) => git.init(asPath(root)));
+  ipcMain.handle(CH.gitRemote, (_e, root: unknown) => git.remote(asPath(root)));
 }
