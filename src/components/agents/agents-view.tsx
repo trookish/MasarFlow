@@ -39,6 +39,7 @@ import {
   buildAssistantSystemPrompt,
 } from "@/lib/ai/context";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { useUrlSelection } from "@/lib/hooks/use-url-selection";
 import { usePageSettings } from "@/lib/stores/page-settings";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -54,7 +55,7 @@ export function AgentsView() {
   const projectId = useActiveProjectId();
   const { showDisabled } = usePageSettings((s) => s.agents);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useUrlSelection("/agents", "agent");
   const [connDialog, setConnDialog] = useState(false);
 
   useEffect(() => {

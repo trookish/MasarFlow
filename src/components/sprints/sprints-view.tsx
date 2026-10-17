@@ -6,6 +6,7 @@ import { ChevronDown, Flag, Plus, Trash2 } from "lucide-react";
 import { sprintsRepo, tasksRepo } from "@/lib/db/repos";
 import type { Sprint, Task } from "@/lib/db/schema";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { useUrlSelection } from "@/lib/hooks/use-url-selection";
 import { usePageSettings } from "@/lib/stores/page-settings";
 import { taskStatusLabel } from "@/lib/workflow";
 import { cn } from "@/lib/utils/cn";
@@ -65,7 +66,7 @@ export function SprintsView() {
     [projectId],
   );
   const tasks = useMemo(() => tasksRaw ?? [], [tasksRaw]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useUrlSelection("/sprints", "sprint");
 
   const selected = sprints.find((s) => s.id === selectedId) ?? null;
   const tasksBySprint = useMemo(() => {

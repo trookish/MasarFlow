@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import Link from "next/link";
 import {
@@ -30,6 +30,7 @@ import {
   type DevLogType,
 } from "@/lib/devlogs";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { useUrlSelection } from "@/lib/hooks/use-url-selection";
 import { usePageSettings } from "@/lib/stores/page-settings";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -100,6 +101,12 @@ export function DevLogsView() {
     [logs, active],
   );
   const groups = useMemo(() => groupLogs(filtered, groupBy), [filtered, groupBy]);
+
+  const [focusId] = useUrlSelection("/devlogs", "devlog");
+  useEffect(() => {
+    if (!focusId) return;
+    document.getElementById(`devlog-${focusId}`)?.scrollIntoView({ block: "center" });
+  }, [focusId, filtered.length]);
 
   function toggle(type: DevLogType) {
     setActive((prev) => {
@@ -200,6 +207,7 @@ export function DevLogsView() {
                         key={log.id}
                         log={log}
                         showTime={showTime}
+                        focusId={focusId}
                         onEdit={() => {
                           setEditingId(log.id);
                           setComposing(false);
@@ -221,11 +229,13 @@ export function DevLogsView() {
 function DevLogItem({
   log,
   showTime,
+  focusId,
   onEdit,
   onDelete,
 }: {
   log: DevLog;
   showTime: boolean;
+  focusId: string | null;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -234,7 +244,13 @@ function DevLogItem({
   const href = refHref(log.refType, log.refId);
 
   return (
-    <li className="group relative mb-4 ml-5">
+    <li
+      id={`devlog-${log.id}`}
+      className={cn(
+        "group relative mb-4 ml-5",
+        log.id === focusId && "rounded-md ring-1 ring-primary",
+      )}
+    >
       {/* Timeline node */}
       <span className="absolute top-1 -left-[26px] flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-background bg-border">
         <Icon className={cn("h-2.5 w-2.5", DEVLOG_TYPE_COLOR[type])} />
