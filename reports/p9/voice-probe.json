@@ -1,0 +1,6 @@
+{
+  "ctor": true,
+  "events": [
+    "error:not-allowed"
+  ]
+}

@@ -98,3 +98,19 @@ step. Exact chain, verified against the packaged app:
 Minimal fix (owner's call): resolve the AI connection **before** opening the seed transaction (hoist
 `seedAiConnection()` out and pass the id in), or make `hydrateConnection`'s secret read not run inside an open
 transaction. Reproduce: fresh packaged profile → `/settings` → Data → "Load demo projects".
+
+## P9.T13 — voice probe + `hide` decision
+
+| Step | Command | Result |
+|---|---|---|
+| voice probe (packaged) | `pnpm e2e:desktop tests/e2e/desktop/voice.spec.ts` | **1 passed** (4.3 s) |
+| gate unit tests | `pnpm exec vitest run --config tests/vitest.config.ts tests/unit/lib/use-speech.test.ts` | **4 passed** |
+
+`reports/p9/voice-probe.json` = `{"ctor": true, "events": ["error:not-allowed"]}` → **decision: hide** (written up in
+`reports/p9/voice-probe.md`). Deviations: (1) the plan expected the first run to FAIL because T12's
+`speechAvailability` was assumed unwired — it was already on disk (commit `4fe96c8`, `src/lib/hooks/use-speech.ts:42-45`
++ `81-84`), so the packaged app renders no mic and the spec passed on the first run; (2) the probe reports
+`error:not-allowed` (the app denies mic permission by policy: `desktop/src/main/security/permissions.ts`) where the plan
+predicted `error:network` — same verdict, one layer earlier; (3) the mic check runs with the demo thread open
+("Backpressure design review"), because the empty chat state renders no composer and a bare "no mic button" assertion
+would pass vacuously there.
