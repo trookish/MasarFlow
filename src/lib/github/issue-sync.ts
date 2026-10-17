@@ -116,7 +116,9 @@ export async function applyIssueTaskSync(
       status: "backlog",
       priority: "medium",
       tags,
-      externalRef: item.externalRef,
+      /* The plan already stamps the ref; recomputing from the sync's own repo
+         is the fallback so a task can never lose its issue identity. */
+      externalRef: item.externalRef || makeExternalRef({ ...repo, number: item.issue.number }),
     });
     created++;
   }
