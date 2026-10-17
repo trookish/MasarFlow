@@ -75,7 +75,7 @@ export function ControlCenterView() {
   ];
 
   return (
-    <div className="flex h-full flex-col gap-4 overflow-auto p-6">
+    <div className="flex h-full flex-col gap-4 overflow-auto p-6" data-testid="control-center">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold">Control Center</h1>
@@ -171,7 +171,12 @@ export function ControlCenterView() {
               and stays there for the web case. This one comes from the main process
               (diagnostics:collect) because roots/secrets/backups/updater only exist there.
               Do not "deduplicate" them into one function — they run in two different processes. */}
-          <textarea readOnly value={markdown} className="h-80 w-full rounded-md border border-border bg-muted/30 p-3 font-mono text-[11px]" />
+          <textarea
+            readOnly
+            value={markdown}
+            data-testid="diagnostics-report"
+            className="h-80 w-full rounded-md border border-border bg-muted/30 p-3 font-mono text-[11px]"
+          />
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => void copyDiagnostics()}>
               Copy diagnostics
