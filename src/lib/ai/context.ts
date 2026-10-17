@@ -11,6 +11,11 @@ import {
   devLogsRepo,
   docsRepo,
   commitsRepo,
+  agentsRepo,
+  canvasRepo,
+  linkedProjectsRepo,
+  linksRepo,
+  activityRepo,
 } from "@/lib/db/repos";
 import type {
   Project,
@@ -24,9 +29,17 @@ import type {
   DevLog,
   Doc,
   Commit,
+  Activity,
+  Agent,
+  Canvas,
+  Link,
+  LinkedProject,
 } from "@/lib/db/schema";
 import { stripMarkdown } from "@/lib/utils/markdown";
 import { retrieveRagChunks } from "@/lib/ai/embeddings/search";
+import { useDockStore } from "@/lib/stores/dock";
+import { deriveActiveContext, formatActiveContext, titleKey } from "@/lib/ai/active-context";
+import { titleOfEntity } from "@/lib/entities/resolve";
 
 /**
  * The workspace context engine. Assembles everything the workspace knows —
@@ -51,12 +64,18 @@ export interface WorkspaceSnapshot {
   devLogs: DevLog[];
   docs: Doc[];
   commits: Commit[];
+  /** v2 — optional so older callers and tests keep compiling. */
+  links?: Link[];
+  canvases?: Canvas[];
+  agents?: Agent[];
+  linkedProjects?: LinkedProject[];
+  activity?: Activity[];
 }
 
 /** A query-relevant passage retrieved from the local semantic RAG index. */
 export interface RagChunk {
   entityId: string;
-  kind: "note" | "doc";
+  kind: string;
   title: string;
   text: string;
   score: number;
@@ -77,6 +96,8 @@ export interface ContextOptions {
    * pure formatter.
    */
   ragChunks?: RagChunk[];
+  /** Pre-rendered "Currently open" markdown (see src/lib/ai/active-context.ts). */
+  activeText?: string;
   /**
    * Caller's cancellation signal — honored while retrieving RAG chunks so a
    * user hitting Stop mid-context-assembly aborts promptly instead of waiting
@@ -106,6 +127,11 @@ export async function fetchWorkspaceSnapshot(
     devLogs,
     docs,
     commits,
+    links,
+    canvases,
+    agents,
+    linkedProjects,
+    activity,
   ] = await Promise.all([
     projectsRepo.get(projectId),
     notesRepo.listByProject(projectId),
@@ -118,6 +144,11 @@ export async function fetchWorkspaceSnapshot(
     devLogsRepo.listByProject(projectId),
     docsRepo.listByProject(projectId),
     commitsRepo.listByProject(projectId),
+    linksRepo.listByProject(projectId),
+    canvasRepo.listByProject(projectId),
+    agentsRepo.list(),
+    linkedProjectsRepo.listByProject(projectId),
+    activityRepo.listRecent(projectId, 20),
   ]);
   return {
     project: project ?? null,
@@ -131,6 +162,11 @@ export async function fetchWorkspaceSnapshot(
     devLogs,
     docs,
     commits,
+    links,
+    canvases,
+    agents,
+    linkedProjects,
+    activity,
   };
 }
 
@@ -220,15 +256,20 @@ export function formatWorkspaceContext(
   const budget = opts.budget ?? DEFAULT_BUDGET;
 
   // RAG chunks (when available) replace Fuse-based full-body selection with
-  // real query-relevant passages, grouped back by source entity.
+  // real query-relevant passages, grouped back by source entity. Only note/doc
+  // chunks drive body selection; every other kind is listed under
+  // "Relevant passages" further down.
+  const ragAll = opts.ragChunks ?? [];
+  const bodyChunks = ragAll.filter((c) => c.kind === "note" || c.kind === "doc");
+  const otherChunks = ragAll.filter((c) => c.kind !== "note" && c.kind !== "doc");
   let fullNoteIds: Set<string>;
   let fullDocIds: Set<string>;
   let noteChunks: Map<string, string[]> | null = null;
   let docChunks: Map<string, string[]> | null = null;
-  if (opts.ragChunks?.length) {
+  if (bodyChunks.length) {
     noteChunks = new Map();
     docChunks = new Map();
-    for (const c of opts.ragChunks) {
+    for (const c of bodyChunks) {
       const target = c.kind === "doc" ? docChunks : noteChunks;
       const list = target.get(c.entityId) ?? [];
       list.push(c.text);
@@ -266,6 +307,8 @@ export function formatWorkspaceContext(
         .join("\n") + "\n",
     );
   }
+
+  if (opts.activeText) push(`\n${opts.activeText}`);
 
   // Memories first — they are distilled, high-signal facts.
   if (snapshot.memories.length) {
@@ -403,6 +446,47 @@ export function formatWorkspaceContext(
     push(`\n## Recent dev log\n${lines.join("\n")}\n`);
   }
 
+  const titleOf = (kind: string, id: string): string => {
+    const hit =
+      kind === "note" ? snapshot.notes.find((x) => x.id === id)?.title
+      : kind === "spec" ? snapshot.specs.find((x) => x.id === id)?.title
+      : kind === "task" ? snapshot.tasks.find((x) => x.id === id)?.title
+      : kind === "doc" ? snapshot.docs.find((x) => x.id === id)?.title
+      : kind === "standard" ? snapshot.standards.find((x) => x.id === id)?.title
+      : kind === "system" ? snapshot.systems.find((x) => x.id === id)?.name
+      : kind === "sprint" ? snapshot.sprints.find((x) => x.id === id)?.name
+      : kind === "canvas" ? snapshot.canvases?.find((x) => x.id === id)?.name
+      : undefined;
+    return hit ? `${kind} "${hit}"` : `${kind} ${id}`;
+  };
+
+  if (snapshot.links?.length) {
+    const lines = snapshot.links
+      .slice(0, 60)
+      .map((l) => `- ${titleOf(l.sourceType, l.sourceId)} —${l.linkType}→ ${titleOf(l.targetType, l.targetId)}`);
+    push(`\n## Links (knowledge graph)\n${lines.join("\n")}\n`);
+  }
+  if (snapshot.canvases?.length) {
+    push(`\n## Canvases\n${snapshot.canvases.map((c) => `- ${c.name} (id ${c.id})`).join("\n")}\n`);
+  }
+  const activeAgents = snapshot.agents?.filter((a) => a.enabled) ?? [];
+  if (activeAgents.length) {
+    push(`\n## Agents\n${activeAgents.map((a) => `- ${a.name} (${a.role})`).join("\n")}\n`);
+  }
+  if (snapshot.linkedProjects?.length) {
+    push(`\n## Linked folders\n${snapshot.linkedProjects.map((l) => `- ${l.name}: ${l.rootPath}`).join("\n")}\n`);
+  }
+  if (snapshot.activity?.length) {
+    const lines = snapshot.activity.map(
+      (a) => `- ${new Date(a.createdAt).toISOString().slice(0, 16).replace("T", " ")} ${a.summary}`,
+    );
+    push(`\n## Recent activity (newest first)\n${lines.join("\n")}\n`);
+  }
+  if (otherChunks.length) {
+    const lines = otherChunks.map((c) => `- [${c.kind}] "${c.title}": ${clip(c.text, 400)}`);
+    push(`\n## Relevant passages\n${lines.join("\n")}\n`);
+  }
+
   return sections.join("");
 }
 
@@ -426,11 +510,23 @@ async function fetchRagChunks(
       signal?.addEventListener("abort", () => (clearTimeout(t), reject(new Error("aborted"))), { once: true });
     });
     const chunks = await Promise.race([work, timeout]);
-    const usable = chunks.filter((c): c is RagChunk & { kind: "note" | "doc" } => c.kind === "note" || c.kind === "doc");
-    return usable.length ? usable : undefined;
+    return chunks.length ? chunks : undefined;
   } catch {
     return undefined;
   }
+}
+
+async function activeTextFromDock(): Promise<string> {
+  const ctx = deriveActiveContext(useDockStore.getState().getProject());
+  if (!ctx) return "";
+  const titles = new Map<string, string>();
+  await Promise.all(
+    ctx.panels.flatMap((p) => (p.ref ? [p.ref] : [])).map(async (ref) => {
+      const t = await titleOfEntity(ref);
+      if (t) titles.set(titleKey(ref), t);
+    }),
+  );
+  return formatActiveContext(ctx, titles);
 }
 
 /** Fetch + format in one call. */
@@ -448,7 +544,7 @@ export async function assembleWorkspaceContext(
         opts.signal,
       )
     : undefined;
-  return formatWorkspaceContext(snapshot, { ...opts, ragChunks });
+  return formatWorkspaceContext(snapshot, { ...opts, ragChunks, activeText: opts.activeText ?? (await activeTextFromDock()) });
 }
 
 /**
