@@ -14,7 +14,7 @@ export interface ObsidianConn {
  * touches the rest of the user's vault. Imported files preserve their
  * original vault path; new entities get a default subfolder.
  */
-export const VAULT_SUBFOLDER = "MasarFlow";
+export { VAULT_SUBFOLDER } from "./vault/paths";
 
 interface ProxyResult {
   ok: boolean;

@@ -159,6 +159,15 @@ export const folderSchema = z.object({
 });
 export type Folder = z.infer<typeof folderSchema>;
 
+/** Vault frontmatter values (P7). Mirrors the YAML subset in vault/frontmatter.ts. */
+export const propValueSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.array(z.string()),
+]);
+export type PropValue = z.infer<typeof propValueSchema>;
+
 export const noteSchema = z.object({
   id: z.string(),
   projectId: z.string(),
@@ -168,6 +177,8 @@ export const noteSchema = z.object({
   excerpt: z.string().default(""),
   tags: z.array(z.string()).default([]),
   folderId: z.string().nullable().default(null),
+  /** Vault frontmatter properties (P7). Not indexed — no Dexie bump needed. */
+  props: z.record(z.string(), propValueSchema).optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
@@ -204,6 +215,8 @@ export const specSchema = z.object({
   implementationProgress: z.number().min(0).max(100).default(0),
   linkedNoteIds: z.array(z.string()).default([]),
   linkedTaskIds: z.array(z.string()).default([]),
+  /** Vault frontmatter properties (P7). Not indexed — no Dexie bump needed. */
+  props: z.record(z.string(), propValueSchema).optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
@@ -243,6 +256,8 @@ export const taskSchema = z.object({
   dependencies: z.array(z.string()).default([]),
   progress: z.number().min(0).max(100).default(0),
   tags: z.array(z.string()).default([]),
+  /** Vault frontmatter properties (P7). Not indexed — no Dexie bump needed. */
+  props: z.record(z.string(), propValueSchema).optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
@@ -307,6 +322,8 @@ export const docSchema = z.object({
   category: z.string().default("general"),
   body: z.string().default(""),
   sourceType: z.enum(["manual", "auto"]).default("manual"),
+  /** Vault frontmatter properties (P7). Not indexed — no Dexie bump needed. */
+  props: z.record(z.string(), propValueSchema).optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
 });

@@ -68,8 +68,8 @@ describe("buildDesiredFiles", () => {
   it("maps notes and docs to default vault paths when no sync records exist", () => {
     const files = buildDesiredFiles([note("n1", "Alpha")], [doc("d1", "Beta")]);
     expect(files.map((f) => f.path)).toEqual([
-      "docs/general/beta.md",
-      "notes/alpha.md",
+      "docs/general/Beta.md",
+      "notes/Alpha.md",
     ]);
     expect(files.every((f) => /^[0-9a-f]{8}$/.test(f.hash))).toBe(true);
   });
@@ -102,8 +102,8 @@ describe("buildDesiredFiles", () => {
     // n1 preserves imported path, n2 and d1 get defaults
     const pathMap = new Map(files.map((f) => [f.entityId, f.path]));
     expect(pathMap.get("n1")).toBe("imported/alpha.md");
-    expect(pathMap.get("n2")).toBe("notes/gamma.md");
-    expect(pathMap.get("d1")).toBe("docs/general/beta.md");
+    expect(pathMap.get("n2")).toBe("notes/Gamma.md");
+    expect(pathMap.get("d1")).toBe("docs/general/Beta.md");
   });
 });
 

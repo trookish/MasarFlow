@@ -1,5 +1,5 @@
 import type { Note, Doc, SyncFile, EntityKind } from "@/lib/db/schema";
-import { slugify } from "@/lib/utils/ids";
+import { pathFor } from "@/lib/vault/paths";
 
 export type SyncStatus = SyncFile["status"];
 
@@ -123,12 +123,10 @@ export function hashContent(input: string): string {
  * vault path). Imported files preserve their original vault location.
  */
 export function noteFilePath(note: Note): string {
-  return `notes/${slugify(note.title || "untitled")}.md`;
+  return pathFor("note", note, null);
 }
 export function docFilePath(doc: Doc): string {
-  const cat = slugify(doc.category || "general");
-  const slug = doc.slug || slugify(doc.title || "untitled");
-  return `docs/${cat}/${slug}.md`;
+  return pathFor("doc", doc);
 }
 
 function frontmatter(fields: Record<string, string>): string {
