@@ -164,7 +164,13 @@ test(RELOAD_TITLE, async ({ desktop }) => {
   // snapshot (params — not the data-dock-url attribute, which stays "/brain").
   const title = `P9 reload note ${Date.now()}`;
   await brain.getByRole("button", { name: "New note" }).first().click();
-  await brain.getByPlaceholder("Untitled note").fill(title);
+  // Wait for the NEW note's editor before typing: the create round-trips the
+  // database, and a fill that races the editor remount can land its clear
+  // step in the old note's input (then the debounce saves an empty title).
+  const titleInput = brain.getByPlaceholder("Untitled note");
+  await expect(titleInput).toHaveValue("Untitled note", { timeout: 15_000 });
+  await titleInput.fill(title);
+  await expect(titleInput).toHaveValue(title);
   await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/brain?note=");
   const noteId = /note=([^&]+)/.exec(page.url())?.[1];
   expect(noteId).toBeTruthy();
