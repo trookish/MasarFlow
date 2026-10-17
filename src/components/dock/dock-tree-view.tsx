@@ -58,7 +58,7 @@ function SplitNode({
       >
         <DockNodeChild node={first} />
       </div>
-      <SplitDivider direction={node.direction} splitId={node.id} />
+      <SplitDivider direction={node.direction} splitId={node.id} ratio={node.ratio} />
       <div className="min-h-0 min-w-0 flex-1">
         <DockNodeChild node={second} />
       </div>

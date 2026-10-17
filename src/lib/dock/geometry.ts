@@ -102,3 +102,26 @@ export function clampRatio(r: number): number {
 export function translateRect(rect: Rect, dx: number, dy: number): Rect {
   return { x: rect.x + dx, y: rect.y + dy, width: rect.width, height: rect.height };
 }
+
+/**
+ * Keyboard resize step for a split divider (WAI-ARIA window-splitter pattern).
+ * Left/Up shrink the first pane, Right/Down grow it; Shift = coarse (10%);
+ * Home/End jump to the clamp limits. Null when the key does not resize.
+ */
+export function resizeDelta(
+  key: string,
+  direction: "horizontal" | "vertical",
+  shift = false,
+): number | null {
+  const normalized = key.toLowerCase();
+  const step = shift ? 0.1 : 0.02;
+  const [shrink, grow] =
+    direction === "horizontal"
+      ? ["arrowleft", "arrowright"]
+      : ["arrowup", "arrowdown"];
+  if (normalized === shrink) return -step;
+  if (normalized === grow) return step;
+  if (normalized === "home") return -1;
+  if (normalized === "end") return 1;
+  return null;
+}
