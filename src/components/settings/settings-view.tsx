@@ -88,6 +88,7 @@ import {
 } from "@/components/shell/remove-project-dialog";
 import { GradientEditorDialog } from "@/components/settings/gradient-editor-dialog";
 import { SemanticIndexCard } from "@/components/settings/semantic-index-card";
+import { DataBackupCard } from "@/components/settings/data-backup-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -861,6 +862,9 @@ function DataSection() {
             onChange={(v) => setSkipDeleteConfirm(!v)}
           />
         </SettingRow>
+        <div className="py-3.5">
+          <DataBackupCard />
+        </div>
         <SettingRow
           label="Reset"
           description="Permanently delete every project, note, spec, and task in this browser."

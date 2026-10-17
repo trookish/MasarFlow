@@ -13,7 +13,7 @@
   "/knowledge": [],
   "/plugins": [],
   "/search": [],
-  "/settings": ["semantic index builds locally and finds by meaning"],
+  "/settings": ["semantic index builds locally and finds by meaning", "export then import restores the workspace"],
   "/specs": [],
   "/sprints": [],
   "/standards": [],
