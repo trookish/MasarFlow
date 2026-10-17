@@ -2,7 +2,7 @@ import { net, protocol } from "electron";
 import { Readable } from "node:stream";
 import { APP_ORIGIN, APP_SCHEME, TOKEN_HEADER } from "@shared/security";
 import { buildCsp } from "../security/csp";
-import { isNullBodyStatus, rewriteRedirectToApp, rewriteRequestToServer } from "./protocol-url";
+import { isNullBodyStatus, rewriteRedirectToApp, rewriteRequestToServer, streamFromIncoming } from "./protocol-url";
 
 /** MUST be called before `app` is ready. */
 export function registerAppScheme(): void {
@@ -86,14 +86,7 @@ export function installAppProtocol(opts: AppProtocolOptions): void {
           resolve(new Response(null, init));
           return;
         }
-        const stream = new ReadableStream<Uint8Array>({
-          start(controller) {
-            resp.on("data", (chunk) => controller.enqueue(new Uint8Array(chunk)));
-            resp.on("end", () => controller.close());
-            resp.on("error", (error) => controller.error(error));
-          },
-        });
-        resolve(new Response(stream, init));
+        resolve(new Response(streamFromIncoming(resp, () => req.abort()), init));
       });
 
       req.on("error", (error) => {

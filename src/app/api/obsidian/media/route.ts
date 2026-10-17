@@ -66,14 +66,37 @@ export async function GET(request: NextRequest) {
           responseHeaders.set("Content-Range", res.headers["content-range"]);
         }
 
-        // Create a Web ReadableStream from the Node.js IncomingMessage
+        // Create a Web ReadableStream from the Node.js IncomingMessage. A client can
+        // cancel mid-transfer (the player seeks or closes); events after that must not
+        // touch the closed controller, or the throw escapes as an uncaught exception.
+        let done = false;
         const stream = new ReadableStream({
           start(controller) {
-            res.on("data", (chunk) => controller.enqueue(chunk));
-            res.on("end", () => controller.close());
-            res.on("error", (err) => controller.error(err));
+            res.on("data", (chunk) => {
+              if (done) return;
+              try {
+                controller.enqueue(chunk);
+              } catch {
+                done = true;
+              }
+            });
+            res.on("end", () => {
+              if (done) return;
+              done = true;
+              try {
+                controller.close();
+              } catch {
+                /* already closed */
+              }
+            });
+            res.on("error", (err) => {
+              if (done) return;
+              done = true;
+              controller.error(err);
+            });
           },
           cancel() {
+            done = true;
             req.destroy();
           },
         });

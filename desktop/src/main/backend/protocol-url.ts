@@ -30,3 +30,62 @@ export function rewriteRedirectToApp(location: string, requestUrl: string): stri
 export function isNullBodyStatus(status: number): boolean {
   return status === 101 || status === 103 || status === 204 || status === 205 || status === 304;
 }
+
+/** The slice of Electron's IncomingMessage the proxy reads (an EventEmitter). */
+export interface IncomingBody {
+  on(event: "data", listener: (chunk: Buffer) => void): unknown;
+  on(event: "end", listener: () => void): unknown;
+  on(event: "error", listener: (error: Error) => void): unknown;
+}
+
+/**
+ * Wrap a loopback response body as a web stream for `protocol.handle`.
+ *
+ * The renderer can cancel a response at any time (reload, navigation, an aborted
+ * fetch, a closed window) while the server is still sending. Enqueueing into the
+ * closed controller then throws ERR_INVALID_STATE from an event listener, which
+ * Electron reports as an uncaught main-process exception (a modal error dialog).
+ * So every event after cancel/end/error is ignored, and cancel aborts the
+ * upstream request so the server stops sending.
+ */
+export function streamFromIncoming(resp: IncomingBody, abort: () => void): ReadableStream<Uint8Array> {
+  let done = false;
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      resp.on("data", (chunk) => {
+        if (done) return;
+        try {
+          controller.enqueue(new Uint8Array(chunk));
+        } catch {
+          done = true; // closed underneath us; drop the rest
+        }
+      });
+      resp.on("end", () => {
+        if (done) return;
+        done = true;
+        try {
+          controller.close();
+        } catch {
+          // already closed
+        }
+      });
+      resp.on("error", (error) => {
+        if (done) return;
+        done = true;
+        try {
+          controller.error(error);
+        } catch {
+          // already closed
+        }
+      });
+    },
+    cancel() {
+      done = true;
+      try {
+        abort();
+      } catch {
+        // the request may already be finished
+      }
+    },
+  });
+}
