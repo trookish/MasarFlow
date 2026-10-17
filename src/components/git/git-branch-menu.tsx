@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, GitBranch, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,12 +11,23 @@ import { gitFailureCopy } from "@/lib/git/client";
 import type { GitBranchInfo } from "@desktop-shared/git";
 import type { GitRepo } from "@/lib/git/use-git-repo";
 
-export function GitBranchMenu({ repo }: { repo: GitRepo }) {
+export function GitBranchMenu({ repo, openSignal = 0 }: { repo: GitRepo; openSignal?: number }) {
   const [branches, setBranches] = useState<GitBranchInfo[]>([]);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+
+  /* The panel's "create-branch" recovery action asks this menu to open and
+     focus its name input — the only place a branch can be created. */
+  useEffect(() => {
+    if (openSignal <= 0) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- external open request from the git panel
+    setOpen(true);
+    const id = window.setTimeout(() => nameRef.current?.focus(), 0);
+    return () => window.clearTimeout(id);
+  }, [openSignal]);
 
   const load = useCallback(async () => {
     if (!repo.bridge || !repo.root) return;
@@ -100,6 +111,7 @@ export function GitBranchMenu({ repo }: { repo: GitRepo }) {
           </ul>
           <div className="mt-2 flex items-center gap-1 border-t border-border pt-2">
             <Input
+              ref={nameRef}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="feat/new-branch"

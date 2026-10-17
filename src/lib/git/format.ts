@@ -1,4 +1,5 @@
-import type { GitDiffFile, GitFileChange, GitRepoStatus, GitStatusLetter } from "@desktop-shared/git";
+import type { GitDiffFile, GitFileChange, GitFailureCode, GitRepoStatus, GitStatusLetter } from "@desktop-shared/git";
+import { GIT_DESKTOP_REQUIRED } from "@/lib/git/client";
 
 /**
  * Pure presentation helpers for the git panel. No React, no Dexie, no Electron
@@ -154,4 +155,119 @@ export function diffStatSummary(files: GitDiffFile[]): string {
   const additions = files.reduce((n, f) => n + f.additions, 0);
   const deletions = files.reduce((n, f) => n + f.deletions, 0);
   return `${files.length} file${files.length === 1 ? "" : "s"} · +${additions} −${deletions}`;
+}
+
+export type GitStateAction = "init" | "retry" | "install" | "create-branch" | "open-linked-projects" | null;
+
+export type GitPanelState =
+  | { kind: "no-desktop" }
+  | { kind: "detached" }
+  | { kind: "failure"; code: GitFailureCode; detail?: string };
+
+export interface GitStateCopy {
+  title: string;
+  body: string;
+  action: GitStateAction;
+  detail?: string;
+}
+
+/**
+ * One place that turns any non-happy git state into copy plus (at most) one
+ * recovery action, so the panel never shows a raw todo of failure strings.
+ */
+export function describeGitState(state: GitPanelState): GitStateCopy {
+  if (state.kind === "no-desktop") {
+    return {
+      title: "Git needs the desktop app",
+      body: GIT_DESKTOP_REQUIRED,
+      action: null,
+    };
+  }
+  if (state.kind === "detached") {
+    return {
+      title: "Detached HEAD",
+      body: "No branch is checked out, so a commit here would be easy to lose. Create a branch from the current commit and continue there.",
+      action: "create-branch",
+    };
+  }
+  const detail = state.detail?.trim() || undefined;
+  switch (state.code) {
+    case "git-missing":
+      return {
+        title: "Git was not found",
+        body: "MasarFlow runs git itself but could not start it. Install Git for Windows and reopen the app, or point MASARFLOW_GIT_PATH at a portable git.exe.",
+        action: "install",
+        detail,
+      };
+    case "not-a-repo":
+      return {
+        title: "Not a git repository",
+        body: "This folder has no .git yet. Create a repository to start tracking changes here — nothing else in the app is affected.",
+        action: "init",
+        detail,
+      };
+    case "root-not-allowed":
+      return {
+        title: "Folder not linked",
+        body: "Git only runs inside folders you added to this app. Link this folder in Linked Projects, then retry.",
+        action: "open-linked-projects",
+        detail,
+      };
+    case "permission-denied":
+      return {
+        title: "Windows denied access",
+        body: "Another program is holding files in this folder (an editor, an indexer, a terminal). Close it and retry.",
+        action: "retry",
+        detail,
+      };
+    case "index-locked":
+      return {
+        title: "Repository is busy",
+        body: "A git process is writing to this repository right now. Wait a moment and retry.",
+        action: "retry",
+        detail,
+      };
+    case "nothing-to-commit":
+      return {
+        title: "Nothing to commit",
+        body: "Nothing is staged. Tick the files you want in this commit, then commit again.",
+        action: null,
+        detail,
+      };
+    case "invalid-input":
+      return {
+        title: "Git rejected that input",
+        body: "The branch name or path is not valid for git. Fix it and retry.",
+        action: null,
+        detail,
+      };
+    case "no-remote":
+      return {
+        title: "No origin remote",
+        body: "This repository has no 'origin' remote, so there is nothing to fetch or compare against. Local commits still work.",
+        action: null,
+        detail,
+      };
+    case "detached-head":
+      return {
+        title: "Detached HEAD",
+        body: "Create or switch to a branch before committing.",
+        action: "create-branch",
+        detail,
+      };
+    case "timeout":
+      return {
+        title: "Git timed out",
+        body: "The command did not finish within a minute and was stopped. Large repositories can be slow on first read — retry.",
+        action: "retry",
+        detail,
+      };
+    default:
+      return {
+        title: "Git failed",
+        body: "The command did not succeed. The raw output below usually names the file or ref that caused it.",
+        action: "retry",
+        detail,
+      };
+  }
 }
