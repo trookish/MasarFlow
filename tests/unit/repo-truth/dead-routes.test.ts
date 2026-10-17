@@ -1,7 +1,10 @@
-import { describe, it } from "vitest";
+import { describe, it, expect } from "vitest";
 import { readSources, REPO_ROOT } from "../_helpers/fs-scan";
 import { expectShrinkingAllowlist } from "../_helpers/shrinking-allowlist";
 import { join } from "node:path";
+import { existsSync, readdirSync, statSync } from "node:fs";
+import { ALL_NAV_ITEMS } from "@/lib/nav";
+import { PAGE_PATHS } from "@/lib/dock/registry";
 
 /**
  * Dead routes: API route files nothing in the app calls.
@@ -57,5 +60,53 @@ describe("api routes have callers", () => {
       .sort();
 
     expectShrinkingAllowlist(dead, DEAD_ROUTES);
+  });
+});
+
+/**
+ * Page-caller guard (P9.T4): the other half of "no route without a caller".
+ *
+ * - an orphan page (a page.tsx no nav entry points at) can never be reached:
+ *   the sidebar, the dock and the palette all render from ALL_NAV_ITEMS;
+ * - a ghost nav entry (a link with no page file behind it) is a 404.
+ *
+ * nav-parity.test.ts (P8) asserts nav → dock membership through PAGE_PATHS;
+ * this guard scans the filesystem directly, so a page added to the tree
+ * without a nav entry fails here even if PAGE_PATHS is never touched.
+ */
+function workspaceRoutes(): string[] {
+  const base = join(REPO_ROOT, "src/app/(workspace)");
+  const routes: string[] = [];
+  const rec = (dir: string, rel: string): void => {
+    for (const name of readdirSync(dir)) {
+      const full = join(dir, name);
+      if (!statSync(full).isDirectory()) continue;
+      const next = `${rel}/${name}`;
+      if (existsSync(join(full, "page.tsx"))) routes.push(next);
+      rec(full, next);
+    }
+  };
+  rec(base, "");
+  return routes.sort();
+}
+
+describe("workspace pages are reachable", () => {
+  it("every page is a dock page (no orphan route)", () => {
+    const orphans = workspaceRoutes().filter((r) => !PAGE_PATHS.includes(r));
+    expect(orphans).toEqual([]);
+  });
+
+  it("every nav entry has a page (no ghost link)", () => {
+    const missing = ALL_NAV_ITEMS.map((i) => i.href).filter(
+      (href) => !workspaceRoutes().includes(href),
+    );
+    expect(missing).toEqual([]);
+  });
+
+  it("PAGE_PATHS is exactly the nav href set", () => {
+    // Deduped: the Brain item and its Notes child intentionally share "/brain"
+    // (see nav.ts and nav-parity.test.ts), and PAGE_PATHS is a Set of hrefs.
+    const navHrefs = [...new Set(ALL_NAV_ITEMS.map((i) => i.href))].sort();
+    expect(PAGE_PATHS.slice().sort()).toEqual(navHrefs);
   });
 });
