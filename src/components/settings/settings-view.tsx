@@ -1348,7 +1348,7 @@ function ChatSection() {
       </SettingRow>
       <SettingRow
         label="Code highlighting"
-        description="Syntax-highlight code blocks in responses."
+        description="Syntax-highlight code blocks in chat replies, note previews and dev logs."
       >
         <Toggle
           value={chat.codeHighlighting}

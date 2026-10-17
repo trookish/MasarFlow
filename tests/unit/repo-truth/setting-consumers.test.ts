@@ -12,9 +12,11 @@ import { expectShrinkingAllowlist } from "../_helpers/shrinking-allowlist";
  * stores are runtime state (dock layout, theme, project selection), not
  * user-facing settings, and are covered by their own unit tests.
  *
- * Verified 2026-10-16: 18 groups / 47 keys, exactly one dead key.
+ * Verified 2026-10-16: 18 groups / 47 keys, exactly one dead key
+ * (`chat.codeHighlighting`), wired in P9.T11 — the allow-list is empty and
+ * must stay empty.
  */
-const DEAD_SETTINGS: string[] = ["chat.codeHighlighting"];
+const DEAD_SETTINGS: string[] = [];
 
 function leafKeys(): string[] {
   const store = readSources(join(REPO_ROOT, "src")).find(

@@ -1,12 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { cn } from "@/lib/utils/cn";
 import { usePlugin, settingStr } from "@/lib/plugins-runtime";
+import { usePageSettings } from "@/lib/stores/page-settings";
 import { MermaidBlock } from "./mermaid-block";
 import { CodeBlock } from "@/components/chat/code-block";
 import { useObsidianStore } from "@/lib/stores/obsidian";
@@ -56,6 +57,15 @@ export const MarkdownPreview = memo(
   const processed = preprocessWikilinks(content);
   const obsidian = useObsidianStore();
   const mermaid = usePlugin("mermaid-diagrams");
+  // Syntax highlighting is user-configurable (Settings → Chat). It applies to
+  // every markdown surface this component renders: chat replies, note previews,
+  // dev logs, agent output.
+  const codeHighlighting = usePageSettings((s) => s.chat.codeHighlighting);
+  const rehypePlugins = (
+    codeHighlighting
+      ? [[rehypeHighlight, { detect: false, ignoreMissing: true }]]
+      : []
+  ) as ComponentProps<typeof ReactMarkdown>["rehypePlugins"];
 
   /** Extract raw text from a rendered <code> child tree. */
   function codeText(node: ReactNode): string {
@@ -97,9 +107,7 @@ export const MarkdownPreview = memo(
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         urlTransform={markdownUrlTransform}
-        rehypePlugins={[
-          [rehypeHighlight, { detect: false, ignoreMissing: true }],
-        ]}
+        rehypePlugins={rehypePlugins}
         components={{
           pre({ children, ...props }) {
             const child = Array.isArray(children) ? children[0] : children;
