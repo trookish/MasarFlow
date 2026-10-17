@@ -125,7 +125,7 @@ export function useGitRepo() {
 
   /** Run a mutation then re-read the status (stage/unstage/commit/branch all end here). */
   const mutate = useCallback(
-    async (fn: () => Promise<GitResult<unknown>>, op: string): Promise<GitResult<unknown>> => {
+    async <T,>(fn: () => Promise<GitResult<T>>, op: string): Promise<GitResult<T>> => {
       const result = await fn();
       if (!mounted.current) return result;
       setState((s) => applyResult(s, result, op));
