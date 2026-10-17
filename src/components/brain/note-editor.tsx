@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Trash2, FileUp, FileDown } from "lucide-react";
 import { notesRepo } from "@/lib/db/repos";
-import { NOTE_TYPES, type Note, type NoteType } from "@/lib/db/schema";
+import { NOTE_TYPES, type Note, type NoteType, type PropValue } from "@/lib/db/schema";
 import { NOTE_TYPE_DOT } from "@/lib/colors";
 import { usePageSettings } from "@/lib/stores/page-settings";
 import { usePlugin, settingStr } from "@/lib/plugins-runtime";
@@ -23,6 +23,7 @@ import { TemplatePicker } from "./template-picker";
 import { RichMarkdownEditor } from "./rich-markdown-editor";
 import { BacklinksPanel } from "./backlinks-panel";
 import { BacklinksSection } from "@/components/entities/backlinks-section";
+import { PropertiesPanel } from "@/components/vault/properties-panel";
 
 interface NoteEditorProps {
   note: Note;
@@ -35,6 +36,13 @@ interface NoteEditorProps {
 
 function arraysEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
+function propsEqual(
+  a: Record<string, PropValue> | undefined,
+  b: Record<string, PropValue> | undefined,
+): boolean {
+  return JSON.stringify(a ?? {}) === JSON.stringify(b ?? {});
 }
 
 export function NoteEditor({
@@ -55,30 +63,31 @@ export function NoteEditor({
   const [body, setBody] = useState(note.body);
   const [type, setType] = useState<NoteType>(note.type);
   const [tags, setTags] = useState<string[]>(note.tags);
+  const [props, setProps] = useState<Record<string, PropValue>>(note.props ?? {});
   const [mode, setMode] = useState<"write" | "read">("write");
 
   const loaded = useRef(note);
-  const latest = useRef({ title: note.title, body: note.body, type: note.type, tags: note.tags });
+  const latest = useRef({ title: note.title, body: note.body, type: note.type, tags: note.tags, props: note.props });
 
   // Debounced autosave.
   useEffect(() => {
-    latest.current = { title, body, type, tags };
+    latest.current = { title, body, type, tags, props };
     const l = loaded.current;
     if (l.id !== noteId) return;
-    if (title === l.title && body === l.body && type === l.type && arraysEqual(tags, l.tags)) return;
+    if (title === l.title && body === l.body && type === l.type && arraysEqual(tags, l.tags) && propsEqual(props, l.props)) return;
     const handle = setTimeout(async () => {
-      await notesRepo.update(noteId, { title, body, type, tags });
-      loaded.current = { ...loaded.current, title, body, type, tags };
+      await notesRepo.update(noteId, { title, body, type, tags, props });
+      loaded.current = { ...loaded.current, title, body, type, tags, props };
     }, 450);
     return () => clearTimeout(handle);
-  }, [title, body, type, tags, noteId]);
+  }, [title, body, type, tags, props, noteId]);
 
   // Flush on unmount (switching notes faster than debounce).
   useEffect(() => {
     return () => {
       const l = loaded.current;
       const cur = latest.current;
-      if (cur.title !== l.title || cur.body !== l.body || cur.type !== l.type || !arraysEqual(cur.tags, l.tags)) {
+      if (cur.title !== l.title || cur.body !== l.body || cur.type !== l.type || !arraysEqual(cur.tags, l.tags) || !propsEqual(cur.props, l.props)) {
         void notesRepo.update(noteId, cur);
       }
     };
@@ -183,6 +192,7 @@ export function NoteEditor({
         </div>
 
         <TagInput value={tags} onChange={setTags} />
+        <PropertiesPanel props={props} onChange={setProps} />
       </div>
 
       {/* Body */}
