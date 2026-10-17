@@ -10,6 +10,7 @@ import {
   systemsRepo,
 } from "@/lib/db/repos";
 import { stripMarkdown } from "./markdown";
+import { entityHref } from "@/lib/entities/registry";
 
 export type SearchKind =
   | "note"
@@ -71,7 +72,7 @@ export async function buildSearchItems(
       title: n.title,
       subtitle: `${n.type} · ${n.tags.join(", ")}`,
       body: stripMarkdown(n.body),
-      href: `/brain?note=${n.id}`,
+      href: entityHref({ kind: "note", id: n.id }),
     });
   }
   for (const s of specs) {
@@ -81,7 +82,7 @@ export async function buildSearchItems(
       title: `${s.number} · ${s.title}`,
       subtitle: `${s.status} · ${s.purpose}`,
       body: s.technicalNotes,
-      href: `/specs?spec=${s.id}`,
+      href: entityHref({ kind: "spec", id: s.id }),
     });
   }
   for (const t of tasks) {
@@ -91,7 +92,7 @@ export async function buildSearchItems(
       title: t.title,
       subtitle: `${t.status} · ${t.priority} · ${t.assignee}`,
       body: t.description,
-      href: `/tasks?task=${t.id}`,
+      href: entityHref({ kind: "task", id: t.id }),
     });
   }
   for (const s of standards) {
@@ -101,7 +102,7 @@ export async function buildSearchItems(
       title: s.title,
       subtitle: `${s.category}`,
       body: s.rule,
-      href: `/standards?standard=${s.id}`,
+      href: entityHref({ kind: "standard", id: s.id }),
     });
   }
   for (const m of memories) {
@@ -111,7 +112,7 @@ export async function buildSearchItems(
       title: m.content,
       subtitle: `${m.type} · weight ${m.weight}`,
       body: m.tags.join(", "),
-      href: `/dashboard`,
+      href: entityHref({ kind: "memory", id: m.id }),
     });
   }
   for (const d of devLogs) {
@@ -121,7 +122,7 @@ export async function buildSearchItems(
       title: d.title,
       subtitle: d.type,
       body: stripMarkdown(d.body),
-      href: `/devlogs`,
+      href: entityHref({ kind: "devlog", id: d.id }),
     });
   }
   for (const d of docs) {
@@ -131,7 +132,7 @@ export async function buildSearchItems(
       title: d.title,
       subtitle: d.category,
       body: stripMarkdown(d.body),
-      href: `/docs?doc=${d.id}`,
+      href: entityHref({ kind: "doc", id: d.id }),
     });
   }
   for (const s of systems) {
@@ -141,7 +142,7 @@ export async function buildSearchItems(
       title: s.name,
       subtitle: `${s.category} · ${s.status}`,
       body: s.description,
-      href: `/architecture?system=${s.id}`,
+      href: entityHref({ kind: "system", id: s.id }),
     });
   }
 
