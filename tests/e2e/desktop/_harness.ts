@@ -202,6 +202,15 @@ export async function navigateTo(page: Page, linkName: string): Promise<void> {
   );
   for (const label of labels) {
     await page.getByRole("button", { name: label, exact: true }).first().click();
+    // The popup renders after the click; counting immediately races it (it
+    // passed on an idle machine and failed under load). Wait for this group's
+    // menu to show before deciding the link is not in it.
+    await page
+      .locator('[aria-label="Navigation dock"] [role="menu"]')
+      .filter({ hasText: label })
+      .first()
+      .waitFor({ state: "visible", timeout: 5_000 })
+      .catch(() => undefined);
     const link = page.getByRole("link", { name: linkName, exact: true });
     if ((await link.count()) > 0) {
       await link.first().click();
