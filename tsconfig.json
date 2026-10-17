@@ -26,6 +26,12 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@desktop/*": [
+        "./desktop/src/main/*"
+      ],
+      "@shared/*": [
+        "./desktop/src/shared/*"
       ]
     }
   },
