@@ -29,6 +29,9 @@ interface UIState {
   setSearchOpen: (value: boolean) => void;
   shortcutsOpen: boolean;
   setShortcutsOpen: (value: boolean) => void;
+  /** P7: Ctrl/Cmd+O quick switcher (transient). */
+  quickSwitchOpen: boolean;
+  setQuickSwitchOpen: (value: boolean) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -54,6 +57,8 @@ export const useUIStore = create<UIState>()(
       setSearchOpen: (searchOpen) => set({ searchOpen }),
       shortcutsOpen: false,
       setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
+      quickSwitchOpen: false,
+      setQuickSwitchOpen: (quickSwitchOpen) => set({ quickSwitchOpen }),
     }),
     {
       name: "masarflow-ui",

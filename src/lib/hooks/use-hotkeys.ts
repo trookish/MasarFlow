@@ -107,6 +107,7 @@ function runDockAction(action: DockKeyAction): void {
 /**
  * Wires the global keyboard shortcuts:
  *   ⌘/Ctrl+K  command palette
+ *   ⌘/Ctrl+O  quick switcher (P7)
  *   ⌘/Ctrl+/  global search
  *   ⌘/Ctrl+B  toggle sidebar
  *   ?         shortcuts cheatsheet (when not typing)
@@ -125,6 +126,13 @@ export function useGlobalHotkeys(): void {
       if (mod && key === "k" && !e.shiftKey) {
         e.preventDefault();
         useUIStore.setState((s) => ({ paletteOpen: !s.paletteOpen }));
+        return;
+      }
+      // Ctrl/Cmd+O — quick switcher (P7). Same call style as the palette above:
+      // mod-combos fire even while editing (plain typing never matches `mod`).
+      if (mod && key === "o" && !e.shiftKey) {
+        e.preventDefault();
+        useUIStore.setState({ quickSwitchOpen: !useUIStore.getState().quickSwitchOpen });
         return;
       }
       if (mod && e.key === "/") {

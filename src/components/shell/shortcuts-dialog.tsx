@@ -16,6 +16,7 @@ const GROUPS: { title: string; items: { keys: string[]; label: string }[] }[] =
       title: "Global",
       items: [
         { keys: ["⌘", "K"], label: "Command palette" },
+        { keys: ["⌘", "O"], label: "Quick switcher" },
         { keys: ["⌘", "/"], label: "Search everything" },
         { keys: ["⌘", "B"], label: "Toggle sidebar" },
         { keys: ["?"], label: "Keyboard shortcuts" },

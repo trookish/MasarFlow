@@ -5,6 +5,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { CommandPalette } from "@/components/shell/command-palette";
+import { QuickSwitcher } from "@/components/vault/quick-switcher";
 import { Toaster } from "@/components/ui/toaster";
 import { GlobalSearch } from "@/components/shell/global-search";
 import { ShortcutsDialog } from "@/components/shell/shortcuts-dialog";
@@ -146,6 +147,7 @@ export default function WorkspaceLayout({
         </div>
         {!sidebarOnLeft && <Sidebar />}
         <CommandPalette />
+        <QuickSwitcher />
         <Toaster />
         <GlobalSearch />
         <ShortcutsDialog />
