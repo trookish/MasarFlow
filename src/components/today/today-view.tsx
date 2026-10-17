@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * Today: the answer to "what do I do now". Three task buckets from the local
- * database, the recent activity feed, today's note, and (when P6 is merged) the
- * git card. Everything here is a link into the dock — this page never edits a
- * task in place beyond its deadline.
+ * Today: the answer to "what do I do now". Four task buckets from the local
+ * database, the repository card, the recent activity feed and today's note.
+ * Everything here is a link into the dock — this page never edits a task in
+ * place beyond its deadline.
  */
 
 import { useMemo, useState } from "react";
