@@ -1,13 +1,19 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 /**
- * /tools/terminal route — the xterm dock panel lands in a later P8 task; this
- * stub keeps the dock panel loader's dynamic import resolvable today.
+ * /tools/terminal route — the dock panel loader also renders this page.
+ *
+ * The xterm bundle touches `self` at module scope, so the panel is imported
+ * client-only (ssr: false): the server never evaluates xterm, and the route
+ * still renders its client shell from the browser.
  */
+const TerminalPanel = dynamic(
+  () => import("@/components/tools/terminal-panel").then((m) => m.TerminalPanel),
+  { ssr: false },
+);
+
 export default function TerminalPage() {
-  return (
-    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-      The terminal panel is coming in a later step.
-    </div>
-  );
+  return <TerminalPanel />;
 }

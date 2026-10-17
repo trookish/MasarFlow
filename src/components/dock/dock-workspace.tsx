@@ -27,6 +27,7 @@ import { DockFloatingWindow } from "./dock-floating-window";
 import { DockTray } from "./dock-tray";
 import { DockOverlay } from "./dock-overlay";
 import { useDockDnd } from "./use-dock-dnd";
+import { useTerminalSync } from "@/lib/hooks/use-terminal-sync";
 
 /** Height of the floating nav dock zone at the bottom of the viewport. */
 const NAV_DOCK_EXCLUSION_PX = 90;
@@ -42,6 +43,7 @@ export function DockWorkspace() {
   const [rect, setRect] = useState<Rect | null>(null);
 
   useDockDnd();
+  useTerminalSync();
 
   // Track the workspace rect for overlay coordinate conversion.
   useEffect(() => {

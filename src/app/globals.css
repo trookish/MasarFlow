@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "xterm/css/xterm.css";
 
 /* Class-based dark mode (next-themes attribute="class"); dark is the default. */
 @custom-variant dark (&:where(.dark, .dark *));
