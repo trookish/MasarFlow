@@ -31,9 +31,14 @@ const DEMO_DOC = "Architecture Overview";
 const STUB_LABEL = "E2E stub";
 const STUB_MODEL = "stub-model";
 
-/** The chat panel's container while /chat is focused. */
+/** The chat panel's dock container (each route opens its own dock group). */
 function chatPanel(page: Page) {
-  return page.locator('[data-testid="dock-panel"][data-dock-url="/chat"]');
+  return page.locator('[data-testid="dock-panel"][data-dock-url^="/chat"]');
+}
+
+/** The docs panel's dock container. */
+function docsPanel(page: Page) {
+  return page.locator('[data-testid="dock-panel"][data-dock-url^="/docs"]');
 }
 
 /** The composer textarea (agentic threads use the workspace placeholder). */
@@ -51,13 +56,15 @@ test.afterAll(async () => {
 async function openStubThread(page: Page): Promise<void> {
   await navigateTo(page, "Chat");
   await expect(chatPanel(page)).toHaveCount(1);
-  await page.getByRole("button", { name: DEMO_THREAD, exact: true }).click();
+  await chatPanel(page)
+    .getByRole("button", { name: DEMO_THREAD, exact: true })
+    .click();
   await expect(composer(page)).toBeVisible();
   await composer(page).fill(`/model ${STUB_LABEL}:${STUB_MODEL}`);
-  await page.getByRole("button", { name: "Send" }).click();
-  await expect(page.getByText(`Now using ${STUB_LABEL}:${STUB_MODEL}`)).toBeVisible({
-    timeout: 15_000,
-  });
+  await chatPanel(page).getByRole("button", { name: "Send" }).click();
+  await expect(
+    chatPanel(page).getByText(`Now using ${STUB_LABEL}:${STUB_MODEL}`),
+  ).toBeVisible({ timeout: 15_000 });
 }
 
 /**
@@ -68,18 +75,15 @@ async function openStubThread(page: Page): Promise<void> {
  */
 async function sendTurn(page: Page, text: string): Promise<void> {
   const box = composer(page);
-  const send = page.getByRole("button", { name: "Send" });
+  const send = chatPanel(page).getByRole("button", { name: "Send" });
+  const stop = chatPanel(page).getByRole("button", { name: "Stop" });
   await expect(async () => {
     await box.fill(text);
     await send.click();
-    await expect(page.getByRole("button", { name: "Stop" })).toBeVisible({
-      timeout: 2_000,
-    });
+    await expect(stop).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 60_000 });
   // Turn finished: the composer swapped Stop back to Send.
-  await expect(page.getByRole("button", { name: "Stop" })).toHaveCount(0, {
-    timeout: 30_000,
-  });
+  await expect(stop).toHaveCount(0, { timeout: 30_000 });
 }
 
 test("/chat: chat knows the open page", async () => {
@@ -98,30 +102,78 @@ test("/chat: chat knows the open page", async () => {
 
     await addStubConnection(page, stub.baseUrl, STUB_LABEL);
 
-    // Leave a real entity open in the dock. The Docs editor is inline (no
-    // modal), so its panel — and its ?doc= param — stays docked when chat
-    // takes focus next: exactly the state the briefing must reflect.
-    await navigateTo(page, "Documentation");
-    await page.getByRole("button", { name: DEMO_DOC, exact: true }).first().click();
-    await expect(page.getByPlaceholder("Untitled doc")).toHaveValue(DEMO_DOC);
-
-    await openStubThread(page);
+    // /chat FIRST, while its panel is still wide and focused: select the
+    // seeded thread, repoint it at the stub, and watch the /model notice land
+    // in the chat panel. Each route opens its own dock group; opening /docs
+    // first would push the chat group into a quarter of the window, where the
+    // chat's own threads sidebar starves the conversation column to 0 px and
+    // the notice would never be visible.
+    await navigateTo(page, "Chat");
+    await expect(chatPanel(page)).toHaveCount(1);
+    await chatPanel(page)
+      .getByRole("button", { name: DEMO_THREAD, exact: true })
+      .click();
+    await expect(composer(page)).toBeVisible();
+    await composer(page).fill(`/model ${STUB_LABEL}:${STUB_MODEL}`);
+    await chatPanel(page).getByRole("button", { name: "Send" }).click();
+    await expect(
+      chatPanel(page).getByText(`Now using ${STUB_LABEL}:${STUB_MODEL}`),
+    ).toBeVisible({ timeout: 15_000 });
     await catalogSettled;
-    await sendTurn(page, "what am I looking at?");
 
-    // The reply came through the real wire.
-    await expect(page.getByText(/STUB-REPLY what am I looking at\?/).first()).toBeVisible(
-      { timeout: 30_000 },
+    // Leave a real entity open in another dock group. The Docs editor is
+    // inline (no modal), so its panel — and its ?doc= snapshot — stays
+    // docked: exactly the state the briefing must reflect after the return.
+    await navigateTo(page, "Documentation");
+    await docsPanel(page)
+      .getByRole("button", { name: DEMO_DOC, exact: true })
+      .first()
+      .click();
+    await expect(docsPanel(page).getByPlaceholder("Untitled doc")).toHaveValue(
+      DEMO_DOC,
     );
 
-    // What the app actually SENT — the payload captured at the stub.
+    // Back to the chat group and send. Clicking an already-active dock tab is
+    // a no-op (dock-group.tsx focuses only a tab that is not active in its
+    // group), so the nav link is what re-focuses /chat — and the preserved
+    // ?thread= snapshot mirrors back into the URL.
+    await navigateTo(page, "Chat");
+    await expect(composer(page)).toBeVisible();
+    await sendTurn(page, "what am I looking at?");
+
+    // The turn completed: the reply round-tripped through the stub and is
+    // persisted. Read from the app's own IndexedDB — the chat panel is narrow
+    // by now, so a visible-text assertion would measure layout, not the wire.
+    await expect(async () => {
+      const messages = await readTable<{ role: string; content: string }>(
+        page,
+        "chatMessages",
+      );
+      expect(
+        messages.some(
+          (m) =>
+            m.role === "assistant" &&
+            m.content.includes("STUB-REPLY") &&
+            m.content.includes("what am I looking at"),
+        ),
+      ).toBe(true);
+    }).toPass({ timeout: 15_000 });
+
+    // The real assertion — what the app actually SENT, captured at the stub.
     await waitFor(() => stub.chatBodies().length > 0);
     const body = stub.chatBodies().at(-1)!;
-    const sent = JSON.stringify(body);
     expect(body.model).toBe(STUB_MODEL);
-    // Snapshot v2 active context: the open page is described by name.
-    expect(sent).toContain("## Currently open");
-    expect(sent).toContain(`Doc "${DEMO_DOC}"`);
+    // Snapshot v2 active context: the open page is described by name. Read
+    // the briefing text itself — stringifying the body escapes the quotes,
+    // so a `Doc "…"` substring would never match the JSON encoding.
+    const briefing = (
+      (body.messages ?? []) as { role?: string; content?: unknown }[]
+    )
+      .filter((m) => m.role === "system" && typeof m.content === "string")
+      .map((m) => m.content as string)
+      .join("\n");
+    expect(briefing).toContain("## Currently open");
+    expect(briefing).toContain(`Doc "${DEMO_DOC}"`);
     // The awareness tools travel with the turn.
     const tools = (body.tools ?? []) as { function?: { name?: string } }[];
     const names = tools.map((t) => t.function?.name);
