@@ -520,6 +520,24 @@ git add .hermes/spikes/*.md scripts/fetch-embedding-model.mjs .gitignore && git 
 > Verify every Electron symbol against `desktop/node_modules/electron/electron.d.ts` before using it.
 > Main-process modules that contain logic must not import `electron` at module top-level unless they need it, so vitest (node env) can import them.
 
+## P0 findings that OVERRIDE the P1 code below (spikes run 2026-10-17)
+
+Read `.hermes/spikes/S1.md`, `S2.md`, `S3.md`. Where they conflict with code in P1/P3, the spikes win:
+
+1. **S1 — pnpm must be hoisted.** `pnpm-workspace.yaml` now has `nodeLinker: hoisted` (committed with the spike results). pnpm 11 ignores `node-linker` in `.npmrc`. Never remove it: with the isolated layout Next standalone recreates pnpm dir links as file-type symlinks and the server dies with `EPERM ... stat ... node_modules\.pnpm\...`.
+2. **S1 — `outputFileTracingExcludes` key is `"/*"`, not `"*"`** (keys are route globs).
+3. **S1 — electron-builder drops any folder named exactly `node_modules`** inside `extraResources` (hard-coded in `app-builder-lib/out/util/filter.js`). P1.T8 must ship the server with TWO entries:
+   ```yaml
+   extraResources:
+     - { from: app-server, to: app-server }
+     - { from: app-server/node_modules, to: app-server/node_modules }
+   ```
+   and the P1.T9 smoke test must boot the packaged server from a copy OUTSIDE the repo (an in-place boot resolves modules upward into the repo and hides the bug).
+4. **S1 — `pnpm build` needs `@desktop/*` and `@shared/*` in the root `tsconfig.json`** — done in commit `a984596`.
+5. **S2 — the scheme proxy must use `net.request`, not `net.fetch`.** Electron 43's `net.fetch` with `redirect: "manual"` dies with `Redirect was cancelled` (electron/electron#43715) and `"follow"` hides the redirect from the page. P1.T4's `installAppProtocol` must use the verified handler in `S2.md` → "Exact code that worked": `net.request({ redirect: "manual" })`, its `redirect` event → `Response.redirect("masarflow://app" + pathname + search, status)`, response body bridged into a `ReadableStream`, request body via `Readable.fromWeb(request.body).pipe(req)`. Keep the token header, the `.catch` on the startup chain, and P1.T4's unit test of the URL rewrite.
+6. **S2 — set `app.setName("MasarFlow")` / `productName`** before `ready`, so userData is `%APPDATA%\MasarFlow`, not the shared `%APPDATA%\Electron`.
+7. **S3 — transformers 4.x:** set `env.backends.onnx.wasm.wasmPaths` to a **string** same-origin path (object form + default `useWasmCache` uses a `blob:` import that the CSP blocks); prefer the wasm-only ORT entry (`ort.wasm.min.mjs`, `device: "wasm"`: 13.6 MiB wasm, load 481 ms). The web bundle has bare imports (`onnxruntime-web/webgpu`, `onnxruntime-common`) that P3's bundler must resolve to ONE module instance. Measured: 83 ms per 840-char chunk, related−unrelated cosine gap 0.787, zero CSP violations.
+
 ## P1.T1 — Test aliases + pure modules: token, ports, URL policy (TDD, ≈8 min)
 
 **1. Edit `tests/vitest.config.ts`** to:

@@ -20,6 +20,9 @@
 /.next/
 /out/
 
+# downloaded embedding models (see scripts/fetch-embedding-model.mjs)
+/public/models/
+
 # production
 /build
 
