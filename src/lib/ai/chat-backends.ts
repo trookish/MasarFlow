@@ -9,6 +9,7 @@
 import type { ChatAttachment, ChatMessage } from "@/lib/db/schema";
 import type { WireImage, WireMessage } from "./chat-client";
 import type { AiProvider, Catalog } from "./catalog";
+import { resolveConnectionProvider } from "./providers/custom";
 
 export type ChatBackend = "api" | "ollama";
 
@@ -79,11 +80,17 @@ export function buildLegacyMessages(
   return out;
 }
 
-/** The provider for an "api" thread, resolved from its saved connection. */
+/**
+ * The provider for an "api" thread, resolved from its saved connection.
+ * Catalog providers are looked up by id; a `providerId: "custom"` connection
+ * is built from its own base URL (any OpenAI-compatible endpoint).
+ */
 export function providerForConnection(
   catalog: Catalog,
-  connection: { providerId: string } | null | undefined,
+  connection:
+    | { id: string; label: string; providerId: string; baseUrl: string }
+    | null
+    | undefined,
 ): AiProvider | null {
-  if (!connection) return null;
-  return catalog[connection.providerId] ?? null;
+  return resolveConnectionProvider(catalog, connection);
 }

@@ -7,6 +7,7 @@ import {
   providerForConnection,
 } from "@/lib/ai/chat-backends";
 import { FALLBACK_CATALOG } from "@/lib/ai/catalog";
+import { CUSTOM_PROVIDER_ID } from "@/lib/ai/providers/custom";
 import type { ChatAttachment, ChatMessage } from "@/lib/db/schema";
 
 function msg(
@@ -176,15 +177,35 @@ describe("buildLegacyMessages", () => {
 describe("providerForConnection", () => {
   it("resolves a connection's provider from the catalog", () => {
     expect(
-      providerForConnection(FALLBACK_CATALOG, { providerId: "anthropic" })?.id,
+      providerForConnection(FALLBACK_CATALOG, {
+        id: "c1",
+        label: "A",
+        providerId: "anthropic",
+        baseUrl: "",
+      })?.id,
     ).toBe("anthropic");
   });
   it("returns null for unknown providers or missing connections", () => {
     expect(
-      providerForConnection(FALLBACK_CATALOG, { providerId: "nope" }),
+      providerForConnection(FALLBACK_CATALOG, {
+        id: "c2",
+        label: "B",
+        providerId: "nope",
+        baseUrl: "",
+      }),
     ).toBeNull();
     expect(providerForConnection(FALLBACK_CATALOG, null)).toBeNull();
     expect(providerForConnection(FALLBACK_CATALOG, undefined)).toBeNull();
+  });
+  it("builds a custom provider for a custom endpoint connection", () => {
+    const p = providerForConnection(FALLBACK_CATALOG, {
+      id: "c9",
+      label: "LM Studio",
+      providerId: CUSTOM_PROVIDER_ID,
+      baseUrl: "http://127.0.0.1:1234/v1",
+    });
+    expect(p?.id).toBe(CUSTOM_PROVIDER_ID);
+    expect(p?.api).toBe("http://127.0.0.1:1234/v1");
   });
 });
 
