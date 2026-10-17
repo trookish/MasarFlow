@@ -24,6 +24,7 @@ import {
   Layers,
   Wrench,
   ClipboardList,
+  GitBranch,
   type LucideIcon,
 } from "lucide-react";
 
@@ -144,6 +145,12 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "System",
     icon: Wrench,
     items: [
+      {
+        label: "Git",
+        href: "/git",
+        icon: GitBranch,
+        keywords: ["commits", "diff", "branches", "stage", "repository"],
+      },
       {
         label: "Sync Panel",
         href: "/sync",

@@ -48,6 +48,10 @@ export const PAGE_COMPONENTS: Record<string, ComponentType> = {
     ssr: false,
     loading,
   }),
+  "/git": dynamic(() => import("@/app/(workspace)/git/page"), {
+    ssr: false,
+    loading,
+  }),
   "/specs": dynamic(() => import("@/app/(workspace)/specs/page"), {
     ssr: false,
     loading,
