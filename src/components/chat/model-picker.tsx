@@ -146,6 +146,7 @@ export function UnifiedModelPicker({
         variant="outline"
         size="sm"
         onClick={() => onOpenChange(!open)}
+        data-testid="model-picker-trigger"
         title={
           current
             ? `${current.connectionLabel} · ${current.model.name}`

@@ -163,6 +163,7 @@ export function CanvasToolbar({
         size="sm"
         onClick={onAddWeb}
         title="Add a web page card"
+        data-testid="canvas-add-link"
       >
         <span className="mr-1 text-muted-foreground">+</span> Link
       </Button>

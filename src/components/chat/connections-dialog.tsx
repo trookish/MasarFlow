@@ -276,6 +276,7 @@ function AddConnection({
           onChange={(e) => setLabel(e.target.value)}
           placeholder={isCustom ? "LM Studio (local)" : "My OpenAI key"}
           className="h-9 text-sm"
+          data-testid="connection-label"
         />
       </Field>
 
@@ -309,6 +310,7 @@ function AddConnection({
                 : "https://…"
           }
           className="h-9 font-mono text-sm"
+          data-testid="connection-base-url"
         />
       </Field>
       {isCustom && baseUrl.trim() && !baseUrlOk && (
@@ -372,6 +374,7 @@ function AddConnection({
           size="sm"
           disabled={!providerId || (isCustom && !baseUrlOk)}
           onClick={save}
+          data-testid="connection-save"
         >
           Add connection
         </Button>
