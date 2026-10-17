@@ -16,7 +16,7 @@ Read this first, then your own task file.
 - Your task file names the exact plan section (file + line range) to implement. Implement it as written. Where the plan's code does not compile against the real repo, the real repo wins: adapt minimally and report the deviation.
 
 ## Rules
-- Do not commit unless your task file says to, and then stage explicit paths only (never `git add -A`, `git add .`, or `git commit -a`).
+- Do not commit unless your task file says to, and then commit ONLY your paths with the pathspec form `git add <paths>` then `git commit -m "<msg>" -- <paths>` (plain `git commit` takes the whole shared index, including other agents' staged files). Never `git add -A`, `git add .`, or `git commit -a`. Check `git show --stat HEAD` afterwards.
 - Never read, print or copy secrets (`.env*`, API keys, tokens). If one appears, write `[REDACTED]`.
 - Do not kill processes you did not start. Stop every server/process you start before you finish.
 - No fabricated output: if something fails, report the real error.
