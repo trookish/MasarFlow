@@ -102,7 +102,7 @@ export function SystemPanel() {
                 <dd className="truncate font-mono text-xs" title={row.value}>
                   {row.value}
                 </dd>
-                {row.hint ? <p className="text-[11px] text-muted-foreground">{row.hint}</p> : null}
+                {row.hint ? <dd className="text-[11px] text-muted-foreground">{row.hint}</dd> : null}
               </div>
             ))}
           </dl>
@@ -172,7 +172,7 @@ export function SystemPanel() {
               <dd className="truncate font-mono text-xs" title={row.value}>
                 {row.value}
               </dd>
-              {row.hint ? <p className="text-[11px] text-muted-foreground">{row.hint}</p> : null}
+              {row.hint ? <dd className="text-[11px] text-muted-foreground">{row.hint}</dd> : null}
             </div>
           ))}
         </dl>
