@@ -1,5 +1,6 @@
 import {
   LayoutDashboard,
+  CalendarDays,
   BrainCircuit,
   PenTool,
   LayoutTemplate,
@@ -23,8 +24,10 @@ import {
   Settings,
   Layers,
   Wrench,
+  MonitorCog,
   ClipboardList,
   GitBranch,
+  SquareTerminal,
   type LucideIcon,
 } from "lucide-react";
 
@@ -95,6 +98,12 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Work",
     icon: LayoutDashboard,
     items: [
+      {
+        label: "Today",
+        href: "/today",
+        icon: CalendarDays,
+        keywords: ["today", "now", "due", "overdue", "in progress", "focus", "daily"],
+      },
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       {
         label: "Task Boards",
@@ -170,6 +179,31 @@ export const NAV_GROUPS: NavGroup[] = [
       },
       { label: "Plugins", href: "/plugins", icon: Plug },
       { label: "Settings", href: "/settings", icon: Settings },
+    ],
+  },
+  // ── Tools: things that touch this machine — desktop app only ─────────────
+  {
+    label: "Tools",
+    icon: SquareTerminal,
+    items: [
+      {
+        label: "Terminal",
+        href: "/tools/terminal",
+        icon: SquareTerminal,
+        keywords: ["shell", "console", "command", "powershell", "cmd", "bash"],
+      },
+      {
+        label: "Logs",
+        href: "/tools/logs",
+        icon: ScrollText,
+        keywords: ["diagnostics", "errors", "output", "server log"],
+      },
+      {
+        label: "System Info",
+        href: "/tools/system",
+        icon: MonitorCog,
+        keywords: ["version", "paths", "storage", "environment", "allowed folders"],
+      },
     ],
   },
 ];
