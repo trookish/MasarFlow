@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { gitFailureCopy } from "@/lib/git/client";
 import { commitProblem, shortSha } from "@/lib/git/format";
+import { recordLocalCommit } from "@/lib/git/link-commit";
 import type { GitRepo } from "@/lib/git/use-git-repo";
 
 export function GitCommitBox({ repo, stagedCount }: { repo: GitRepo; stagedCount: number }) {
@@ -29,9 +30,14 @@ export function GitCommitBox({ repo, stagedCount }: { repo: GitRepo; stagedCount
         setProblem(gitFailureCopy(result.code, result.message));
         return;
       }
-      // P6.T13 replaces this with recordLocalCommit() so the commit is mirrored
-      // into Dexie and the task/commit graph sees it (P5 fabric).
-      setCommitted({ sha: result.data.sha, commitId: "" });
+      // Mirror the commit into Dexie so the task/commit graph sees it (P5 fabric).
+      const mirror = await recordLocalCommit({
+        projectId: repo.projectId,
+        root: repo.root,
+        sha: result.data.sha,
+        message,
+      });
+      setCommitted({ sha: result.data.sha, commitId: mirror.commit.id });
       setMessage("");
     } finally {
       setBusy(false);
