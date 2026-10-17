@@ -18,6 +18,7 @@ function normalize(t: Task): Task {
     dependencies: t.dependencies ?? [],
     progress: t.progress ?? 0,
     tags: t.tags ?? [],
+    externalRef: t.externalRef ?? "",
   };
 }
 

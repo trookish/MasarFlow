@@ -256,6 +256,8 @@ export const taskSchema = z.object({
   dependencies: z.array(z.string()).default([]),
   progress: z.number().min(0).max(100).default(0),
   tags: z.array(z.string()).default([]),
+  /** External tracker reference, e.g. "github:owner/repo#42". Non-indexed on purpose. */
+  externalRef: z.string().default(""),
   /** Vault frontmatter properties (P7). Not indexed — no Dexie bump needed. */
   props: z.record(z.string(), propValueSchema).optional(),
   createdAt: z.number(),
