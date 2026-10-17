@@ -204,10 +204,17 @@ export async function navigateTo(page: Page, linkName: string): Promise<void> {
 }
 
 /**
- * Deterministic fixture: /settings → Data → "Load demo projects" seeds Pulse
- * (web app), Lumen (game) and DraftDeck (desktop) with notes, specs, tasks,
- * sprints, systems, docs, commits, canvases and chat threads, then activates
- * Pulse and routes to /dashboard (src/components/settings/settings-view.tsx).
+ * The demo fixture, end to end through product UI: /settings → Data → "Load
+ * demo projects", then activate the Pulse demo project via the topbar switcher
+ * and focus /dashboard.
+ *
+ * KNOWN BUG (packaged app only, found by this harness — see reports/p9/00-baseline.md):
+ * `seedDemoProject()` throws `TransactionInactiveError` at Lumen's chat step
+ * because `seedAiConnection()` awaits an Electron-IPC secret read
+ * (`hydrateConnection` → `getSecret`) inside the open seed transaction. Pulse
+ * and Lumen are still written, DraftDeck is not, and the seed never reaches
+ * `setActiveProjectId(Pulse)` — so the fixture activates Pulse itself. When
+ * the bug is fixed this becomes a no-op (the switcher already shows Pulse).
  */
 export async function seedDemoProjects(page: Page): Promise<void> {
   if ((await page.getByTestId("shell-ready").count()) === 0) {
@@ -218,11 +225,33 @@ export async function seedDemoProjects(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Data", exact: true }).first().click();
   await expect(page.getByText("Data Management").first()).toBeVisible();
   await page.getByRole("button", { name: /Load demo projects/i }).click();
-  // loadDemo() activates Pulse when seeding finishes; the project switcher
-  // showing it is the completion signal (the button flips to "Loading…" and
-  // back too fast to observe reliably).
-  await expect(page.getByText("Pulse").first()).toBeVisible({ timeout: 120_000 });
+  await activateProject(page, DEMO_WEB_PROJECT);
+  await navigateTo(page, "Dashboard");
   await waitForShellReady(page);
+}
+
+/** The web-app demo project the seed activates last (src/lib/db/demo-seed.ts). */
+export const DEMO_WEB_PROJECT = "Pulse: Realtime Team Dashboard";
+
+/**
+ * Makes `name` the active project through the topbar switcher (the only
+ * truthful signal — "Pulse" also appears in the /settings copy, so text
+ * matching alone is a false positive). Retries while the seed is still
+ * writing rows.
+ */
+export async function activateProject(page: Page, name: string): Promise<void> {
+  const switcher = page.getByRole("banner").getByRole("button").first();
+  await expect(async () => {
+    if ((await switcher.innerText()).includes(name)) return; // already active
+    await switcher.click();
+    const row = page.getByRole("menu").getByRole("button", { name, exact: true });
+    if ((await row.count()) === 0) {
+      await page.keyboard.press("Escape");
+      throw new Error(`project "${name}" is not in the switcher yet`);
+    }
+    await row.click();
+    await expect(switcher).toContainText(name);
+  }).toPass({ timeout: 60_000 });
 }
 
 /**
@@ -270,14 +299,15 @@ export function writeEvidence(name: string, data: unknown): string {
 }
 
 /**
- * Fixture: `await use(launchApp(...))` — one app per test file unless a spec
- * opts into more. Passing runs clean their profile dir; failed runs keep it
- * for inspection.
+ * Fixture: `await provide(launchApp(...))` — one app per test file unless a
+ * spec opts into more. Passing runs clean their profile dir; failed runs keep
+ * it for inspection. (Playwright names this parameter `use`; it is renamed
+ * here because `use(...)` in a non-component trips react-hooks/rules-of-hooks.)
  */
 export const test = base.extend<{ desktop: AppHandle }>({
-  desktop: async ({}, use, testInfo) => {
+  desktop: async ({}, provide, testInfo) => {
     const handle = await launchApp({ seed: "demo" });
-    await use(handle);
+    await provide(handle);
     await handle.close();
     if (testInfo.status === "passed") removeProfile(handle.profileDir);
   },

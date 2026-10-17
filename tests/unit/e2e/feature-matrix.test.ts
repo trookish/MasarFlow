@@ -40,7 +40,6 @@ const ROUTES_WITHOUT_FEATURES = [
   "/docs",
   "/files",
   "/knowledge",
-  "/plugins",
   "/search",
   "/specs",
   "/sprints",

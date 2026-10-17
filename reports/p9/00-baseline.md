@@ -59,3 +59,42 @@ Deviation found by the first run (real repo wins): the packaged shell defaults t
 so nav links live in per-group popups of the floating dock, not in a sidebar rail. The plan's
 `getByRole("link", { name: "…" })` locators time out there. The harness therefore ships `navigateTo(page, label)`
 (direct link first, then the dock group buttons) and every spec uses it.
+
+## P9.T7 — spec A green + a real bug found
+
+| Step | Command | Result |
+|---|---|---|
+| desktop e2e | `pnpm e2e:desktop tests/e2e/desktop/shell.spec.ts` | **5 passed** (26.0 s): `/shell` boot, `/dashboard` first-run, `/dashboard` demo data, `/plugins` catalog, restart persistence |
+| matrix guard | `pnpm exec vitest run --config tests/vitest.config.ts tests/unit/e2e/feature-matrix.test.ts` | **3 passed** |
+
+Deviations (the real repo wins, per the task file):
+1. Plan's `getByRole("link", { name: "Dashboard" | "Plugins" })` cannot work in the packaged shell (bottom floating
+   dock — see P9.T6). The first-run spec asserts `shell-ready` + the project name + the `/dashboard` dock tab; the
+   plugins spec uses `navigateTo` and asserts the opened dock panel + catalog rows.
+2. `/plugins` has no page heading, so the plan's heading assertion was replaced by the panel/catalog assertions.
+3. The demo fixture's completion signal was a false positive: "Pulse" matches the `/settings` copy, so the old
+   `getByText("Pulse")` returned instantly. The fixture now activates Pulse through the topbar switcher
+   (`activateProject`) and the spec asserts the switcher itself.
+
+### BUG (not fixed here — outside this stream's files): "Load demo projects" aborts in the packaged app
+
+`seedDemoProject()` throws `TransactionInactiveError: Transaction has already completed or failed` at Lumen's chat
+step. Exact chain, verified against the packaged app:
+
+- `src/lib/db/demo-seed.ts` seeds each demo project inside `db.transaction("rw", db.tables, …)` and calls
+  `seedAiConnection()` **inside** that transaction (line ~2223).
+- For the second project, `aiConnectionsRepo.list()` returns Pulse's row, so `hydrateConnection()`
+  (`src/lib/db/repos/chat-secrets.ts:10`) awaits `getSecret()` → `window.masarflow.secrets.get` — an Electron IPC
+  round-trip (`desktop/src/preload/index.ts:43-48`).
+- That non-Dexie await ends Dexie's transaction zone; the transaction auto-commits and the next write in it
+  (`chatThreadsRepo.create` in `seedChat`, demo-seed.ts ~861) throws `TransactionInactiveError`.
+- Observed end state in the packaged app (fresh profile): Pulse seeds fully; Lumen stops before its chat thread
+  (`chatThreads` 0, `workflowRuns` 0; everything earlier present); DraftDeck never starts; `loadDemo()` never reaches
+  `setActiveProjectId(Pulse)`/`router.push("/dashboard")`, so the UI silently keeps the previous project and the
+  button just flips back from "Loading…". Console shows the unhandled rejection.
+- Browser/dev is unaffected: `secretsAvailable()` is false there, so `hydrateConnection` returns synchronously.
+  Packaged-app-only bug.
+
+Minimal fix (owner's call): resolve the AI connection **before** opening the seed transaction (hoist
+`seedAiConnection()` out and pass the id in), or make `hydrateConnection`'s secret read not run inside an open
+transaction. Reproduce: fresh packaged profile → `/settings` → Data → "Load demo projects".
