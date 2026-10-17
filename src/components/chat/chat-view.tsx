@@ -130,6 +130,19 @@ import {
   buildLegacyMessages,
   providerForConnection,
 } from "@/lib/ai/chat-backends";
+import {
+  runWithFallback,
+  type FallbackTarget,
+} from "@/lib/ai/providers/fallback";
+import {
+  effortToReasoning,
+  EFFORT_LEVELS,
+  type Effort,
+} from "@/lib/ai/providers/effort";
+import {
+  fallbackNoticeText,
+  parseFallbackNotice,
+} from "@/lib/ai/providers/fallback-notice";
 import { useSpeechInput } from "@/lib/hooks/use-speech";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { usePageSettings } from "@/lib/stores/page-settings";
@@ -217,9 +230,12 @@ export function ChatView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const threadId = searchParams.get("thread");
-  const { density, showTimestamps, defaultBackend } = usePageSettings(
-    (s) => s.chat,
-  );
+  const {
+    density,
+    showTimestamps,
+    defaultBackend,
+    fallbacks: chatFallbacks,
+  } = usePageSettings((s) => s.chat);
 
   const [models, setModels] = useState<OpenCodeModelsPayload | null>(null);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
@@ -241,6 +257,7 @@ export function ChatView() {
   const [attachError, setAttachError] = useState<string | null>(null);
   const [stream, setStream] = useState<LiveStream | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [inlineNotice, setInlineNotice] = useState<string | null>(null);
   const [linkDialog, setLinkDialog] = useState(false);
   const [connDialog, setConnDialog] = useState(false);
   const [pendingApproval, setPendingApproval] = useState<{
@@ -433,6 +450,14 @@ export function ChatView() {
       ? providerForConnection(catalog, apiConnection)
       : null;
   const ollamaProvider = catalog?.ollama ?? null;
+  // Does the thread's current model advertise reasoning support? (Drives the
+  // effort selector's hint; the level itself is inert without it.)
+  const activeCanReason =
+    backend === "api" && apiProvider && thread
+      ? modelSupportsReasoning(apiProvider, thread.modelId)
+      : backend === "ollama" && ollamaProvider && thread
+        ? modelSupportsReasoning(ollamaProvider, thread.modelId)
+        : false;
   const canUseImages =
     backend === "opencode"
       ? (opencodeModel?.capabilities.attachment ?? false)
@@ -641,6 +666,9 @@ export function ChatView() {
       connectionId,
       modelId: firstModel,
       providerId,
+      // Seed the new thread's fallback chain from the user's default list
+      // (API backend only — Ollama is a single local target).
+      fallbacks: backendForNew === "api" ? (chatFallbacks ?? []) : [],
     });
     if (backendForNew === "opencode") {
       void ensureSessionForThread(t.id).catch(() => {
@@ -1370,165 +1398,219 @@ export function ChatView() {
 
     // ── Resolve the backend context ────────────────────────────────────
     const agentic = t.mode === "agentic";
-    let provider: AiProvider | null = null;
-    let apiKey = "";
-    let baseUrl: string | undefined;
-    if (t.backend === "ollama") {
-      provider = catalog.ollama ?? null;
-      if (!provider || Object.keys(provider.models).length === 0) {
-        await saveTerminal({
-          content: acc,
-          status: "error",
-          error:
-            "Ollama isn't reachable — start it (`ollama serve`) and retry.",
-        });
-        return;
-      }
-    } else {
-      const conn = connections.find((c) => c.id === t.connectionId) ?? null;
-      if (!conn) {
-        await saveTerminal({
-          content: acc,
-          status: "error",
-          error:
-            "No AI connection is selected — pick one from the header and retry.",
-        });
-        return;
-      }
-      provider = providerForConnection(catalog, conn);
-      if (!provider) {
-        await saveTerminal({
-          content: acc,
-          status: "error",
-          error:
-            "The connection's provider isn't in the catalog — pick another connection.",
-        });
-        return;
-      }
-      apiKey = conn.apiKey;
-      baseUrl = conn.baseUrl.trim() || undefined;
-    }
-    const modelId = t.modelId || defaultModelId(provider);
-    const withTools = agentic && modelSupportsTools(provider, modelId);
-    if (agentic && !withTools) {
-      notices.push(
-        "The selected model can't call tools — this turn is chat-only. Pick a tool-capable model to use agentic mode.",
-      );
-    }
+    const cat = catalog;
+    // Pre-T8 rows have no `effort` — derive it from the legacy flag so old
+    // threads keep their behaviour (medium ≈ the old 8k thinking budget).
+    const effort: Effort = t.effort ?? (t.reasoningEnabled ? "medium" : "off");
     const requestId = newRequestId();
 
-    try {
-      // Agentic turns are grounded in the live workspace briefing; the tool
-      // guidance matches what the browser Agent Loop can actually execute.
-      const context = agentic
-        ? await buildAgentSystemPrompt({
-            projectId: projectId!,
-            query: userText,
-            withTools,
-            toolbelt: withTools ? "workspace" : undefined,
-            linkedRoots: (linkedRoots ?? []).map((r) => ({
-              name: r.name,
-              rootPath: r.rootPath,
-            })),
-            signal: controller.signal,
-          })
-        : null;
-      if (context?.trimmed) {
-        notices.push(
-          "Workspace briefing trimmed to fit the model context window.",
+    /**
+     * The ordered places this turn can go: the thread's own connection, then
+     * its fallback chain. Ollama threads have a single local target.
+     */
+    const chain: FallbackTarget[] =
+      t.backend === "ollama"
+        ? [{ connectionId: "", modelId: t.modelId }]
+        : [
+            { connectionId: t.connectionId, modelId: t.modelId },
+            ...(t.fallbacks ?? []),
+          ];
+    const primary = chain[0];
+
+    /** The provider + credentials behind one fallback target. */
+    const targetContext = (
+      target: FallbackTarget,
+    ): {
+      provider: AiProvider;
+      apiKey: string;
+      baseUrl: string | undefined;
+    } => {
+      if (t.backend === "ollama") {
+        const provider = cat.ollama ?? null;
+        if (!provider || Object.keys(provider.models).length === 0) {
+          throw new Error(
+            "Ollama isn't reachable — start it (`ollama serve`) and retry.",
+          );
+        }
+        return { provider, apiKey: "", baseUrl: undefined };
+      }
+      const conn = connections.find((c) => c.id === target.connectionId);
+      if (!conn) {
+        throw new Error(
+          target === primary
+            ? "No AI connection is selected — pick one from the header and retry."
+            : `The fallback connection "${target.connectionId}" was not found — skipped.`,
         );
       }
-      push();
-
-      const { text, images } = attachmentsToWire(attachments);
-      const content = text ? `${userText}\n\n${text}` : userText;
-      const wireMessages: WireMessage[] = [
-        ...buildLegacyMessages(messages),
-        {
-          role: "user",
-          content,
-          images: images.length ? images : undefined,
-        },
-      ];
-
-      await runWorkspaceChat({
+      const provider = providerForConnection(cat, conn);
+      if (!provider) {
+        throw new Error(
+          target === primary
+            ? "The connection's provider isn't in the catalog — pick another connection."
+            : `The connection "${conn.label}" has no catalog provider — not found.`,
+        );
+      }
+      return {
         provider,
-        apiKey,
-        baseUrl,
-        model: modelId,
-        system: context?.system ?? undefined,
-        messages: wireMessages,
-        tools: withTools ? [...WORKSPACE_TOOLS, ...FS_TOOLS] : undefined,
-        maxRounds: 8,
-        executeTool: withTools
-          ? async (call) => {
-              if (FS_TOOL_NAMES.has(call.name)) {
-                return executeFsTool(
-                  {
-                    roots: linkedRoots ?? [],
-                    requestApproval: (request) =>
-                      new Promise<boolean>((resolve) => {
-                        if (controller.signal.aborted) {
-                          resolve(false);
-                          return;
-                        }
-                        setLegacyApproval({ request, resolve });
-                      }),
-                    signal: controller.signal,
-                    requestId,
-                  },
-                  call,
-                );
-              }
-              return executeWorkspaceToolWithUndo(
-                projectId!,
-                call,
-                assistant.id,
-              );
-            }
-          : undefined,
-        reasoning:
-          t.reasoningEnabled && modelSupportsReasoning(provider, modelId)
-            ? { enabled: true, budget: 8000 }
-            : undefined,
-        signal: controller.signal,
-        onEvent: (e: StreamEvent) => {
-          if (gen !== turnGenRef.current) return;
-          switch (e.type) {
-            case "text":
-              acc += echoStripper.strip(e.text);
-              break;
-            case "reasoning":
-              reasoningAcc += e.text;
-              break;
-            case "round":
-              if (e.round > 0 && acc) acc += "\n\n";
-              break;
-            case "notice":
-              notices.push(e.message);
-              break;
-            case "tool_call":
-              toolIndexById.set(e.id, tools.length);
-              tools.push({
-                name: e.name,
-                summary: summarize(e.arguments),
-                ok: true,
-                running: true,
-              });
-              break;
-            case "tool_result": {
-              const i = toolIndexById.get(e.id);
-              if (i !== undefined)
-                tools[i] = { ...tools[i], ok: e.ok, running: false };
-              break;
-            }
-            case "error":
-              lastError = e.message;
-              break;
+        apiKey: conn.apiKey,
+        baseUrl: conn.baseUrl.trim() || undefined,
+      };
+    };
+
+    try {
+      // Both backends run the in-browser Agent Loop. A connection that can
+      // never work (bad key, no credit, unknown model) falls through to the
+      // thread's ordered fallbacks; a rate-limited one gets one retry first.
+      // The attempt resets the accumulators so a failed attempt never leaks
+      // partial text into the next one, and the thread is only repointed
+      // when the user confirms a switch ("Keep using this model").
+      await runWithFallback(
+        chain,
+        async (target) => {
+          acc = "";
+          reasoningAcc = "";
+          echoStripper.reset();
+
+          const ctx = targetContext(target);
+          const modelId = target.modelId || defaultModelId(ctx.provider);
+
+          const withTools =
+            agentic && modelSupportsTools(ctx.provider, modelId);
+          if (agentic && !withTools) {
+            const n =
+              "The selected model can't call tools — this turn is chat-only. Pick a tool-capable model to use agentic mode.";
+            if (!notices.includes(n)) notices.push(n);
           }
           push();
+
+          // Agentic turns are grounded in the live workspace briefing; the
+          // tool guidance matches what the browser Agent Loop can execute.
+          const context = agentic
+            ? await buildAgentSystemPrompt({
+                projectId: projectId!,
+                query: userText,
+                withTools,
+                toolbelt: withTools ? "workspace" : undefined,
+                linkedRoots: (linkedRoots ?? []).map((r) => ({
+                  name: r.name,
+                  rootPath: r.rootPath,
+                })),
+                signal: controller.signal,
+              })
+            : null;
+          if (context?.trimmed) {
+            const n =
+              "Workspace briefing trimmed to fit the model context window.";
+            if (!notices.includes(n)) notices.push(n);
+          }
+          push();
+
+          const { text, images } = attachmentsToWire(attachments);
+          const content = text ? `${userText}\n\n${text}` : userText;
+          const wireMessages: WireMessage[] = [
+            ...buildLegacyMessages(messages),
+            {
+              role: "user",
+              content,
+              images: images.length ? images : undefined,
+            },
+          ];
+
+          return runWorkspaceChat({
+            provider: ctx.provider,
+            apiKey: ctx.apiKey,
+            baseUrl: ctx.baseUrl,
+            model: modelId,
+            system: context?.system ?? undefined,
+            messages: wireMessages,
+            tools: withTools ? [...WORKSPACE_TOOLS, ...FS_TOOLS] : undefined,
+            maxRounds: 8,
+            executeTool: withTools
+              ? async (call) => {
+                  if (FS_TOOL_NAMES.has(call.name)) {
+                    return executeFsTool(
+                      {
+                        roots: linkedRoots ?? [],
+                        requestApproval: (request) =>
+                          new Promise<boolean>((resolve) => {
+                            if (controller.signal.aborted) {
+                              resolve(false);
+                              return;
+                            }
+                            setLegacyApproval({ request, resolve });
+                          }),
+                        signal: controller.signal,
+                        requestId,
+                      },
+                      call,
+                    );
+                  }
+                  return executeWorkspaceToolWithUndo(
+                    projectId!,
+                    call,
+                    assistant.id,
+                  );
+                }
+              : undefined,
+            reasoning: effortToReasoning(
+              effort,
+              modelSupportsReasoning(ctx.provider, modelId),
+            ),
+            signal: controller.signal,
+            onEvent: (e: StreamEvent) => {
+              if (gen !== turnGenRef.current) return;
+              switch (e.type) {
+                case "text":
+                  acc += echoStripper.strip(e.text);
+                  break;
+                case "reasoning":
+                  reasoningAcc += e.text;
+                  break;
+                case "round":
+                  if (e.round > 0 && acc) acc += "\n\n";
+                  break;
+                case "notice":
+                  notices.push(e.message);
+                  break;
+                case "tool_call":
+                  toolIndexById.set(e.id, tools.length);
+                  tools.push({
+                    name: e.name,
+                    summary: summarize(e.arguments),
+                    ok: true,
+                    running: true,
+                  });
+                  break;
+                case "tool_result": {
+                  const i = toolIndexById.get(e.id);
+                  if (i !== undefined)
+                    tools[i] = { ...tools[i], ok: e.ok, running: false };
+                  break;
+                }
+                case "error":
+                  lastError = e.message;
+                  break;
+              }
+              push();
+            },
+          });
         },
-      });
+        {
+          onSwitch: (_from, to, reason) => {
+            // Discard the failed attempt's partial output; the notice carries
+            // a "Keep using this model" action — only that click repoints.
+            acc = "";
+            reasoningAcc = "";
+            echoStripper.reset();
+            const label = to.connectionId
+              ? (connections.find((c) => c.id === to.connectionId)?.label ??
+                "another connection")
+              : "Local (Ollama)";
+            notices.push(fallbackNoticeText(label, to, reason));
+            push();
+          },
+        },
+      );
 
       if (gen !== turnGenRef.current) return;
       const userCancelled =
@@ -1780,6 +1862,23 @@ export function ChatView() {
     }
   }
 
+  /**
+   * Accept a fallback switch: repoint the thread at the target the turn
+   * actually succeeded on (persisted only now, on the user's click).
+   */
+  async function keepModel(threadId: string, target: FallbackTarget) {
+    const conn = connections.find((c) => c.id === target.connectionId);
+    await chatThreadsRepo.update(threadId, {
+      connectionId: target.connectionId,
+      modelId: target.modelId,
+      providerId: conn?.providerId ?? "",
+      backend: "api",
+    });
+    setInlineNotice(
+      `Now using ${conn?.label ?? target.connectionId}:${target.modelId}`,
+    );
+  }
+
   function stop() {
     // Only a real user click marks the turn as cancelled — timeouts and
     // connection failures go through the error path, never "Stopped.".
@@ -1980,6 +2079,12 @@ export function ChatView() {
                 onChange={(m) => chatThreadsRepo.update(thread.id, { mode: m })}
               />
 
+              <EffortSelector
+                effort={thread.effort ?? "off"}
+                canReason={activeCanReason}
+                onChange={(e) => chatThreadsRepo.update(thread.id, { effort: e })}
+              />
+
               {mode === "agentic" && (
                 <Tooltip
                   label={
@@ -2049,6 +2154,7 @@ export function ChatView() {
                         ? () => void undoAssistant(m.id)
                         : undefined
                     }
+                    onKeepModel={(tid, target) => void keepModel(tid, target)}
                   />
                 ))}
                 <div ref={bottomRef} />
@@ -2091,6 +2197,11 @@ export function ChatView() {
                 {sendError && (
                   <p className="mb-1.5 flex items-center gap-1.5 text-xs text-destructive">
                     <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {sendError}
+                  </p>
+                )}
+                {inlineNotice && (
+                  <p className="mb-1.5 flex items-center gap-1.5 text-xs text-primary">
+                    <Check className="h-3.5 w-3.5 shrink-0" /> {inlineNotice}
                   </p>
                 )}
                 {pending.length > 0 && (
@@ -2753,6 +2864,54 @@ function ModeToggle({
   );
 }
 
+/* ── Reasoning effort selector (writes thread.effort) ─────────────────── */
+
+const EFFORT_HINTS: Record<Effort, string> = {
+  off: "No extended thinking — fastest answers.",
+  low: "A little extended thinking.",
+  medium: "Balanced extended thinking (the old default budget).",
+  high: "Maximum extended thinking — slowest, most thorough.",
+};
+
+function EffortSelector({
+  effort,
+  canReason,
+  onChange,
+}: {
+  effort: Effort;
+  canReason: boolean;
+  onChange: (effort: Effort) => void;
+}) {
+  return (
+    <div
+      className="flex shrink-0 items-center rounded-md border border-border p-0.5"
+      title={
+        canReason
+          ? "Reasoning effort for this chat."
+          : "This model doesn't advertise reasoning support — effort levels have no effect."
+      }
+    >
+      <BrainCircuit className="mx-1 h-3.5 w-3.5 text-muted-foreground" />
+      {EFFORT_LEVELS.map((level) => (
+        <button
+          key={level}
+          type="button"
+          title={EFFORT_HINTS[level]}
+          onClick={() => onChange(level)}
+          className={cn(
+            "rounded px-2 py-1 text-xs font-medium capitalize transition-colors",
+            effort === level
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {level}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /* ── Backend switch (OpenCode / API / Local Ollama) ───────────────────── */
 
 const BACKEND_OPTIONS: {
@@ -3034,6 +3193,7 @@ const MessageRow = memo(
     onRegenerate,
     onSaveCodeAsNote,
     onUndoFiles,
+    onKeepModel,
   }: {
     message: ChatMessage;
     live: LiveStream | null;
@@ -3044,6 +3204,8 @@ const MessageRow = memo(
     onRegenerate: () => void;
     onSaveCodeAsNote: (code: string, language: string) => void;
     onUndoFiles?: () => void;
+    /** Accept a fallback switch shown on a notice ("Keep using this model"). */
+    onKeepModel?: (threadId: string, target: FallbackTarget) => void;
   }) {
     const [copied, setCopied] = useState(false);
     const content = live ? live.text : m.content;
@@ -3096,14 +3258,28 @@ const MessageRow = memo(
             </div>
           )}
 
-          {notices.map((n, i) => (
-            <p
-              key={i}
-              className="mb-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground"
-            >
-              <Info className="h-3 w-3 shrink-0" /> {n}
-            </p>
-          ))}
+          {notices.map((n, i) => {
+            const { text: noticeText, keep } = parseFallbackNotice(n);
+            return (
+              <p
+                key={i}
+                className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground"
+              >
+                <Info className="h-3 w-3 shrink-0" /> {noticeText}
+                {keep && onKeepModel && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => onKeepModel(m.threadId, keep)}
+                    className="h-5 px-1.5 text-[11px]"
+                  >
+                    Keep using this model
+                  </Button>
+                )}
+              </p>
+            );
+          })}
 
           {toolActivity.length > 0 && (
             <div className="mb-1.5 flex flex-wrap gap-1">

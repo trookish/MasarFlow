@@ -50,6 +50,11 @@ export interface ChatSettings {
   density: "compact" | "comfortable";
   /** Backend new chat threads start on (OpenCode / API / Ollama). */
   defaultBackend: "opencode" | "api" | "ollama";
+  /**
+   * Ordered fallback targets tried when the primary connection for a new
+   * (API-backend) chat fails — copied into `thread.fallbacks` at creation.
+   */
+  fallbacks: { connectionId: string; modelId: string }[];
 }
 
 export interface AgentsSettings {
@@ -146,6 +151,7 @@ export const PAGE_SETTINGS_DEFAULTS: AllPageSettings = {
     codeHighlighting: true,
     density: "comfortable",
     defaultBackend: "opencode",
+    fallbacks: [],
   },
   agents: { showDisabled: false },
   workflow: { autoAdvance: false },
