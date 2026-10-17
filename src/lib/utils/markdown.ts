@@ -42,6 +42,26 @@ export function extractWikilinkTargets(markdown: string): string[] {
   return extractWikilinks(markdown).map((l) => l.target);
 }
 
+// A tag starts with a letter/underscore, may contain letters, digits, `_`, `-`
+// and `/` (nested tags), and must not be preceded by a word character or `/`
+// (so `issue#1` and URLs with fragments are not tags — same rule as Obsidian).
+const TAG_RE = /(?:^|[\s(])#([\p{L}_][\p{L}\p{N}_/-]*)/gu;
+
+/** Inline `#tag` references, de-duplicated case-insensitively, in order. */
+export function extractTags(markdown: string): string[] {
+  const seen = new Set<string>();
+  const tags: string[] = [];
+  for (const match of markdown.matchAll(TAG_RE)) {
+    const tag = match[1].replace(/[-/]+$/, "");
+    if (!tag || !/\p{L}/u.test(tag)) continue;
+    const key = tag.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    tags.push(tag);
+  }
+  return tags;
+}
+
 /**
  * Strip common markdown syntax to plain text, then collapse whitespace.
  * Good enough for excerpts and search indexing (not a full parser).

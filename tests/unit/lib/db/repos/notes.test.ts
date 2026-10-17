@@ -57,3 +57,11 @@ describe("notesRepo wikilink syncing", () => {
     expect(await linksRepo.listByTarget("note", b!.id)).toHaveLength(0);
   });
 });
+
+describe("notesRepo.findByAlias", () => {
+  it("finds a note by one of its frontmatter aliases", async () => {
+    await notesRepo.create({ projectId: "p1", title: "Authentication design", props: { aliases: ["Auth", "Login"] } });
+    expect((await notesRepo.findByAlias("p1", "auth"))?.title).toBe("Authentication design");
+    expect(await notesRepo.findByAlias("p1", "nope")).toBeUndefined();
+  });
+});

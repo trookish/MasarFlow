@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  extractTags,
   extractWikilinks,
   extractWikilinkTargets,
   makeExcerpt,
@@ -50,5 +51,24 @@ describe("makeExcerpt", () => {
     const excerpt = makeExcerpt(long, 40);
     expect(excerpt.length).toBeLessThanOrEqual(41);
     expect(excerpt.endsWith("…")).toBe(true);
+  });
+});
+
+describe("extractTags", () => {
+  it("finds inline and nested tags, ignoring headings and URLs", () => {
+    const md = "# Heading\n\n#auth and #auth/security, but not #123 or https://x.com/#top\n\n#مهم";
+    expect(extractTags(md)).toEqual(["auth", "auth/security", "مهم"]);
+  });
+
+  it("de-duplicates case-insensitively and keeps first-seen order", () => {
+    expect(extractTags("#Beta #alpha #beta")).toEqual(["Beta", "alpha"]);
+  });
+
+  it("reads a tag inside a list item or parentheses", () => {
+    expect(extractTags("- item (#idea)\n* #later")).toEqual(["idea", "later"]);
+  });
+
+  it("finds nothing in plain prose", () => {
+    expect(extractTags("no tags here")).toEqual([]);
   });
 });

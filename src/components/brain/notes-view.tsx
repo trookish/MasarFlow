@@ -120,7 +120,9 @@ export function NotesView() {
 
   async function navigateToTitle(title: string) {
     if (!projectId) return;
-    const note = await notesRepo.ensureByTitle(projectId, title);
+    // Resolve through frontmatter aliases first — `[[Auth]]` must open the
+    // aliased note, not create a placeholder (P7.T13).
+    const note = (await notesRepo.findByAlias(projectId, title)) ?? (await notesRepo.ensureByTitle(projectId, title));
     select(note.id);
   }
 

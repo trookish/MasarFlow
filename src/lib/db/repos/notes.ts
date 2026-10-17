@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import type { Note, NoteType, PropValue } from "@/lib/db/schema";
 import { uuid, now } from "@/lib/utils/ids";
 import { makeExcerpt, extractWikilinkTargets } from "@/lib/utils/markdown";
+import { asList } from "@/lib/vault/frontmatter";
 import { linksRepo } from "./links";
 
 interface CreateNoteInput {
@@ -54,6 +55,17 @@ export const notesRepo = {
       (n) => n.title.trim().toLowerCase() === target,
     );
     return found ? normalize(found) : undefined;
+  },
+
+  /** Resolve a `[[wikilink]]` target through the note's frontmatter aliases. */
+  async findByAlias(projectId: string, alias: string): Promise<Note | undefined> {
+    const target = alias.trim().toLowerCase();
+    if (!target) return undefined;
+    const candidates = await db.notes.where("projectId").equals(projectId).toArray();
+    const found = candidates
+      .map(normalize)
+      .find((n) => asList(n.props?.aliases).some((a) => a.trim().toLowerCase() === target));
+    return found;
   },
 
   async create(input: CreateNoteInput): Promise<Note> {
