@@ -28,6 +28,7 @@ import { startStubProvider, stopAllStubs, waitFor } from "./_stub-provider";
 
 const DEMO_THREAD = "Backpressure design review";
 const DEMO_DOC = "Architecture Overview";
+const DEMO_DOC2 = "Welcome to Pulse";
 const STUB_LABEL = "E2E stub";
 const STUB_MODEL = "stub-model";
 
@@ -360,6 +361,57 @@ test("/docs: create a document", async ({ desktop }) => {
   await expect(page.getByRole("button", { name: "P9 doc", exact: true })).toBeVisible({
     timeout: 15_000,
   });
+});
+
+test("/docs: the editor stays usable in a narrow panel", async ({ desktop }) => {
+  const { page } = desktop;
+
+  // Dashboard and chat are docked from the seed; /docs opens beside them.
+  // One more route then takes the other half, so /docs ends up in a quarter
+  // of the window (~360 px at 1440) — the narrow panel this bug is about.
+  await navigateTo(page, "Chat");
+  await navigateTo(page, "Documentation");
+  await docsPanel(page)
+    .getByRole("button", { name: DEMO_DOC, exact: true })
+    .first()
+    .click();
+  await expect(docsPanel(page).getByPlaceholder("Untitled doc")).toHaveValue(
+    DEMO_DOC,
+  );
+
+  await navigateTo(page, "Project Watcher");
+  await expect(
+    page.locator('[data-testid="dock-panel"][data-dock-url^="/watcher"]'),
+  ).toHaveCount(1);
+
+  // Re-focus /docs: the dock keeps the panel's ?doc= snapshot, so the doc is
+  // selected again — this time in the narrow panel.
+  await navigateTo(page, "Documentation");
+  await expect(docsPanel(page).getByPlaceholder("Untitled doc")).toHaveValue(
+    DEMO_DOC,
+  );
+
+  const panel = await docsPanel(page).boundingBox();
+  expect(panel?.width ?? 0).toBeLessThan(500);
+
+  // The bug: the fixed-width doc list (w-72) starves the editor column
+  // (flex-1 min-w-0) down to 0 px — in the DOM, but unusable.
+  const editor = docsPanel(page).locator("div.min-w-0.flex-1").first();
+  const editorBox = await editor.boundingBox();
+  expect(editorBox?.width ?? 0).toBeGreaterThanOrEqual(280);
+
+  // The fix's UX: below the panel-width threshold the list collapses to a
+  // toggle, and a doc is still reachable through the overlay it opens.
+  await docsPanel(page).getByRole("button", { name: "Show docs list" }).click();
+  const other = docsPanel(page).getByRole("button", {
+    name: DEMO_DOC2,
+    exact: true,
+  });
+  await expect(other).toBeVisible();
+  await other.click();
+  await expect(docsPanel(page).getByPlaceholder("Untitled doc")).toHaveValue(
+    DEMO_DOC2,
+  );
 });
 
 test("/watcher: watch events view renders", async ({ desktop }) => {

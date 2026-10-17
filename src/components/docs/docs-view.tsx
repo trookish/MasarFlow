@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, BookOpen, Search } from "lucide-react";
+import { Plus, BookOpen, PanelLeftOpen, Search } from "lucide-react";
 import { docsRepo } from "@/lib/db/repos";
 import type { Doc } from "@/lib/db/schema";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
@@ -22,6 +22,8 @@ export function DocsView() {
   const selectedId = searchParams.get("doc");
   const { defaultMode, showLineNumbers } = usePageSettings((s) => s.docs);
   const [query, setQuery] = useState("");
+  // Narrow panels: the doc list overlays the editor, opened from the toggle.
+  const [listOpen, setListOpen] = useState(false);
 
   const docsRaw = useLiveQuery(
     () => docsRepo.listByProject(projectId),
@@ -57,6 +59,7 @@ export function DocsView() {
   const selected = docs.find((d) => d.id === selectedId) ?? null;
 
   function select(id: string | null) {
+    setListOpen(false);
     router.replace(id ? `/docs?doc=${id}` : "/docs", { scroll: false });
   }
 
@@ -77,9 +80,28 @@ export function DocsView() {
   }
 
   return (
-    <div className="flex h-full min-h-0">
-      {/* Sidebar */}
-      <div className="flex w-72 shrink-0 flex-col border-r border-border">
+    <div className="@container relative flex h-full min-h-0">
+      {/* Narrow panels: a backdrop closes the doc-list overlay. */}
+      {listOpen && (
+        <button
+          type="button"
+          aria-label="Close docs list"
+          onClick={() => setListOpen(false)}
+          className="absolute inset-0 z-10 bg-background/60 @max-[600px]:block @min-[600px]:hidden"
+        />
+      )}
+      {/* Doc list. A fixed column while the panel is wide; below 600px it
+          overlays the editor (opened from the toolbar toggle), so the editor
+          column always keeps a usable width — a 288px list used to starve it
+          to 0px in a ~360px panel. */}
+      <div
+        className={cn(
+          "w-72 shrink-0 flex-col border-r border-border",
+          listOpen
+            ? "flex @max-[600px]:absolute @max-[600px]:inset-y-0 @max-[600px]:left-0 @max-[600px]:z-20 @max-[600px]:bg-background @max-[600px]:shadow-xl"
+            : "@min-[600px]:flex @max-[600px]:hidden",
+        )}
+      >
         <div className="flex items-center justify-between gap-2 border-b border-border p-2">
           <span className="px-1 text-sm font-medium">Documentation</span>
           <Button
@@ -136,8 +158,21 @@ export function DocsView() {
         </ScrollArea>
       </div>
 
-      {/* Editor */}
-      <div className="min-w-0 flex-1">
+      {/* Editor column */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Narrow-only toolbar: brings the doc list back as an overlay. */}
+        <div className="@max-[600px]:flex @min-[600px]:hidden h-9 shrink-0 items-center gap-2 border-b border-border px-2">
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            aria-label="Show docs list"
+            onClick={() => setListOpen(true)}
+          >
+            <PanelLeftOpen className="h-4 w-4" />
+          </Button>
+          <span className="truncate text-sm font-medium">Documentation</span>
+        </div>
+        <div className="min-h-0 flex-1">
         {selected ? (
           <DocEditor
             key={selected.id}
@@ -158,6 +193,7 @@ export function DocsView() {
             }
           />
         )}
+        </div>
       </div>
     </div>
   );
