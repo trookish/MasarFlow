@@ -9,6 +9,7 @@ import {
   KanbanSquare,
   SunMoon,
   Trash2,
+  CalendarDays,
 } from "lucide-react";
 import {
   Command,
@@ -24,6 +25,7 @@ import { useProjectStore } from "@/lib/stores/project";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { ALL_NAV_ITEMS } from "@/lib/nav";
 import { notesRepo, canvasRepo, specsRepo, tasksRepo } from "@/lib/db/repos";
+import { openDailyNote } from "@/lib/vault/daily";
 import { resetData } from "@/lib/db/data";
 
 export function CommandPalette() {
@@ -69,6 +71,13 @@ export function CommandPalette() {
     if (!projectId) return;
     await tasksRepo.create({ projectId, title: "Untitled task" });
     router.push("/tasks");
+  }
+
+  /** P7.T15: ensure + focus today's daily note (P8's Today view uses the same entry). */
+  async function openToday() {
+    if (!projectId) return;
+    const { noteId } = await openDailyNote(projectId);
+    router.push(`/brain?note=${noteId}`);
   }
 
   return (
@@ -118,6 +127,10 @@ export function CommandPalette() {
                 </CommandItem>
               );
             })}
+            <CommandItem value="open today daily note journal" onSelect={run(openToday)}>
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              Open today’s note
+            </CommandItem>
           </CommandGroup>
 
           <CommandGroup heading="Appearance">
