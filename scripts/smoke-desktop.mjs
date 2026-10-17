@@ -105,6 +105,8 @@ child.on("exit", () => {
   const r = JSON.parse(readFileSync(out, "utf8"));
   const ok =
     r.ok &&
+    typeof r.path === "string" &&
+    r.path.startsWith("/dashboard") &&
     r.origin === "masarflow://app" &&
     r.hasApi === true &&
     r.guard?.status === 403 &&
@@ -113,7 +115,14 @@ child.on("exit", () => {
     console.log("booted from:", exe);
     console.log("SMOKE_OK", JSON.stringify(r));
     if (process.env.MASARFLOW_SMOKE_KEEP === "1") console.log("(kept for inspection:", tmp + ")");
-    else rmSync(tmp, { recursive: true, force: true });
+    else {
+      // The exiting app can hold file handles for a moment; a failed cleanup is not a failed smoke.
+      try {
+        rmSync(tmp, { recursive: true, force: true, maxRetries: 10, retryDelay: 500 });
+      } catch (error) {
+        console.warn("could not remove", tmp, "-", error.code ?? error.message);
+      }
+    }
     process.exit(0);
   }
   fail("SMOKE_FAIL " + JSON.stringify(r));

@@ -24,6 +24,8 @@
     "desktop:dist": "pnpm build:app && pnpm --dir desktop run dist",
     "desktop:dist:dir": "pnpm build:app && pnpm --dir desktop run dist:dir",
     "smoke:desktop": "node scripts/smoke-desktop.mjs",
+    "smoke:boot-gate": "node scripts/smoke-boot-gate.mjs",
+    "security:check": "node scripts/security-check.mjs",
     "desktop:typecheck": "pnpm --dir desktop run typecheck"
   },
   "dependencies": {
