@@ -1,0 +1,20 @@
+# Wave 9 / Stream B — P8.T22–T24: palette v2, compact mode, quality budget
+
+Read `.hermes/tasks/00-shared-context.md` first. Run `unset MASARFLOW_TOKEN PORT MASARFLOW_VERSION` in your terminal before anything else.
+
+Plan: `.hermes/plans/2026-10-16_223644-masarflow-v0-2-0-0-p8-dock-frontend.md`, tasks **P8.T22, P8.T23, P8.T24**. The command registry and recents are committed: `src/lib/commands/{registry,filter}.ts` and `src/lib/stores/recent.ts`. Read the P8.T20 deviation: pages live in the `"Go to"` group and `MODE_GROUPS.go = ["Go to"]`, so project switches appear under "Everything". Make the palette chips match the registry's real groups, and state what the "Go to" chip shows.
+
+The quick switcher (Ctrl+O, `src/components/vault/quick-switcher.tsx`) and global search already exist. Keep the palette (Ctrl+K) distinct and don't break either. P8.T24's `no-native-dialogs` guard may flag existing `window.confirm`/`alert` calls. If the plan allows a shrinking allow-list, list them there. Otherwise replace them only in files you own, and allow-list the rest with reasons.
+
+Rules for every task: plan line numbers and some file names are from 2026-10-17 and may have drifted. Search for the quoted text, read the real exports, and let the compiler win over the plan's literal text. Where the plan contradicts itself, fix it minimally and list the change. TDD where the plan gives tests (test → run FAIL → implement → run PASS) with `pnpm exec vitest run --config tests/vitest.config.ts <files>`. Commit after each task with the plan's message, pathspec form. If `pnpm typecheck` fails only in `.next/**/types/validator.ts`, run `pnpm exec next typegen` and retry. If a gate fails on a sibling's mid-edit file, wait 2 minutes and retry once, then report. The repo's lint treats `react-hooks/set-state-in-effect` as an error. Use the render-time "adjust state" pattern, or the repo's existing `eslint-disable-next-line ... -- reason` convention where an effect is truly needed. Don't start dev servers unless a task requires one, and stop any you start. Your final message must be the written report itself, not a tool call.
+
+Shared files (add only, re-read immediately before editing, commit right away in your task's pathspec commit, never drop another stream's lines): `tests/e2e/feature-matrix.json`, `tests/unit/e2e/feature-matrix.test.ts`, `src/lib/dock/registry.ts`, `src/components/dock/panel-loader.tsx`, `src/components/shell/shortcuts-dialog.tsx`, `src/lib/plugins.ts` (D deletes entries, the others only read it).
+
+Exit gate: your tests pass; `pnpm typecheck` and `pnpm lint` exit 0 (0 errors). Any e2e spec you add must be run and its pass count reported.
+
+Streams this wave (disjoint files):
+- A (P8 Today + nav): `src/lib/nav.ts`, `src/lib/today/**`, `src/components/today/**`, `src/app/(workspace)/today/**`, `src/components/shell/sidebar.tsx`, `src/lib/db/schema.ts`, `src/lib/db/repos/tasks.ts`, `src/components/tasks/**`, `tests/unit/nav-parity.test.ts`.
+- B (P8 palette, compact mode, quality budget): `src/components/shell/{command-palette,topbar}.tsx`, `src/lib/ui/{focus-trap,viewport}.ts`, `src/lib/hooks/{use-focus-trap,use-narrow-viewport,use-dock-sync}.ts`, `src/components/dock/dock-workspace.tsx`, `src/lib/entities/open.ts`, `tests/unit/ui/**`. B needs a compact-mode change in `sidebar.tsx` (owned by A): B describes it exactly and does not edit it.
+- C (P10 desktop settings, version, onboarding core, diagnostics, tray): `desktop/src/**` (all of it this wave), `src/lib/onboarding/**`, `src/components/onboarding/**`, `tests/unit/desktop/**`, `tests/unit/lib/onboarding/**`.
+- D (P9 truth guards + plugin deletions): `scripts/truth-scan.mjs`, `tests/unit/repo-truth/**`, `src/lib/hooks/use-speech.ts`, `src/lib/plugins.ts`, `src/lib/canvas-*.ts`, `src/components/canvas/**`, `tests/unit/lib/plugins-consumers.test.ts`, `src/lib/ai/fs-tools.ts`, `reports/**`.
+Never edit another stream's files outside the shared list. If you need a change in one, describe it exactly in your report.
