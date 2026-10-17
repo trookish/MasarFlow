@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { readSelection, selectionFor, withSelection } from "@/lib/entities/url";
 
@@ -19,9 +19,11 @@ export function useUrlSelection(
   const onThisPage = pathname === path;
   const live = onThisPage ? readSelection(search, param) : null;
   const [kept, setKept] = useState<string | null>(live);
-  useEffect(() => {
-    if (onThisPage) setKept(live);
-  }, [onThisPage, live]);
+  // Remember the last value seen while THIS page was focused (derived state,
+  // adjusted during render). An effect would be the other option, but the
+  // repo's react-hooks rules reject setState-in-effect; this also skips the
+  // stale commit that an effect would produce.
+  if (onThisPage && kept !== live) setKept(live);
 
   const select = useCallback(
     (id: string | null) => {
