@@ -117,7 +117,12 @@ export function GitBranchMenu({ repo, openSignal = 0 }: { repo: GitRepo; openSig
               placeholder="feat/new-branch"
               className="h-7 font-mono text-xs"
             />
-            <Button size="sm" onClick={() => void create()} disabled={!name.trim()}>
+            <Button
+              size="sm"
+              aria-label="Create branch"
+              onClick={() => void create()}
+              disabled={!name.trim()}
+            >
               <Plus className="h-3.5 w-3.5" />
             </Button>
           </div>

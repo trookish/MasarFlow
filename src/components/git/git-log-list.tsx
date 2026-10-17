@@ -29,7 +29,9 @@ export function GitLogList({ repo }: { repo: GitRepo }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial log load
     void load();
-  }, [load, repo.branch]);
+    // repo.status is a fresh object on every git read, so the log re-reads
+    // after a commit (HEAD moved) as well as after a branch switch.
+  }, [load, repo.branch, repo.status]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">

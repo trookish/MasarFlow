@@ -26,6 +26,13 @@ export function GitView() {
     void linkedProjectsRepo.listByProject(repo.projectId).then(setLinkedRoots);
   }, [linkerOpen, repo.projectId]);
 
+  /* The dialog edits the same rows this list was read from: after a link,
+     unlink or re-grant the panel must re-read them, or the dialog keeps
+     rendering the list it was opened with. */
+  function refreshLinkedRoots(): void {
+    if (repo.projectId) void linkedProjectsRepo.listByProject(repo.projectId).then(setLinkedRoots);
+  }
+
   if (!bridge) {
     const notice = describeGitState({ kind: "no-desktop" });
     return (
@@ -66,6 +73,7 @@ export function GitView() {
         <LinkedProjectsDialog
           projectId={repo.projectId}
           roots={linkedRoots}
+          onChange={refreshLinkedRoots}
           onClose={() => {
             setLinkerOpen(false);
             void repo.refresh();
