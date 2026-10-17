@@ -128,7 +128,9 @@ export function planVaultSync(input: {
       actions.push({ action: "skip", path, kind: e.kind, entityId: e.id, status: "deleted" });
       continue;
     }
-    if (remoteHash == null && e.status !== null) {
+    if (remoteHash == null && e.status !== null && e.status !== "new") {
+      // a "new" row means the entity was never synced: an absent file is
+      // expected, so fall through to "create" instead of reporting a deletion.
       actions.push({ action: "missing", path, kind: e.kind, entityId: e.id });
       continue;
     }
