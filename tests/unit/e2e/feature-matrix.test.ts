@@ -29,15 +29,10 @@ function workspaceRoutes(): string[] {
  * promoted to real features). Must be [] by P9.
  */
 const ROUTES_WITHOUT_FEATURES = [
-  "/agents",
-  "/architecture",
   "/brain",
-  "/brain/canvas",
   "/brain/graph",
   "/brain/templates",
-  "/chat",
   "/devlogs",
-  "/docs",
   "/files",
   "/knowledge",
   "/search",
@@ -50,7 +45,6 @@ const ROUTES_WITHOUT_FEATURES = [
   "/tools/logs",
   "/tools/system",
   "/tools/terminal",
-  "/watcher",
   "/workflow",
 ];
 

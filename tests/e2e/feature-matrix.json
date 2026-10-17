@@ -1,15 +1,15 @@
 {
-  "/agents": [],
-  "/architecture": [],
+  "/agents": ["roster seeds the default agents"],
+  "/architecture": ["create a system and open its diagram"],
   "/brain": [],
-  "/brain/canvas": [],
+  "/brain/canvas": ["add a card to the canvas"],
   "/brain/graph": [],
   "/brain/templates": [],
-  "/chat": [],
+  "/chat": ["chat knows the open page", "create task from message"],
   "/control-center": ["diagnostics and update panel"],
   "/dashboard": ["a corrupt database shows the recovery screen", "first-run setup wizard", "first-run dialog creates the first project", "demo project seeds and the dashboard renders its data"],
   "/devlogs": [],
-  "/docs": [],
+  "/docs": ["create a document"],
   "/files": [],
   "/git": ["browser mode explains git needs the desktop app"],
   "/knowledge": [],
@@ -25,6 +25,6 @@
   "/tools/logs": [],
   "/tools/system": [],
   "/tools/terminal": [],
-  "/watcher": [],
+  "/watcher": ["watch events view renders"],
   "/workflow": []
 }
