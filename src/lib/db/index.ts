@@ -39,6 +39,7 @@ import type {
   ParsedContent,
   AiUndo,
   EmbeddingRow,
+  Activity,
 } from "./schema";
 
 /**
@@ -84,6 +85,7 @@ export class MasarFlowDB extends Dexie {
   parsedContents!: EntityTable<ParsedContent, "id">;
   aiUndo!: EntityTable<AiUndo, "id">;
   embeddings!: EntityTable<EmbeddingRow, "id">;
+  activity!: EntityTable<Activity, "id">;
 
   constructor() {
     super("masarflow");
@@ -234,6 +236,10 @@ export class MasarFlowDB extends Dexie {
     // embedding worker; the table is rebuildable and excluded from backups.
     this.version(11).stores({
       embeddings: "id, projectId, [projectId+kind], [projectId+entityId]",
+    });
+    // v12: activity log (additive).
+    this.version(12).stores({
+      activity: "id, projectId, [projectId+createdAt], [projectId+entityKind+entityId]",
     });
   }
 }

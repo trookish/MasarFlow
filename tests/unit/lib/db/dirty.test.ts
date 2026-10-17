@@ -27,4 +27,18 @@ describe("dirty tracking", () => {
     await db.notes.add({ id: "n2", projectId: "p", title: "t", body: "", type: "note", tags: [], folderId: null, createdAt: 1, updatedAt: 1 } as never);
     expect(takeDirty()).toBe(0);
   });
+  it("ignores the derived activity log so logging a change never schedules a backup", async () => {
+    const off = installDirtyTracking(db);
+    await db.activity.add({
+      id: "a",
+      projectId: "p",
+      entityKind: "task",
+      entityId: "t",
+      op: "created",
+      summary: 'Created task "x"',
+      createdAt: 1,
+    });
+    expect(takeDirty()).toBe(0);
+    off();
+  });
 });

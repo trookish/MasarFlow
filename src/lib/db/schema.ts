@@ -811,3 +811,15 @@ export const embeddingSchema = z.object({
   vector: z.custom<Float32Array>(),
 });
 export type EmbeddingRow = z.infer<typeof embeddingSchema>;
+
+/** Append-only record of what changed in a project (feeds chat awareness and the Today view). */
+export const activitySchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  entityKind: entityKindSchema,
+  entityId: z.string(),
+  op: z.enum(["created", "updated", "deleted"]),
+  summary: z.string(),
+  createdAt: z.number(),
+});
+export type Activity = z.infer<typeof activitySchema>;

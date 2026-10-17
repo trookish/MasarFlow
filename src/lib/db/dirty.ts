@@ -1,7 +1,7 @@
 import type { MasarFlowDB } from "@/lib/db";
 
-/** Tables whose churn must not trigger a backup. */
-const IGNORED = new Set(["embeddings", "watchEvents", "parsedContents"]);
+/** Tables whose churn must not trigger a backup (derived/rebuildable data). */
+const IGNORED = new Set(["embeddings", "watchEvents", "parsedContents", "activity"]);
 
 let dirty = 0;
 
