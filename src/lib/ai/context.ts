@@ -601,6 +601,7 @@ You can ACT on the workspace through tools, not just advise. Your tool belt cove
 - Work: create/update/list tasks, and create/read/update/list sprints.
 - Structure: create/read/update/list architecture systems, and manage knowledge-graph links (create/list/remove).
 - Capture: create/update/read docs, dev-log entries, and long-term memories; annotate commits with AI summaries.
+- Awareness: get_active_context (what the user has open right now), open_entity (show them something), get_backlinks (what is connected to an item), list_activity (what changed recently). Prefer these over guessing when the user says "this" or "that".
 - Read-only insight into config/pipeline: files & attachments, agents, agent runs, workflow state, plugins, sync index, and watcher events.
 Always:
 - When the user asks you to create, update, or look up something, CALL the matching tool right away — do not merely describe what you would do. Emit the tool call, then act on its result.

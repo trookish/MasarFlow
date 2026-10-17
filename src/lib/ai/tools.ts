@@ -19,6 +19,7 @@ import {
   pluginsRepo,
   syncRepo,
   watchEventsRepo,
+  activityRepo,
 } from "@/lib/db/repos";
 import {
   taskStatusSchema,
@@ -42,6 +43,12 @@ import {
   type SearchItem,
 } from "@/lib/utils/search";
 import { semanticSearch } from "@/lib/ai/embeddings/search";
+import { deriveActiveContext } from "@/lib/ai/active-context";
+import { computeBacklinks } from "@/lib/entities/backlinks";
+import { isEntityKind, entityHref, type EntityRef } from "@/lib/entities/registry";
+import { titleOfEntity } from "@/lib/entities/resolve";
+import { openEntity } from "@/lib/entities/open";
+import { useDockStore } from "@/lib/stores/dock";
 import type { ToolCallRequest } from "./workspace-tool-defs";
 
 /**
@@ -1246,6 +1253,69 @@ export async function executeWorkspaceTool(
             fileType: e.fileType,
             systemId: e.systemId,
             createdAt: e.createdAt,
+          })),
+        });
+      }
+
+      /* ── Awareness ────────────────────────────────────────────────── */
+      case "get_active_context": {
+        const ctx = deriveActiveContext(useDockStore.getState().getProject());
+        if (!ctx) return ok({ focused: null, panels: [] });
+        const panels = await Promise.all(
+          ctx.panels.map(async (p) => ({
+            page: p.path,
+            label: p.label,
+            focused: p.focused,
+            floating: p.floating,
+            entity: p.ref
+              ? { kind: p.ref.kind, id: p.ref.id, title: (await titleOfEntity(p.ref)) ?? null }
+              : null,
+          })),
+        );
+        return ok({ focused: panels.find((p) => p.focused) ?? null, panels });
+      }
+
+      case "open_entity": {
+        const kind = s("kind");
+        const id = s("id");
+        if (!kind || !id) return fail("kind and id are required");
+        if (!isEntityKind(kind)) return fail(`Unknown entity kind: ${kind}`);
+        const ref: EntityRef = { kind, id };
+        if ((await titleOfEntity(ref)) === null) return fail(`${kind} ${id} not found`);
+        openEntity(ref);
+        return ok({ opened: entityHref(ref) });
+      }
+
+      case "get_backlinks": {
+        const kind = s("kind");
+        const id = s("id");
+        if (!kind || !id) return fail("kind and id are required");
+        if (!isEntityKind(kind)) return fail(`Unknown entity kind: ${kind}`);
+        const { incoming, outgoing } = computeBacklinks(await linksRepo.listByProject(projectId), { kind, id });
+        const named = (edges: typeof incoming) =>
+          Promise.all(
+            edges.map(async (e) => ({
+              linkId: e.linkId,
+              kind: e.other.kind,
+              id: e.other.id,
+              title: (await titleOfEntity(e.other)) ?? null,
+              linkType: e.linkType,
+              label: e.label,
+            })),
+          );
+        return ok({ incoming: await named(incoming), outgoing: await named(outgoing) });
+      }
+
+      case "list_activity": {
+        const limit = Math.min(Math.max(n("limit") ?? 20, 1), 100);
+        const rows = await activityRepo.listRecent(projectId, limit);
+        return ok({
+          activity: rows.map((r) => ({
+            kind: r.entityKind,
+            id: r.entityId,
+            op: r.op,
+            summary: r.summary,
+            at: r.createdAt,
           })),
         });
       }

@@ -788,6 +788,49 @@ export const WORKSPACE_TOOLS: WorkspaceToolDef[] = [
       properties: { limit: num("Max results (default 20).") },
     },
   },
+
+  /* ── Awareness: what the user sees, what is connected, what changed ─── */
+  {
+    name: "get_active_context",
+    description:
+      "What the user currently has open in MasarFlow: the focused page and the entity selected on it (with title and id), plus every other open panel. Call this when the user says 'this', 'it' or 'the current …'.",
+    parameters: { type: "object", properties: {} },
+  },
+  {
+    name: "open_entity",
+    description:
+      "Show an entity to the user: focus its page in the workspace with the entity selected. Use after creating or finding something the user should look at.",
+    parameters: {
+      type: "object",
+      properties: {
+        kind: enumOf(ENTITY_KIND_VALUES, "Entity kind."),
+        id: str("Entity id."),
+      },
+      required: ["kind", "id"],
+    },
+  },
+  {
+    name: "get_backlinks",
+    description:
+      "Everything linked to or from an entity in the knowledge graph (incoming = other things that reference it; outgoing = what it references), with titles.",
+    parameters: {
+      type: "object",
+      properties: {
+        kind: enumOf(ENTITY_KIND_VALUES, "Entity kind."),
+        id: str("Entity id."),
+      },
+      required: ["kind", "id"],
+    },
+  },
+  {
+    name: "list_activity",
+    description:
+      "Recent changes in the project (created / updated / deleted entities), newest first. Use to answer 'what changed?' or 'what was I working on?'.",
+    parameters: {
+      type: "object",
+      properties: { limit: num("Max results (default 20, max 100).") },
+    },
+  },
 ];
 
 /** Look up tool definitions by name. */
