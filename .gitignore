@@ -66,4 +66,6 @@ desktop/node_modules/
 desktop/dist/
 desktop/out/
 desktop/release/
+# assembled Next standalone server (scripts/build-app-server.mjs)
+/desktop/app-server/
 /release/
