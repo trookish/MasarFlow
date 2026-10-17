@@ -40,7 +40,9 @@ export const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
  * confusing ENOENT.
  */
 export function packagedExe(): string {
-  const dir = path.join(REPO_ROOT, "desktop", "dist", "win-unpacked");
+  // MASARFLOW_E2E_APP_DIR points at a private copy of win-unpacked, so a sibling's
+  // `pnpm desktop:dist:dir` cannot replace the binary under a running suite.
+  const dir = process.env.MASARFLOW_E2E_APP_DIR?.trim() || path.join(REPO_ROOT, "desktop", "dist", "win-unpacked");
   const cfg = path.join(REPO_ROOT, "desktop", "electron-builder.yml");
   if (existsSync(cfg)) {
     const m = /^productName:\s*(.+)$/m.exec(readFileSync(cfg, "utf8"));

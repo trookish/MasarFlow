@@ -174,9 +174,10 @@ async function boot(): Promise<void> {
     createTray();
     // P10.T9: wire the updater once the window exists. The launch check is a
     // plain timeout that cannot slow the start-up path, runs only for installed
-    // builds, and never in smoke mode (which must stay offline and fast).
+    // builds, and never in smoke mode (which must stay offline and fast) or
+    // under the packaged e2e harness (MASARFLOW_E2E=1), which must not reach github.com.
     initUpdater(() => mainWindow);
-    if (app.isPackaged && !process.env.MASARFLOW_UPDATER_DEV_FEED) {
+    if (app.isPackaged && !process.env.MASARFLOW_UPDATER_DEV_FEED && process.env.MASARFLOW_E2E !== "1") {
       setTimeout(() => void checkForUpdates(() => mainWindow), 15_000);
     }
   }
