@@ -13,9 +13,10 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { DockNode } from "@/lib/dock/types";
+import type { DockNode, DockZone } from "@/lib/dock/types";
 import { pageIdOf } from "@/lib/dock/types";
 import { zoneForPoint, type Rect } from "@/lib/dock/geometry";
+import { dropVerdict } from "@/lib/dock/dropguard";
 import { useProjectStore } from "@/lib/stores/project";
 import { useDockStore } from "@/lib/stores/dock";
 import { PAGE_COMPONENTS } from "./panel-loader";
@@ -69,10 +70,13 @@ export function DockWorkspace() {
         return;
       }
 
+      const tree = projectState?.workspaces[projectState.activeWorkspace]?.tree;
+      if (!tree) return;
+
       const nodes = Array.from(
         container.querySelectorAll<HTMLElement>("[data-dock-node]"),
       );
-      let hit: { id: string; zone: ReturnType<typeof zoneForPoint> } | null = null;
+      let hit: { id: string; zone: DockZone | null; refused: string | null } | null = null;
       for (const node of nodes) {
         const box = node.getBoundingClientRect();
         const r: Rect = { x: box.left, y: box.top, width: box.width, height: box.height };
@@ -83,18 +87,25 @@ export function DockWorkspace() {
           e.clientY <= r.y + r.height
         ) {
           const z = zoneForPoint(r, e.clientX, e.clientY);
-          hit = { id: node.dataset.dockNode as string, zone: z };
-          if (z === "tab") break; // most specific target wins
+          const id = node.dataset.dockNode as string;
+          const verdict = dropVerdict(tree, drag.source, id, z);
+          hit = { id, zone: verdict.ok ? z : null, refused: verdict.ok ? null : verdict.reason };
+          if (verdict.ok && z === "tab") break; // most specific valid target wins
         }
       }
 
       const nextZone = hit?.zone ?? null;
-      const nextTarget = hit?.id ?? null;
-      if (drag.zone !== nextZone || drag.targetId !== nextTarget) {
-        setDrag({ ...drag, zone: nextZone, targetId: nextTarget });
+      const nextTarget = hit ? hit.id : null;
+      const nextRefused = hit?.refused ?? null;
+      if (
+        drag.zone !== nextZone ||
+        drag.targetId !== nextTarget ||
+        drag.refused !== nextRefused
+      ) {
+        setDrag({ ...drag, zone: nextZone, targetId: nextTarget, refused: nextRefused });
       }
     },
-    [drag, setDrag],
+    [drag, setDrag, projectState],
   );
 
   if (!activeProjectId || !projectState) {
@@ -108,6 +119,7 @@ export function DockWorkspace() {
   return (
     <div
       ref={containerRef}
+      data-dock-workspace=""
       onPointerMove={onPointerMove}
       className="relative h-full w-full overflow-hidden"
     >

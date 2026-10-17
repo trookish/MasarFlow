@@ -79,8 +79,10 @@ export interface DockDragState {
   pointer: { x: number; y: number };
   /** Zone under the pointer, or null when over no drop target. */
   zone: DockZone | null;
-  /** Node id (or "root") under the pointer, when applicable. */
+  /** Node id (or "root"/"outside") under the pointer, when applicable. */
   targetId: string | null;
+  /** Why the last candidate target was refused, for the overlay hint. */
+  refused: string | null;
 }
 
 interface DockStore {

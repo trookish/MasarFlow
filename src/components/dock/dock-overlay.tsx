@@ -64,6 +64,17 @@ export function DockOverlay({ workspaceRect }: { workspaceRect: Rect }) {
           }}
         />
       ) : null}
+      {drag.refused ? (
+        <div
+          className="absolute flex items-center gap-1.5 rounded-md border border-destructive/50 bg-popover px-2 py-1 text-xs font-medium text-destructive shadow-lg"
+          style={{
+            left: drag.pointer.x - workspaceRect.x + 12,
+            top: drag.pointer.y - workspaceRect.y + 12,
+          }}
+        >
+          {drag.refused}
+        </div>
+      ) : null}
       {zone ? (
         <div
           className="absolute flex items-center gap-1 rounded-md border border-border bg-popover px-2 py-1 text-xs font-medium shadow-lg"

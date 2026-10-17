@@ -17,6 +17,7 @@
 
 import { useEffect, useRef } from "react";
 import { useDockStore } from "@/lib/stores/dock";
+import { dropVerdict } from "@/lib/dock/dropguard";
 
 /**
  * Global pointer listener while a drag is active. The workspace component
@@ -56,7 +57,7 @@ export function useDockDnd(): void {
       originRef.current = null;
       if (!d || !origin) return;
 
-      const { source, zone, targetId } = d;
+      const { source, zone, targetId, refused } = d;
       const overWorkspace = targetId !== "outside";
 
       // A click (no meaningful movement) never commits — it must not float,
@@ -64,10 +65,19 @@ export function useDockDnd(): void {
       const dist = Math.hypot(e.clientX - origin.x, e.clientY - origin.y);
       if (source.kind !== "floater" && dist < 4) return;
 
+      // A refusal is final for this release: never fall through to "float".
+      if (refused) return;
+
       if (source.kind === "floater") {
         // The window moved live via its own gesture; if the release happened
         // over a highlighted drop zone, dock it there.
         if (overWorkspace && zone && targetId) {
+          const current = useDockStore.getState();
+          const state = current.activeProjectId
+            ? current.projects[current.activeProjectId]
+            : undefined;
+          const tree = state?.workspaces[state.activeWorkspace].tree;
+          if (tree && targetId && zone && !dropVerdict(tree, source, targetId, zone).ok) return;
           s.dockFloater(source.floaterId, targetId, zone);
         }
         return;
@@ -91,6 +101,8 @@ export function useDockDnd(): void {
               : group && group.type === "page"
                 ? group.pageId
                 : null;
+          const tree = state?.workspaces[state.activeWorkspace].tree;
+          if (tree && targetId && zone && !dropVerdict(tree, source, targetId, zone).ok) return;
           if (primary) s.move(primary, targetId, zone);
         }
         return;
@@ -101,6 +113,12 @@ export function useDockDnd(): void {
       if (!overWorkspace) return; // released outside -> cancel
 
       if (zone && targetId) {
+        const current = useDockStore.getState();
+        const state = current.activeProjectId
+          ? current.projects[current.activeProjectId]
+          : undefined;
+        const tree = state?.workspaces[state.activeWorkspace].tree;
+        if (tree && targetId && zone && !dropVerdict(tree, source, targetId, zone).ok) return;
         s.move(panelId, targetId, zone);
         return;
       }
@@ -150,6 +168,7 @@ export function startPanelDrag(
     pointer: { x: e.clientX, y: e.clientY },
     zone: null,
     targetId: null,
+    refused: null,
   });
 }
 
@@ -165,5 +184,6 @@ export function startFloaterDrag(
     pointer: { x: e.clientX, y: e.clientY },
     zone: null,
     targetId: null,
+    refused: null,
   });
 }

@@ -133,6 +133,7 @@ describe("workspaces + drag", () => {
       pointer: { x: 5, y: 5 },
       zone: null,
       targetId: null,
+      refused: null,
     };
     useDockStore.getState().setDrag(drag);
     expect(useDockStore.getState().drag).toEqual(drag);
