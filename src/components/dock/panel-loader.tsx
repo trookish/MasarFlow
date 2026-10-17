@@ -13,13 +13,10 @@
 import dynamic from "next/dynamic";
 import type { ComponentType } from "react";
 import { pageIdOf } from "@/lib/dock/types";
+import { PanelLoading } from "./panel-loading";
 
 function loading() {
-  return (
-    <div className="flex h-full w-full items-center justify-center bg-background/50">
-      <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-primary" />
-    </div>
-  );
+  return <PanelLoading />;
 }
 
 export const PAGE_COMPONENTS: Record<string, ComponentType> = {
@@ -108,6 +105,19 @@ export const PAGE_COMPONENTS: Record<string, ComponentType> = {
     loading,
   }),
   "/settings": dynamic(() => import("@/app/(workspace)/settings/page"), {
+    ssr: false,
+    loading,
+  }),
+  "/today": dynamic(() => import("@/app/(workspace)/today/page"), { ssr: false, loading }),
+  "/tools/terminal": dynamic(() => import("@/app/(workspace)/tools/terminal/page"), {
+    ssr: false,
+    loading,
+  }),
+  "/tools/logs": dynamic(() => import("@/app/(workspace)/tools/logs/page"), {
+    ssr: false,
+    loading,
+  }),
+  "/tools/system": dynamic(() => import("@/app/(workspace)/tools/system/page"), {
     ssr: false,
     loading,
   }),

@@ -14,6 +14,7 @@ import { getPageDef } from "@/lib/dock/registry";
 import { useDockStore } from "@/lib/stores/dock";
 import { PAGE_COMPONENTS } from "./panel-loader";
 import { PanelContent } from "./panel-content";
+import { PanelErrorBoundary, PanelMissing } from "./panel-error";
 import { startFloaterDrag } from "./use-dock-dnd";
 import { cn } from "@/lib/utils/cn";
 
@@ -212,11 +213,11 @@ export function DockFloatingWindow({ floater }: { floater: FloatWindow }) {
       <div className="min-h-0 flex-1">
         <PanelContent active>
           {ActiveComponent ? (
-            <ActiveComponent />
+            <PanelErrorBoundary panelId={floater.activePanel}>
+              <ActiveComponent />
+            </PanelErrorBoundary>
           ) : (
-            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              Page not found: {pageIdOf(floater.activePanel)}
-            </div>
+            <PanelMissing panelId={floater.activePanel} />
           )}
         </PanelContent>
       </div>

@@ -19,6 +19,7 @@ import { zoneForPoint, type Rect } from "@/lib/dock/geometry";
 import { useProjectStore } from "@/lib/stores/project";
 import { useDockStore } from "@/lib/stores/dock";
 import { PAGE_COMPONENTS } from "./panel-loader";
+import { PanelErrorBoundary, PanelMissing } from "./panel-error";
 import { DockTreeView } from "./dock-tree-view";
 import { PanelContent } from "./panel-content";
 import { DockFloatingWindow } from "./dock-floating-window";
@@ -139,10 +140,10 @@ export function DockWorkspace() {
 function MaximizedPanel({ panelId }: { panelId: string }) {
   const Component = PAGE_COMPONENTS[pageIdOf(panelId)] ?? null;
   return Component ? (
-    <Component />
+    <PanelErrorBoundary panelId={panelId}>
+      <Component />
+    </PanelErrorBoundary>
   ) : (
-    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-      Page not found: {pageIdOf(panelId)}
-    </div>
+    <PanelMissing panelId={panelId} />
   );
 }

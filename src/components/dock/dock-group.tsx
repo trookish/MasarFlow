@@ -13,6 +13,7 @@ import { useDockStore } from "@/lib/stores/dock";
 import { startPanelDrag } from "./use-dock-dnd";
 import { PanelContent } from "./panel-content";
 import { PAGE_COMPONENTS } from "./panel-loader";
+import { PanelErrorBoundary, PanelMissing } from "./panel-error";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
@@ -163,11 +164,11 @@ function PanelTab({ panelId, active }: { panelId: string; active: boolean }) {
   return (
     <PanelContent active={active}>
       {Component ? (
-        <Component />
+        <PanelErrorBoundary panelId={panelId}>
+          <Component />
+        </PanelErrorBoundary>
       ) : (
-        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-          Page not found: {pageIdOf(panelId)}
-        </div>
+        <PanelMissing panelId={panelId} />
       )}
     </PanelContent>
   );
