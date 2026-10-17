@@ -1,11 +1,21 @@
-appId: com.masarflow.launcher
-productName: MasarFlow Launcher
+appId: com.masarflow.app
+productName: MasarFlow
 directories:
   buildResources: resources
   output: dist
 files:
   - out/**
   - resources/**
+extraResources:
+  # Spike S1: electron-builder hard-drops any entry named exactly `node_modules`
+  # from extraResources (app-builder-lib/out/util/filter.js returns false for
+  # `relative === "node_modules"`). The server therefore ships as TWO entries;
+  # paths inside the second one are `next/...`, `react/...`, never the bare
+  # string, so they survive the filter.
+  - from: app-server
+    to: app-server
+  - from: app-server/node_modules
+    to: app-server/node_modules
 # node-pty ships N-API prebuilds (ABI-stable) — no native rebuild needed
 npmRebuild: false
 asarUnpack:
@@ -20,3 +30,5 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  perMachine: false
+  deleteAppDataOnUninstall: false
