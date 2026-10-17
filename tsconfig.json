@@ -32,6 +32,9 @@
       ],
       "@shared/*": [
         "./desktop/src/shared/*"
+      ],
+      "@desktop-shared/*": [
+        "./desktop/src/shared/*"
       ]
     }
   },

@@ -8,6 +8,7 @@ import { ProjectSwitcher } from "./project-switcher";
 import { ThemeToggle } from "./theme-toggle";
 import { PomodoroWidget, DailyNoteButton } from "./plugin-widgets";
 import { UpdateDialog } from "./update-dialog";
+import { WindowControls } from "./window-controls";
 import { useUpdatesStore } from "@/lib/stores/updates";
 import { WorkspaceMenu } from "@/components/dock/workspace-menu";
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,7 @@ export function Topbar() {
   );
 
   return (
-    <header className="relative z-40 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur">
+    <header className="app-drag relative z-40 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur">
       {direction === "left" && toggleButton}
 
       <ProjectSwitcher />
@@ -120,6 +121,7 @@ export function Topbar() {
         {direction === "right" && toggleButton}
       </div>
       <UpdateDialog open={updateOpen} onOpenChange={setUpdateOpen} />
+      <WindowControls />
     </header>
   );
 }
