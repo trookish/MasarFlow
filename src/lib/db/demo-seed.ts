@@ -88,8 +88,11 @@ async function seedProjectIfMissing(
 /* ══ Demo 1 · Pulse — a realtime team dashboard (web app) ══════════════ */
 
 async function seedPulseDemo(): Promise<string> {
-  const existing = await seedProjectIfMissing(DEMO_SLUGS.web, () =>
-    db.transaction("rw", db.tables, async () => {
+  const existing = await seedProjectIfMissing(DEMO_SLUGS.web, async () => {
+    // Outside the transaction: in desktop mode the connection read awaits the
+    // secret store over IPC, which would end Dexie's transaction zone.
+    const connectionId = await seedAiConnection();
+    return db.transaction("rw", db.tables, async () => {
       const projectId = await seedPulseProject();
       await seedPulseArchitecture(projectId);
       await seedPulseNotes(projectId);
@@ -101,12 +104,11 @@ async function seedPulseDemo(): Promise<string> {
       await seedPulseCommits(projectId, ctx);
       await seedPulseCanvas(projectId, ctx);
       await seedPulseWatchAndSync(projectId);
-      const connectionId = await seedAiConnection();
       await seedPulseChat(projectId, connectionId);
       await seedPulseWorkflow(projectId, connectionId);
       return projectId;
-    }),
-  );
+    });
+  });
   return (
     existing ??
     (await db.projects.where("slug").equals(DEMO_SLUGS.web).first())!.id
@@ -841,8 +843,11 @@ async function seedPulseWorkflow(
 /* ══ Demo 2 · Lumen — a Unity 2D action-platformer (game) ══════════════ */
 
 async function seedLumenDemo(): Promise<string> {
-  const existing = await seedProjectIfMissing(DEMO_SLUGS.game, () =>
-    db.transaction("rw", db.tables, async () => {
+  const existing = await seedProjectIfMissing(DEMO_SLUGS.game, async () => {
+    // Outside the transaction: in desktop mode the connection read awaits the
+    // secret store over IPC, which would end Dexie's transaction zone.
+    const connectionId = await seedAiConnection();
+    return db.transaction("rw", db.tables, async () => {
       const projectId = await seedCoreProject();
       await seedArchitecture(projectId);
       await seedFoldersAndNotes(projectId);
@@ -857,12 +862,11 @@ async function seedLumenDemo(): Promise<string> {
       await seedCanvas(projectId, ctx);
       await seedWatchEvents(projectId);
       await seedSyncFiles(projectId);
-      const connectionId = await seedAiConnection();
       await seedChat(projectId, connectionId);
       await seedWorkflow(projectId, connectionId);
       return projectId;
-    }),
-  );
+    });
+  });
   return (
     existing ??
     (await db.projects.where("slug").equals(DEMO_SLUGS.game).first())!.id
@@ -2337,8 +2341,11 @@ async function seedWorkflow(
 /* ══ Demo 3 · DraftDeck — a markdown desktop editor (software app) ══════ */
 
 async function seedDraftDeckDemo(): Promise<string> {
-  const existing = await seedProjectIfMissing(DEMO_SLUGS.desktop, () =>
-    db.transaction("rw", db.tables, async () => {
+  const existing = await seedProjectIfMissing(DEMO_SLUGS.desktop, async () => {
+    // Outside the transaction: in desktop mode the connection read awaits the
+    // secret store over IPC, which would end Dexie's transaction zone.
+    const connectionId = await seedAiConnection();
+    return db.transaction("rw", db.tables, async () => {
       const projectId = await seedDraftDeckProject();
       await seedDraftDeckArchitecture(projectId);
       await seedDraftDeckNotes(projectId);
@@ -2350,12 +2357,11 @@ async function seedDraftDeckDemo(): Promise<string> {
       await seedDraftDeckCommits(projectId, ctx);
       await seedDraftDeckCanvas(projectId);
       await seedDraftDeckWatchAndSync(projectId);
-      const connectionId = await seedAiConnection();
       await seedDraftDeckChat(projectId, connectionId);
       await seedDraftDeckWorkflow(projectId, connectionId);
       return projectId;
-    }),
-  );
+    });
+  });
   return (
     existing ??
     (await db.projects.where("slug").equals(DEMO_SLUGS.desktop).first())!.id
