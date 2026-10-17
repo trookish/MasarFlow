@@ -37,7 +37,9 @@ describe("demo seed workflow runs", () => {
       ).toEqual(prefix.map((s) => `${s.stepKey}:done`));
       for (const s of prefix) expect(s.output.length).toBeGreaterThan(0);
       // Nothing after the in-flight step has started.
-      expect(statuses.slice(running + 1).every((s) => s === "pending")).toBe(true);
+      expect(statuses.slice(running + 1).every((s) => s === "pending")).toBe(
+        true,
+      );
     }
   });
 });
