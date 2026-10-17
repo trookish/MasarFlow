@@ -13,7 +13,7 @@
   "/knowledge": [],
   "/plugins": [],
   "/search": [],
-  "/settings": [],
+  "/settings": ["semantic index builds locally and finds by meaning"],
   "/specs": [],
   "/sprints": [],
   "/standards": [],

@@ -24,8 +24,33 @@ function workspaceRoutes(): string[] {
   return routes.sort();
 }
 
-/** Routes with no listed features yet. Must be [] by P9. */
-const ROUTES_WITHOUT_FEATURES = Object.keys(MATRIX).sort();
+/**
+ * Routes with no listed features yet (verified 2026-10-17: /settings
+ * promoted to real features). Must be [] by P9.
+ */
+const ROUTES_WITHOUT_FEATURES = [
+  "/agents",
+  "/architecture",
+  "/brain",
+  "/brain/canvas",
+  "/brain/graph",
+  "/brain/templates",
+  "/chat",
+  "/dashboard",
+  "/devlogs",
+  "/docs",
+  "/files",
+  "/knowledge",
+  "/plugins",
+  "/search",
+  "/specs",
+  "/sprints",
+  "/standards",
+  "/sync",
+  "/tasks",
+  "/watcher",
+  "/workflow",
+];
 
 describe("feature matrix", () => {
   it("lists every workspace route and no ghost routes", () => {
