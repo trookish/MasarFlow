@@ -40,8 +40,8 @@ const CHECKS = {
 
 function stubFetch(payloads: unknown[]) {
   const calls: string[] = [];
-  const impl = async (url: string, init?: RequestInit): Promise<Response> => {
-    calls.push(`${init?.method ?? "GET"} ${url}`);
+  const impl = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    calls.push(`${init?.method ?? "GET"} ${String(input)}`);
     const body = payloads.shift() ?? {};
     return new Response(JSON.stringify(body), {
       status: 200,

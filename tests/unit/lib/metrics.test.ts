@@ -19,6 +19,7 @@ function task(patch: Partial<Task>): Task {
     dependencies: [],
     progress: 0,
     tags: [],
+    externalRef: "",
     ...ts,
     ...patch,
   };
