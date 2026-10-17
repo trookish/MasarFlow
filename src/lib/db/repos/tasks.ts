@@ -11,6 +11,7 @@ function normalize(t: Task): Task {
     description: t.description ?? "",
     status: t.status ?? "backlog",
     priority: t.priority ?? "medium",
+    dueDate: t.dueDate ?? null,
     specId: t.specId ?? null,
     sprintId: t.sprintId ?? null,
     parentTaskId: t.parentTaskId ?? null,

@@ -20,6 +20,7 @@ function task(patch: Partial<Task>): Task {
     progress: 0,
     tags: [],
     externalRef: "",
+    dueDate: null,
     ...ts,
     ...patch,
   };

@@ -29,7 +29,7 @@ const spec = (over: Partial<Spec> = {}): Spec => ({
 const task = (over: Partial<Task> = {}): Task => ({
   id: "t1", projectId: "p1", title: "Fix login", description: "", status: "backlog",
   priority: "medium", specId: null, sprintId: null, parentTaskId: null, assignee: "human",
-  dependencies: [], progress: 0, tags: [], externalRef: "", createdAt: 0, updatedAt: 0, ...over,
+  dependencies: [], progress: 0, tags: [], externalRef: "", dueDate: null, createdAt: 0, updatedAt: 0, ...over,
 });
 
 describe("fileSegment", () => {

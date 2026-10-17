@@ -249,6 +249,13 @@ export const taskSchema = z.object({
   description: z.string().default(""),
   status: taskStatusSchema.default("backlog"),
   priority: taskPrioritySchema.default("medium"),
+  /**
+   * When the task should be finished (ms epoch, start of the local day it is
+   * due) or null when it has no deadline. NOT indexed — added without a Dexie
+   * version bump (same precedent as standardSchema.pattern); the Today view
+   * filters in memory over at most a few hundred rows.
+   */
+  dueDate: z.number().nullable().default(null),
   specId: z.string().nullable().default(null),
   sprintId: z.string().nullable().default(null),
   parentTaskId: z.string().nullable().default(null),
