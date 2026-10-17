@@ -26,10 +26,13 @@ export function LinkedProjectsDialog({
   projectId,
   roots,
   onClose,
+  onChange,
 }: {
   projectId: string;
   roots: LinkedProject[];
   onClose: () => void;
+  /** Called after a link/unlink/re-grant so the host can re-read the list. */
+  onChange?: () => void;
 }) {
   const [path, setPath] = useState("");
   const [name, setName] = useState("");
@@ -87,6 +90,7 @@ export function LinkedProjectsDialog({
     if (!picked) return;
     await linkedProjectsRepo.update(root.id, { rootPath: picked });
     setCovers((prev) => ({ ...prev, [root.id]: true }));
+    onChange?.();
   }
 
   async function add() {
@@ -113,6 +117,7 @@ export function LinkedProjectsDialog({
       });
       setPath("");
       setName("");
+      onChange?.();
     } finally {
       setBusy(false);
     }
@@ -173,7 +178,9 @@ export function LinkedProjectsDialog({
                     variant="ghost"
                     size="icon-sm"
                     aria-label={`Unlink ${r.name}`}
-                    onClick={() => linkedProjectsRepo.remove(r.id)}
+                    onClick={() => {
+                      void linkedProjectsRepo.remove(r.id).then(() => onChange?.());
+                    }}
                     className="text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />
