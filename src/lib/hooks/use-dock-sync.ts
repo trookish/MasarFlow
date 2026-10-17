@@ -28,6 +28,9 @@ import {
 } from "next/navigation";
 import { useProjectStore } from "@/lib/stores/project";
 import { useDockStore } from "@/lib/stores/dock";
+import { useRecentStore } from "@/lib/stores/recent";
+import { getPageDef } from "@/lib/dock/registry";
+import { pageIdOf } from "@/lib/dock/types";
 import { urlOfFocused } from "@/lib/dock/dock-core";
 
 export function useDockSync(): void {
@@ -62,6 +65,17 @@ export function useDockSync(): void {
     if (urlChanged) {
       // URL is authoritative: focus-or-open, then mirror from FRESH state.
       store.open(currentUrl);
+
+      // Recent lane: a successful URL -> dock sync is a page visit. Record the
+      // page PATH (not the query) so re-visits dedupe; the label is the page's
+      // own name, never a raw path.
+      const path = pageIdOf(currentUrl);
+      useRecentStore.getState().rememberPage(activeProjectId, {
+        id: path,
+        label: getPageDef(path)?.label ?? path,
+        href: path,
+      });
+
       const freshState = store.getProject();
       const fresh = freshState ? urlOfFocused(freshState) : null;
       if (fresh && fresh !== currentUrl) router.replace(fresh);
