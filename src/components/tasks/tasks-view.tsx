@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, ChevronDown, Filter } from "lucide-react";
@@ -8,6 +8,7 @@ import { tasksRepo, specsRepo, sprintsRepo } from "@/lib/db/repos";
 import type { Assignee, Task } from "@/lib/db/schema";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { usePageSettings } from "@/lib/stores/page-settings";
+import { useUrlSelection } from "@/lib/hooks/use-url-selection";
 import { ASSIGNEES } from "@/lib/workflow";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +24,7 @@ export function TasksView() {
   const projectId = useActiveProjectId();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const selectedId = searchParams.get("task");
+  const [selectedId, select] = useUrlSelection("/tasks", "task");
 
   const tasks = useLiveQuery(
     () => tasksRepo.listByProject(projectId),
@@ -58,9 +59,18 @@ export function TasksView() {
   );
   const selectedTask = allTasks.find((t) => t.id === selectedId) ?? null;
 
-  function select(id: string | null) {
-    router.replace(id ? `/tasks?task=${id}` : "/tasks", { scroll: false });
-  }
+  // The dashboard's "New task" action deep-links here with ?new=1. Consume the
+  // intent: replace it with an explicit empty value FIRST (so a reload can't
+  // re-trigger the create, and the dock's panel snapshot stops carrying it),
+  // then run the create flow — this works even when this panel is already the
+  // focused one, where a push to the same route would change nothing.
+  const wantsNew = searchParams.get("new") === "1";
+  useEffect(() => {
+    if (!wantsNew || !projectId) return;
+    router.replace("/tasks?new=", { scroll: false });
+    void createTask({ status: "todo" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires on the intent transition only; createTask is a fresh closure per render.
+  }, [wantsNew, projectId, router]);
 
   async function recompute(...specIds: (string | null | undefined)[]) {
     for (const id of new Set(specIds.filter((x): x is string => Boolean(x)))) {

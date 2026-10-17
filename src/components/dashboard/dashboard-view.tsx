@@ -345,17 +345,21 @@ export function DashboardView() {
               >
                 <Plus className="h-3.5 w-3.5" /> New note
               </Button>
+              {/* "New task"/"New spec" deep-link with ?new=1 and the target view
+                  consumes the intent (creating the entity), so the action still
+                  works when that route is already the focused panel — a plain
+                  push to the focused route would change nothing. */}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push("/tasks")}
+                onClick={() => router.push("/tasks?new=1")}
               >
                 <KanbanSquare className="h-3.5 w-3.5" /> New task
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push("/specs")}
+                onClick={() => router.push("/specs?new=1")}
               >
                 <FileText className="h-3.5 w-3.5" /> New spec
               </Button>

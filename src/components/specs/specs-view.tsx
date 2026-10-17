@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, FileText } from "lucide-react";
 import { specsRepo, tasksRepo, notesRepo } from "@/lib/db/repos";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { usePageSettings } from "@/lib/stores/page-settings";
+import { useUrlSelection } from "@/lib/hooks/use-url-selection";
 import { specStatusMeta } from "@/lib/workflow";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ export function SpecsView() {
   const projectId = useActiveProjectId();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const selectedId = searchParams.get("spec");
+  const [selectedId, select] = useUrlSelection("/specs", "spec");
   const { defaultSort, showCompleted } = usePageSettings((s) => s.specs);
 
   const specs = useLiveQuery(
@@ -64,9 +65,18 @@ export function SpecsView() {
     [tasks, selectedSpec],
   );
 
-  function select(id: string | null) {
-    router.replace(id ? `/specs?spec=${id}` : "/specs", { scroll: false });
-  }
+  // The dashboard's "New spec" action deep-links here with ?new=1. Consume the
+  // intent: replace it with an explicit empty value FIRST (so a reload can't
+  // re-trigger the create, and the dock's panel snapshot stops carrying it),
+  // then run the create flow — this works even when this panel is already the
+  // focused one, where a push to the same route would change nothing.
+  const wantsNew = searchParams.get("new") === "1";
+  useEffect(() => {
+    if (!wantsNew || !projectId) return;
+    router.replace("/specs?new=", { scroll: false });
+    void createSpec();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires on the intent transition only; createSpec is a fresh closure per render.
+  }, [wantsNew, projectId, router]);
 
   async function createSpec() {
     if (!projectId) return;
