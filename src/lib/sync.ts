@@ -6,11 +6,12 @@ import { serializeEntity } from "@/lib/vault/serialize";
 export type SyncStatus = SyncFile["status"];
 
 export const SYNC_STATUS_LABEL: Record<SyncStatus, string> = {
-  synced: "Synced",
-  local_modified: "Modified",
-  remote_modified: "Remote",
-  conflict: "Conflict",
   new: "New",
+  local_modified: "Local changes",
+  remote_modified: "File changes",
+  conflict: "Conflict",
+  synced: "In sync",
+  deleted: "Deleted on disk",
 };
 
 // ── Obsidian file type support ───────────────────────────────────────────────
@@ -267,6 +268,7 @@ export function summarize(states: { status: SyncStatus }[]): Record<SyncStatus, 
     remote_modified: 0,
     conflict: 0,
     new: 0,
+    deleted: 0,
   };
   for (const s of states) counts[s.status] += 1;
   return counts;

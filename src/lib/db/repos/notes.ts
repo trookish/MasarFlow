@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { Note, NoteType } from "@/lib/db/schema";
+import type { Note, NoteType, PropValue } from "@/lib/db/schema";
 import { uuid, now } from "@/lib/utils/ids";
 import { makeExcerpt, extractWikilinkTargets } from "@/lib/utils/markdown";
 import { linksRepo } from "./links";
@@ -11,6 +11,7 @@ interface CreateNoteInput {
   type?: NoteType;
   folderId?: string | null;
   tags?: string[];
+  props?: Record<string, PropValue>;
   id?: string;
 }
 
@@ -67,6 +68,7 @@ export const notesRepo = {
       excerpt: makeExcerpt(body),
       tags: input.tags ?? [],
       folderId: input.folderId ?? null,
+      ...(input.props ? { props: input.props } : {}),
       createdAt: ts,
       updatedAt: ts,
     };

@@ -480,7 +480,7 @@ export const syncFileSchema = z.object({
   hash: z.string().default(""),
   mtime: z.number().default(0),
   status: z
-    .enum(["synced", "local_modified", "remote_modified", "conflict", "new"])
+    .enum(["synced", "local_modified", "remote_modified", "conflict", "new", "deleted"])
     .default("new"),
   entityType: entityKindSchema.nullable().default(null),
   entityId: z.string().nullable().default(null),

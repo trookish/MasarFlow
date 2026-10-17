@@ -79,6 +79,7 @@ const STATUS_STYLE: Record<SyncStatus, string> = {
   remote_modified: "bg-node-system/15 text-node-system",
   conflict: "bg-node-decision/15 text-node-decision",
   synced: "bg-node-lore/15 text-node-lore",
+  deleted: "bg-node-task/15 text-node-task",
 };
 
 // Filter bar order.
@@ -88,6 +89,7 @@ const FILTER_ORDER: SyncStatus[] = [
   "remote_modified",
   "synced",
   "conflict",
+  "deleted",
 ];
 
 const ENTITY_ICON: Partial<Record<EntityKind, LucideIcon>> = {
