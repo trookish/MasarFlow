@@ -55,7 +55,7 @@ let code = 1;
 try {
   const env = { ...process.env };
   for (const k of ["MASARFLOW_TOKEN", "PORT", "MASARFLOW_VERSION"]) delete env[k];
-  const r = spawnSync("pnpm", ["desktop:dist:dir"], { cwd: root, stdio: "inherit", shell: true, env });
+  const r = spawnSync("pnpm desktop:dist:dir", { cwd: root, stdio: "inherit", shell: true, env });
   code = r.status ?? 1;
   if (code === 0) {
     rmSync(out, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
