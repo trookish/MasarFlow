@@ -44,3 +44,18 @@ nsis:
   allowToChangeInstallationDirectory: true
   perMachine: false
   deleteAppDataOnUninstall: false
+# D12/Q4: Windows x64 is first-class for 0.2.0.0. These blocks exist so a future
+# `--mac`/`--linux` run is a config change, not an archaeology project. They are
+# NEVER built in CI for this release and are not validated — do not advertise them.
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+linux:
+  category: Development
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
