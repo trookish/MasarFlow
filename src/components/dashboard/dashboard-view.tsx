@@ -36,6 +36,7 @@ import {
   docsRepo,
 } from "@/lib/db/repos";
 import { computeProjectMetrics } from "@/lib/metrics";
+import { createIntentHref } from "@/lib/navigation/create-intent";
 import { useActiveProjectId, useActiveProject } from "@/lib/hooks/use-project";
 import { usePageSettings } from "@/lib/stores/page-settings";
 import { ProjectIcon } from "@/components/shell/project-fields";
@@ -345,21 +346,21 @@ export function DashboardView() {
               >
                 <Plus className="h-3.5 w-3.5" /> New note
               </Button>
-              {/* "New task"/"New spec" deep-link with ?new=1 and the target view
-                  consumes the intent (creating the entity), so the action still
-                  works when that route is already the focused panel — a plain
-                  push to the focused route would change nothing. */}
+              {/* "New task"/"New spec" deep-link with a fresh ?new=<nonce> per
+                  click; the target view creates once per nonce. The action
+                  still works when that route is already the focused panel,
+                  because every click is a different URL. */}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push("/tasks?new=1")}
+                onClick={() => router.push(createIntentHref("/tasks"))}
               >
                 <KanbanSquare className="h-3.5 w-3.5" /> New task
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push("/specs?new=1")}
+                onClick={() => router.push(createIntentHref("/specs"))}
               >
                 <FileText className="h-3.5 w-3.5" /> New spec
               </Button>

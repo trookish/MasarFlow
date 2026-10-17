@@ -95,10 +95,11 @@ test("/journey: install-free onboarding survives a restart", async () => {
     await expect(visibleText(page, noteTitle)).toBeVisible({ timeout: 15_000 });
     await shot(page, "03-note.png");
 
-    // 4. Create a task on the board. Use the board view's OWN "New task" button
-    // (direct create): the dashboard's "New task" deep-links with ?new=1 and
-    // that async intent can fire more than once under load, creating duplicate
-    // tasks (observed: 3 from one click). The board button opens the
+    // 4. Create a task on the board with the board view's OWN "New task"
+    // button (direct create). The dashboard's "New task" once created
+    // duplicates under load (3 from one click); it now carries a one-shot
+    // ?new=<nonce> and planning.spec covers it, so this journey keeps the
+    // board path. The board button opens the
     // task-detail dialog directly; the title saves on blur, then the dialog
     // has to be closed — its backdrop covers the dock, so the next navigateTo
     // cannot click a group button.

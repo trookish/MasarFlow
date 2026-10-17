@@ -252,6 +252,10 @@ test(DASHBOARD_TITLE, async ({ desktop }) => {
   });
   const specsAfter = await readTable<{ id: string }>(page, "specs");
   expect(specsAfter.length).toBe(specsBefore + 1);
+  // Duplicates arrived late under load (3 from one click), so re-read after
+  // the dock and router have settled: still exactly one.
+  await page.waitForTimeout(2_000);
+  expect((await readTable<{ id: string }>(page, "specs")).length).toBe(specsBefore + 1);
 
   // Same contract for tasks: the board is already open, the action still
   // creates and opens a task.
@@ -271,4 +275,22 @@ test(DASHBOARD_TITLE, async ({ desktop }) => {
   });
   const tasksAfter = await readTable<{ id: string }>(page, "tasks");
   expect(tasksAfter.length).toBe(tasksBefore + 1);
+  await page.waitForTimeout(2_000);
+  expect((await readTable<{ id: string }>(page, "tasks")).length).toBe(tasksBefore + 1);
+
+  // A second click is a new intent: exactly one more task, not zero, not two.
+  await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0, { timeout: 15_000 });
+  await navigateTo(page, "Dashboard");
+  await dashboard.getByRole("button", { name: "New task" }).first().click();
+  await expect(page.getByPlaceholder("Task title")).toHaveValue("New task", {
+    timeout: 15_000,
+  });
+  await expect
+    .poll(async () => (await readTable<{ id: string }>(page, "tasks")).length, {
+      timeout: 15_000,
+    })
+    .toBe(tasksBefore + 2);
+  await page.waitForTimeout(2_000);
+  expect((await readTable<{ id: string }>(page, "tasks")).length).toBe(tasksBefore + 2);
 });

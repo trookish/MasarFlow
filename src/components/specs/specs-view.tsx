@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, FileText } from "lucide-react";
 import { specsRepo, tasksRepo, notesRepo } from "@/lib/db/repos";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { usePageSettings } from "@/lib/stores/page-settings";
 import { useUrlSelection } from "@/lib/hooks/use-url-selection";
+import { useCreateIntent } from "@/lib/hooks/use-create-intent";
 import { specStatusMeta } from "@/lib/workflow";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -19,8 +20,6 @@ import { SpecEditor } from "./spec-editor";
 export function SpecsView() {
   const projectId = useActiveProjectId();
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [selectedId, select] = useUrlSelection("/specs", "spec");
   const { defaultSort, showCompleted } = usePageSettings((s) => s.specs);
 
@@ -66,20 +65,11 @@ export function SpecsView() {
     [tasks, selectedSpec],
   );
 
-  // The dashboard's "New spec" action deep-links here with ?new=1. Consume the
-  // intent: replace it with an explicit empty value FIRST (so a reload can't
-  // re-trigger the create, and the dock's panel snapshot stops carrying it),
-  // then run the create flow — this works even when this panel is already the
-  // focused one, where a push to the same route would change nothing. The
-  // intent is route-scoped: another view's ?new=1 (e.g. /tasks?new=1) must
-  // not create a spec here.
-  const wantsNew = pathname === "/specs" && searchParams.get("new") === "1";
-  useEffect(() => {
-    if (!wantsNew || !projectId) return;
-    router.replace("/specs?new=", { scroll: false });
-    void createSpec(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires on the intent transition only; createSpec is a fresh closure per render.
-  }, [wantsNew, projectId, router]);
+  // The dashboard's "New spec" action deep-links here with ?new=<nonce>. Each
+  // nonce creates at most one spec (see lib/navigation/create-intent.ts), so a
+  // remount or a dock panel replaying its stale URL can't create duplicates,
+  // and a second click (a new nonce) on an open panel still creates one.
+  useCreateIntent("/specs", Boolean(projectId), () => createSpec(true));
 
   async function createSpec(consumeIntent = false) {
     if (!projectId) return;
@@ -91,9 +81,9 @@ export function SpecsView() {
       title: "Untitled spec",
     });
     if (consumeIntent) {
-      // select() merges THIS render's search — which still holds ?new=1 — back
-      // into the URL and re-triggers the effect. Replace with the selection
-      // alone so the intent is consumed in one step.
+      // select() would merge THIS render's search — which still holds the
+      // ?new=<nonce> intent — back into the URL. Replace with the selection
+      // alone so the address bar and dock snapshot drop the intent.
       router.replace(`/specs?spec=${spec.id}`, { scroll: false });
     } else {
       select(spec.id);

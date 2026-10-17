@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, ChevronDown, Filter } from "lucide-react";
 import { tasksRepo, specsRepo, sprintsRepo } from "@/lib/db/repos";
@@ -9,6 +9,7 @@ import type { Assignee, Task } from "@/lib/db/schema";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { usePageSettings } from "@/lib/stores/page-settings";
 import { useUrlSelection } from "@/lib/hooks/use-url-selection";
+import { useCreateIntent } from "@/lib/hooks/use-create-intent";
 import { ASSIGNEES } from "@/lib/workflow";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,8 +24,6 @@ import { TaskDetail } from "./task-detail";
 export function TasksView() {
   const projectId = useActiveProjectId();
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [selectedId, select] = useUrlSelection("/tasks", "task");
 
   const tasks = useLiveQuery(
@@ -60,20 +59,13 @@ export function TasksView() {
   );
   const selectedTask = allTasks.find((t) => t.id === selectedId) ?? null;
 
-  // The dashboard's "New task" action deep-links here with ?new=1. Consume the
-  // intent: replace it with an explicit empty value FIRST (so a reload can't
-  // re-trigger the create, and the dock's panel snapshot stops carrying it),
-  // then run the create flow — this works even when this panel is already the
-  // focused one, where a push to the same route would change nothing. The
-  // intent is route-scoped: another view's ?new=1 (e.g. /specs?new=1) must
-  // not create a task here.
-  const wantsNew = pathname === "/tasks" && searchParams.get("new") === "1";
-  useEffect(() => {
-    if (!wantsNew || !projectId) return;
-    router.replace("/tasks?new=", { scroll: false });
-    void createTask({ status: "todo" }, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires on the intent transition only; createTask is a fresh closure per render.
-  }, [wantsNew, projectId, router]);
+  // The dashboard's "New task" action deep-links here with ?new=<nonce>. Each
+  // nonce creates at most one task (see lib/navigation/create-intent.ts), so a
+  // remount or a dock panel replaying its stale URL can't create duplicates,
+  // and a second click (a new nonce) on an open panel still creates one.
+  useCreateIntent("/tasks", Boolean(projectId), () =>
+    createTask({ status: "todo" }, true),
+  );
 
   async function recompute(...specIds: (string | null | undefined)[]) {
     for (const id of new Set(specIds.filter((x): x is string => Boolean(x)))) {
@@ -103,9 +95,9 @@ export function TasksView() {
       ...patch,
     });
     if (consumeIntent) {
-      // select() merges THIS render's search — which still holds ?new=1 — back
-      // into the URL and re-triggers the effect. Replace with the selection
-      // alone so the intent is consumed in one step.
+      // select() would merge THIS render's search — which still holds the
+      // ?new=<nonce> intent — back into the URL. Replace with the selection
+      // alone so the address bar and dock snapshot drop the intent.
       router.replace(`/tasks?task=${task.id}`, { scroll: false });
     } else {
       select(task.id);
