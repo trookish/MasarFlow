@@ -43,7 +43,7 @@ function scalar(raw: string): PropValue {
 export function parseFrontmatter(md: string): Frontmatter {
   const norm = md.replace(/\r\n/g, "\n");
   const m = norm.match(FENCE);
-  if (!m) return { fields: {}, body: norm.replace(/^\n+/, "") };
+  if (!m) return { fields: {}, body: norm.replace(/^\n+/, "").replace(/\n+$/, "") };
   const fields: Record<string, PropValue> = {};
   let key: string | null = null;
   let items: string[] | null = null;
@@ -85,7 +85,7 @@ export function parseFrontmatter(md: string): Frontmatter {
     fields[k] = scalar(rest);
   }
   flush();
-  return { fields, body: norm.slice(m[0].length).replace(/^\n+/, "") };
+  return { fields, body: norm.slice(m[0].length).replace(/^\n+/, "").replace(/\n+$/, "") };
 }
 
 const RISKY = new RegExp(`(?:${RISKY_ONE.source})|^\\s|\\s$|^-`);

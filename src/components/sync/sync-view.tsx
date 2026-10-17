@@ -48,6 +48,7 @@ import {
   type SyncStatus,
   type SyncFileState,
 } from "@/lib/sync";
+import { asList, asString } from "@/lib/vault/frontmatter";
 import {
   testObsidianConnection,
   pushFileToObsidian,
@@ -358,25 +359,24 @@ export function SyncView() {
 
     if (path.startsWith("docs/")) {
       const parts = path.split("/"); // docs/<category>/<slug>.md
-      const category = fields.category || (parts.length >= 3 ? parts[1] : "general");
+      const category = asString(fields.category) || (parts.length >= 3 ? parts[1] : "general");
       const d = await docsRepo.create({
         projectId: pid,
-        title: fields.title || baseTitle,
+        title: asString(fields.title) || baseTitle,
         category,
         body,
       });
       return { path, hash, status: "synced", entityType: "doc", entityId: d.id, lastSyncedAt: Date.now() };
     }
 
-    const type = (NOTE_TYPES as readonly string[]).includes(fields.type)
-      ? (fields.type as NoteType)
+    const rawType = asString(fields.type);
+    const type = (NOTE_TYPES as readonly string[]).includes(rawType)
+      ? (rawType as NoteType)
       : "note";
-    const tags = fields.tags
-      ? fields.tags.split(",").map((t) => t.trim()).filter(Boolean)
-      : [];
+    const tags = asList(fields.tags);
     const n = await notesRepo.create({
       projectId: pid,
-      title: fields.title || baseTitle,
+      title: asString(fields.title) || baseTitle,
       type,
       tags,
       body,
@@ -410,22 +410,21 @@ export function SyncView() {
   ) {
     const { fields, body } = parseFrontmatter(content);
     if (entityType === "note") {
-      const type = (NOTE_TYPES as readonly string[]).includes(fields.type)
-        ? (fields.type as NoteType)
+      const rawType = asString(fields.type);
+      const type = (NOTE_TYPES as readonly string[]).includes(rawType)
+        ? (rawType as NoteType)
         : undefined;
-      const tags = fields.tags
-        ? fields.tags.split(",").map((t) => t.trim()).filter(Boolean)
-        : undefined;
+      const tags = asList(fields.tags);
       await notesRepo.update(entityId, {
-        ...(fields.title ? { title: fields.title } : {}),
+        ...(asString(fields.title) ? { title: asString(fields.title) } : {}),
         ...(type ? { type } : {}),
-        ...(tags ? { tags } : {}),
+        ...(tags.length ? { tags } : {}),
         body,
       });
     } else if (entityType === "doc") {
       await docsRepo.update(entityId, {
-        ...(fields.title ? { title: fields.title } : {}),
-        ...(fields.category ? { category: fields.category } : {}),
+        ...(asString(fields.title) ? { title: asString(fields.title) } : {}),
+        ...(asString(fields.category) ? { category: asString(fields.category) } : {}),
         body,
       });
     }
@@ -584,14 +583,13 @@ export function SyncView() {
 
         if (isTemplatePath(path)) {
           const { fields, body } = parseFrontmatter(remote.content);
-          const name = fields.title || (path.split("/").pop() ?? path).replace(/\.md$/i, "");
+          const name = asString(fields.title) || (path.split("/").pop() ?? path).replace(/\.md$/i, "");
           if (!existingTemplateNames.has(name)) {
-            const type = (NOTE_TYPES as readonly string[]).includes(fields.type)
-              ? (fields.type as NoteType)
+            const rawType = asString(fields.type);
+            const type = (NOTE_TYPES as readonly string[]).includes(rawType)
+              ? (rawType as NoteType)
               : "note";
-            const tags = fields.tags
-              ? fields.tags.split(",").map((t) => t.trim()).filter(Boolean)
-              : [];
+            const tags = asList(fields.tags);
             await noteTemplatesRepo.create({ projectId: pid, name, type, tags, body });
             existingTemplateNames.add(name);
             importedTemplates += 1;

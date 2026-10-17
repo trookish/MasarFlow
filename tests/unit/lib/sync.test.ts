@@ -225,7 +225,7 @@ describe("parseFrontmatter round-trips serializeNote", () => {
     const { fields, body } = parseFrontmatter(serializeNote(n));
     expect(fields.title).toBe("My Note");
     expect(fields.type).toBe("idea");
-    expect(fields.tags).toBe("alpha, beta");
+    expect(fields.tags).toEqual(["alpha", "beta"]);
     expect(body).toBe("Line one\nLine two");
   });
 

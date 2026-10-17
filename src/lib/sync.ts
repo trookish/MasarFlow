@@ -1,5 +1,7 @@
 import type { Note, Doc, SyncFile, EntityKind } from "@/lib/db/schema";
 import { pathFor } from "@/lib/vault/paths";
+import { parseFrontmatter as parseFm, type PropValue } from "@/lib/vault/frontmatter";
+import { serializeEntity } from "@/lib/vault/serialize";
 
 export type SyncStatus = SyncFile["status"];
 
@@ -129,28 +131,11 @@ export function docFilePath(doc: Doc): string {
   return pathFor("doc", doc);
 }
 
-function frontmatter(fields: Record<string, string>): string {
-  const lines = Object.entries(fields)
-    .filter(([, v]) => v !== "")
-    .map(([k, v]) => `${k}: ${v}`);
-  return `---\n${lines.join("\n")}\n---\n`;
-}
-
 export function serializeNote(note: Note): string {
-  return (
-    frontmatter({
-      title: note.title,
-      type: note.type,
-      tags: note.tags.join(", "),
-    }) +
-    "\n" +
-    note.body
-  );
+  return serializeEntity("note", note, { projectSlug: note.projectId });
 }
 export function serializeDoc(doc: Doc): string {
-  return (
-    frontmatter({ title: doc.title, category: doc.category }) + "\n" + doc.body
-  );
+  return serializeEntity("doc", doc, { projectSlug: doc.projectId });
 }
 
 /** One desired file in the vault, derived from a live entity. */
@@ -243,21 +228,10 @@ export function normalizeMd(s: string): string {
 
 /** Split our serialized markdown back into frontmatter fields + body. */
 export function parseFrontmatter(md: string): {
-  fields: Record<string, string>;
+  fields: Record<string, PropValue>;
   body: string;
 } {
-  const norm = md.replace(/\r\n/g, "\n");
-  const m = norm.match(/^---\n([\s\S]*?)\n---\n?/);
-  if (!m) return { fields: {}, body: norm.replace(/^\n+/, "") };
-  const fields: Record<string, string> = {};
-  for (const line of m[1].split("\n")) {
-    const idx = line.indexOf(":");
-    if (idx === -1) continue;
-    const k = line.slice(0, idx).trim();
-    const v = line.slice(idx + 1).trim();
-    if (k) fields[k] = v;
-  }
-  return { fields, body: norm.slice(m[0].length).replace(/^\n+/, "") };
+  return parseFm(md);
 }
 
 /**
