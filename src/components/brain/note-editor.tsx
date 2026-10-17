@@ -192,7 +192,7 @@ export function NoteEditor({
         </div>
 
         <TagInput value={tags} onChange={setTags} />
-        <PropertiesPanel props={props} onChange={setProps} />
+        <PropertiesPanel props={props} onChange={setProps} entityId={noteId} />
       </div>
 
       {/* Body */}

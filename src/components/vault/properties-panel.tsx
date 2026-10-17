@@ -7,15 +7,19 @@ import {
   addPropRow, fromPropRows, removePropRow, renamePropRow, setPropValue, toPropRows, type PropRow,
 } from "@/lib/vault/props";
 import { Input } from "@/components/ui/input";
+import { VaultPathHint } from "./vault-path-hint";
 
 /** The one property editor: frontmatter, in the editor, for every entity kind. */
 export function PropertiesPanel({
   props,
   onChange,
+  entityId,
   disabled = false,
 }: {
   props: Record<string, PropValue> | undefined;
   onChange: (next: Record<string, PropValue>) => void;
+  /** The entity whose mirrored file the footer hint points at. */
+  entityId: string;
   disabled?: boolean;
 }) {
   const [rows, setRows] = useState<PropRow[]>(() => toPropRows(props));
@@ -81,6 +85,7 @@ export function PropertiesPanel({
           </button>
         </div>
       ))}
+      <VaultPathHint entityId={entityId} />
     </div>
   );
 }

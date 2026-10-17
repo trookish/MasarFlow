@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TagInput } from "@/components/brain/tag-input";
 import { BacklinksSection } from "@/components/entities/backlinks-section";
+import { PropertiesPanel } from "@/components/vault/properties-panel";
 
 interface TaskDetailProps {
   task: Task;
@@ -248,6 +249,12 @@ export function TaskDetail({
             onChange={(tags) => onPatch({ tags })}
           />
         </Field>
+
+        <PropertiesPanel
+          props={task.props}
+          onChange={(props) => onPatch({ props })}
+          entityId={task.id}
+        />
 
         {/* Entity connections (knowledge graph) */}
         <BacklinksSection

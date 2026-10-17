@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarkdownPreview } from "@/components/brain/markdown-preview";
 import { RichMarkdownEditor } from "@/components/brain/rich-markdown-editor";
 import { BacklinksSection } from "@/components/entities/backlinks-section";
+import { PropertiesPanel } from "@/components/vault/properties-panel";
 
 /** Common documentation buckets offered as a datalist (category is free-text). */
 export const DOC_CATEGORY_SUGGESTIONS = [
@@ -24,10 +25,10 @@ export const DOC_CATEGORY_SUGGESTIONS = [
   "design",
 ];
 
-type DocForm = Pick<Doc, "title" | "category" | "body">;
+type DocForm = Pick<Doc, "title" | "category" | "body" | "props">;
 
 function toForm(d: Doc): DocForm {
-  return { title: d.title, category: d.category, body: d.body };
+  return { title: d.title, category: d.category, body: d.body, props: d.props ?? {} };
 }
 
 export function DocEditor({
@@ -136,6 +137,12 @@ export function DocEditor({
             </Tabs>
           </div>
         </div>
+
+        <PropertiesPanel
+          props={form.props}
+          onChange={(props) => set({ props })}
+          entityId={docId}
+        />
       </div>
 
       {/* Body */}

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { StringListEditor } from "./string-list-editor";
 import { BacklinksSection } from "@/components/entities/backlinks-section";
+import { PropertiesPanel } from "@/components/vault/properties-panel";
 
 interface SpecEditorProps {
   spec: Spec;
@@ -45,6 +46,7 @@ type SpecForm = Pick<
   | "futureImprovements"
   | "technicalNotes"
   | "linkedNoteIds"
+  | "props"
 >;
 
 function toForm(spec: Spec): SpecForm {
@@ -62,6 +64,7 @@ function toForm(spec: Spec): SpecForm {
     futureImprovements: spec.futureImprovements,
     technicalNotes: spec.technicalNotes,
     linkedNoteIds: spec.linkedNoteIds,
+    props: spec.props ?? {},
   };
 }
 
@@ -163,6 +166,12 @@ export function SpecEditor({
 
       <ScrollArea className="flex-1 px-5 py-4">
         <div className="mx-auto max-w-3xl space-y-5">
+          <PropertiesPanel
+            props={form.props}
+            onChange={(props) => set({ props })}
+            entityId={specId}
+          />
+
           {/* Progress */}
           <div className="space-y-1.5">
             <div className="flex justify-between text-xs">
