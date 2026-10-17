@@ -45,7 +45,6 @@ import {
   FolderGit2,
   ShieldAlert,
   Terminal,
-  MessageCircleQuestion,
 } from "lucide-react";
 import {
   chatThreadsRepo,
@@ -67,16 +66,6 @@ import type {
 import { buildAgentSystemPrompt } from "@/lib/ai/agent";
 import { newRequestId } from "@/lib/ai/agent/logger";
 import {
-  answerQuestion,
-  rejectQuestion,
-  fetchOpenCodeModels,
-  fetchOpenCodeTools,
-  checkOpenCodeHealth,
-  type OpenCodeModelsPayload,
-  type OpenCodeToolInfo,
-} from "@/lib/ai/opencode-client";
-import type { OpenCodeQuestionInfo } from "@/lib/opencode/types";
-import {
   prepareAttachment,
   type PreparedAttachment,
 } from "@/lib/ai/attachments";
@@ -91,7 +80,7 @@ import {
   type AiModel,
   type AiProvider,
 } from "@/lib/ai/catalog";
-import { WORKSPACE_TOOLS, WORKSPACE_TOOL_NAMES } from "@/lib/ai/tools";
+import { WORKSPACE_TOOLS } from "@/lib/ai/tools";
 import {
   FS_TOOLS,
   FS_TOOL_NAMES,
@@ -138,14 +127,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tooltip } from "@/components/ui/tooltip";
-import {
-  Dialog,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogBody,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { MarkdownPreview } from "@/components/brain/markdown-preview";
 import { LinkedProjectsDialog } from "./linked-projects-dialog";
 import { ConnectionsDialog } from "./connections-dialog";
@@ -223,10 +204,7 @@ export function ChatView() {
     fallbacks: chatFallbacks,
   } = usePageSettings((s) => s.chat);
 
-  const [models, setModels] = useState<OpenCodeModelsPayload | null>(null);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
-  const [ocTools, setOcTools] = useState<OpenCodeToolInfo[]>([]);
-  const [opencodeHealthy, setOpencodeHealthy] = useState(true);
   const [input, setInput] = useState("");
   const [interim, setInterim] = useState("");
   const [threadQuery, setThreadQuery] = useState("");
@@ -275,42 +253,8 @@ export function ChatView() {
       } catch {
         // The fallback catalog never throws; this keeps TS honest.
       }
-      try {
-        const [catalogData, health] = await Promise.all([
-          fetchOpenCodeModels(),
-          checkOpenCodeHealth(),
-        ]);
-        setModels(catalogData);
-        setOpencodeHealthy(health.ok);
-        if (health.ok) {
-          // The real registered tool set — the agentic prompt lists these so
-          // the model never tries tools that don't exist on the server.
-          fetchOpenCodeTools()
-            .then(setOcTools)
-            .catch(() => {});
-        }
-      } catch {
-        setOpencodeHealthy(false);
-      }
     })();
   }, []);
-
-  // The registered workspace functions + the server's native fs tools, split
-  // for the prompt: workspace functions mutate the project DB, fs tools hit
-  // the real files on disk. Only tools the server actually exposes are listed.
-  const ocToolIds = useMemo(() => new Set(ocTools.map((t) => t.id)), [ocTools]);
-  const registeredWorkspaceTools = useMemo(
-    () =>
-      WORKSPACE_TOOLS.filter((def) => ocToolIds.has(def.name)).map((def) => ({
-        name: def.name,
-        description: def.description,
-      })),
-    [ocToolIds],
-  );
-  const nativeFsTools = useMemo(
-    () => ocTools.filter((t) => !WORKSPACE_TOOL_NAMES.includes(t.id)),
-    [ocTools],
-  );
 
   const threadsRaw = useLiveQuery(
     () => chatThreadsRepo.listByProject(projectId),
@@ -333,14 +277,6 @@ export function ChatView() {
 
   const mode = thread?.mode ?? "agentic";
   const backend: ChatBackend = thread?.backend === "ollama" ? "ollama" : "api";
-  const opencodeProvider = thread
-    ? (models?.providers.find((p) => p.providerId === thread.providerId) ??
-      null)
-    : null;
-  const opencodeModel =
-    opencodeProvider && thread
-      ? (opencodeProvider.models.find((m) => m.id === thread.modelId) ?? null)
-      : null;
   // API backend: the thread's saved connection (falls back to the first one
   // so a thread made before any connection existed still has a target).
   const apiConnection: AiConnection | null =
@@ -363,13 +299,11 @@ export function ChatView() {
         ? modelSupportsReasoning(ollamaProvider, thread.modelId)
         : false;
   const canUseImages =
-    backend === "opencode"
-      ? (opencodeModel?.capabilities.attachment ?? false)
-      : backend === "api" && apiProvider && thread
-        ? modelSupportsImages(apiProvider, thread.modelId)
-        : backend === "ollama" && ollamaProvider && thread
-          ? modelSupportsImages(ollamaProvider, thread.modelId)
-          : false;
+    backend === "api" && apiProvider && thread
+      ? modelSupportsImages(apiProvider, thread.modelId)
+      : backend === "ollama" && ollamaProvider && thread
+        ? modelSupportsImages(ollamaProvider, thread.modelId)
+        : false;
 
   const speech = useSpeechInput({
     onTranscript: (text) =>
@@ -424,8 +358,9 @@ export function ChatView() {
 
   async function newChat() {
     if (!projectId) return;
-    // Coerce legacy/junk persisted values ("opencode") to the API backend.
-    const backendForNew: ChatBackend = defaultBackend === "ollama" ? "ollama" : "api";
+    // Coerce legacy persisted backend values to the API backend.
+    const backendForNew: ChatBackend =
+      defaultBackend === "ollama" ? "ollama" : "api";
     let firstModel = "";
     let providerId = "";
     let connectionId = "";
@@ -727,7 +662,7 @@ export function ChatView() {
     let lastError: string | null = null;
 
     // Strip a leading echo of the user's message from the reply (see
-    // createEchoStripper) — same guarantee as the OpenCode path.
+    // createEchoStripper) — the turn loop strips it with the same helper.
     const echoStripper = createEchoStripper(userText);
 
     /** Only the current generation may touch live UI state. */
@@ -1273,21 +1208,6 @@ export function ChatView() {
           >
             <Plus className="h-4 w-4" /> New chat
           </Button>
-          {backend === "opencode" && !opencodeHealthy && (
-            <Tooltip
-              label="The AI agent service is unreachable — start OpenCode or run `pnpm run dev:full`."
-              side="bottom"
-            >
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="OpenCode unavailable"
-                onClick={() => setOpencodeHealthy(false)}
-              >
-                <AlertCircle className="h-4 w-4 text-destructive" />
-              </Button>
-            </Tooltip>
-          )}
         </div>
         {threads.length > 3 && (
           <div className="relative border-b border-border p-2">
@@ -1324,33 +1244,29 @@ export function ChatView() {
         {!thread ? (
           <EmptyState
             icon={MessageSquare}
-            title={opencodeHealthy ? "Start a chat" : "AI agent unavailable"}
+            title={
+              connections.length === 0
+                ? "Add your first AI connection"
+                : "Start a chat"
+            }
             description={
-              opencodeHealthy
-                ? "Pick a backend from the header (OpenCode · API · Local Ollama), choose a provider and model, then send a message. OpenCode manages its own provider keys (`opencode auth`); API keys you add live in your browser only."
-                : "The OpenCode server isn't reachable — switch a chat to the API or Local (Ollama) backend, or start OpenCode with `pnpm run dev:full` (it spawns `opencode serve`)."
+              connections.length === 0
+                ? "MasarFlow chats over API providers you configure (keys stay in your browser) or a local Ollama server. Add a connection to get started."
+                : "Pick a backend from the header (API · Local Ollama) and a model, then send a message. API keys you add live in your browser only."
             }
             action={
-              <Button
-                onClick={() => {
-                  if (opencodeHealthy) {
-                    void newChat();
-                  } else {
-                    void checkOpenCodeHealth().then((h) => {
-                      setOpencodeHealthy(h.ok);
-                      if (h.ok) {
-                        void fetchOpenCodeModels(true)
-                          .then(setModels)
-                          .catch(() => {});
-                        void newChat();
-                      }
-                    });
-                  }
-                }}
-                disabled={!projectId}
-              >
-                <Plus className="h-4 w-4" /> New chat
-              </Button>
+              connections.length === 0 ? (
+                <Button
+                  onClick={() => setConnDialog(true)}
+                  disabled={!projectId}
+                >
+                  <Plus className="h-4 w-4" /> Add connection
+                </Button>
+              ) : (
+                <Button onClick={() => void newChat()} disabled={!projectId}>
+                  <Plus className="h-4 w-4" /> New chat
+                </Button>
+              )
             }
           />
         ) : (
@@ -1403,7 +1319,9 @@ export function ChatView() {
               <EffortSelector
                 effort={thread.effort ?? "off"}
                 canReason={activeCanReason}
-                onChange={(e) => chatThreadsRepo.update(thread.id, { effort: e })}
+                onChange={(e) =>
+                  chatThreadsRepo.update(thread.id, { effort: e })
+                }
               />
 
               {mode === "agentic" && (
@@ -1411,9 +1329,7 @@ export function ChatView() {
                   label={
                     linkedRoots?.length
                       ? `Linked projects: ${linkedRoots.map((r) => r.name).join(", ")} — the AI can read them freely and asks before writes/commands`
-                      : backend === "opencode"
-                        ? "Link an external project folder (e.g. a web app, a Unity game, or any codebase) — the AI's filesystem tools (fs_list/fs_read/fs_search/fs_write/shell) then run in it. Without a link they stay inside the MasarFlow workspace."
-                        : "Link an external project folder (e.g. a web app, a Unity game, or any codebase) — the AI's filesystem tools (fs_list/fs_read/fs_search/fs_write/shell_run) then run in it. Without a link only the workspace tools are available."
+                      : "Link an external project folder (e.g. a web app, a Unity game, or any codebase) — the AI's filesystem tools (fs_list/fs_read/fs_search/fs_write/shell_run) then run in it. Without a link only the workspace tools are available."
                   }
                   side="bottom"
                 >
@@ -1663,13 +1579,11 @@ export function ChatView() {
                         }
                       }}
                       placeholder={
-                        backend === "opencode" && !opencodeHealthy
-                          ? "OpenCode unavailable — start it, then reload."
-                          : speech.listening
-                            ? "Listening… speak now"
-                            : mode === "agentic"
-                              ? "Ask about — or change — anything in your workspace…"
-                              : "Message the model directly…"
+                        speech.listening
+                          ? "Listening… speak now"
+                          : mode === "agentic"
+                            ? "Ask about — or change — anything in your workspace…"
+                            : "Message the model directly…"
                       }
                       rows={1}
                       className="max-h-40 min-h-[38px] w-full resize-none border-0 bg-transparent p-1.5 text-sm shadow-none focus-visible:ring-0"
@@ -1752,7 +1666,7 @@ export function ChatView() {
   );
 }
 
-/* ── Approval card for OpenCode permission requests ───────────────────── */
+/* ── Approval card for fs/shell tool requests (in-browser tools) ──────── */
 
 function ApprovalCard({
   type,
@@ -1824,209 +1738,6 @@ function ApprovalCard({
         </Button>
       </div>
     </div>
-  );
-}
-
-/* ── Question dialog (opencode `question` tool) ───────────────────────── */
-
-/**
- * Popup window shown when the AI uses its `question` tool: renders each
- * asked question with its options (single / multi select) and an optional
- * custom-answer field, then submits the selected labels to OpenCode so the
- * waiting turn can continue.
- */
-function QuestionDialog({
-  requestId,
-  questions,
-  error,
-  onError,
-  onAnswered,
-  onDismiss,
-}: {
-  requestId: string;
-  questions: OpenCodeQuestionInfo[];
-  error: string | null;
-  onError: (error: string | null) => void;
-  onAnswered: () => void;
-  onDismiss: () => void;
-}) {
-  // Per-question selected option labels.
-  const [selected, setSelected] = useState<string[][]>(() =>
-    questions.map(() => []),
-  );
-  // Per-question custom-answer text (allowed when custom !== false).
-  const [custom, setCustom] = useState<string[]>(() => questions.map(() => ""));
-  const [submitting, setSubmitting] = useState(false);
-
-  const allAnswered = questions.every((q, i) => {
-    if (selected[i].length > 0) return true;
-    if (q.custom !== false && custom[i].trim()) return true;
-    return false;
-  });
-
-  function toggleOption(qi: number, label: string) {
-    setSelected((prev) => {
-      const next = prev.map((row) => [...row]);
-      const row = next[qi];
-      const idx = row.indexOf(label);
-      if (questions[qi].multiple) {
-        if (idx === -1) row.push(label);
-        else row.splice(idx, 1);
-      } else {
-        next[qi] = idx === -1 ? [label] : [];
-      }
-      return next;
-    });
-    onError(null);
-  }
-
-  async function submit() {
-    if (!allAnswered || submitting) return;
-    setSubmitting(true);
-    onError(null);
-    try {
-      const answers = questions.map((q, i) => {
-        const labels = [...selected[i]];
-        if (q.custom !== false && custom[i].trim()) {
-          if (!labels.includes(custom[i].trim())) labels.push(custom[i].trim());
-        }
-        return labels;
-      });
-      await answerQuestion(requestId, answers);
-      onAnswered();
-    } catch (e) {
-      onError((e as Error).message || "Could not reach the AI agent service.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <Dialog
-      open
-      onOpenChange={(o) => {
-        if (!o) onDismiss();
-      }}
-      ariaLabel="Question from the AI"
-      className="w-[480px] p-0"
-    >
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          <MessageCircleQuestion className="h-4 w-4 text-primary" />
-          The AI has a question
-        </DialogTitle>
-        <DialogDescription>
-          Answer to continue — the agent is waiting on your reply.
-        </DialogDescription>
-      </DialogHeader>
-      <DialogBody className="space-y-4">
-        {questions.map((q, qi) => (
-          <div key={qi} className="space-y-2">
-            <div>
-              {q.header && (
-                <span className="mb-1 inline-block rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">
-                  {q.header}
-                </span>
-              )}
-              <p className="text-sm font-medium">{q.question}</p>
-            </div>
-            {q.options.length > 0 && (
-              <div
-                className={cn(
-                  "flex flex-wrap gap-1.5",
-                  q.multiple && "flex-col items-stretch",
-                )}
-              >
-                {q.options.map((opt) => {
-                  const active = selected[qi].includes(opt.label);
-                  return (
-                    <button
-                      key={opt.label}
-                      type="button"
-                      onClick={() => toggleOption(qi, opt.label)}
-                      className={cn(
-                        "rounded-md border px-2.5 py-1.5 text-left text-xs transition-colors",
-                        active
-                          ? "border-primary bg-primary/10 text-foreground"
-                          : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground",
-                        q.multiple && "flex items-start gap-2",
-                      )}
-                    >
-                      {q.multiple && (
-                        <span
-                          className={cn(
-                            "mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm border",
-                            active
-                              ? "border-primary bg-primary"
-                              : "border-border",
-                          )}
-                        >
-                          {active && (
-                            <Check className="h-2.5 w-2.5 text-primary-foreground" />
-                          )}
-                        </span>
-                      )}
-                      <span>
-                        <span className="block font-medium">{opt.label}</span>
-                        {opt.description && (
-                          <span className="block font-normal text-muted-foreground">
-                            {opt.description}
-                          </span>
-                        )}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            {q.custom !== false && (
-              <Input
-                value={custom[qi]}
-                onChange={(e) => {
-                  setCustom((prev) =>
-                    prev.map((v, i) => (i === qi ? e.target.value : v)),
-                  );
-                  onError(null);
-                }}
-                placeholder={
-                  selected[qi].length === 0
-                    ? "Type a custom answer…"
-                    : "Add a custom answer…"
-                }
-                className="h-9 text-sm"
-              />
-            )}
-          </div>
-        ))}
-        {error && (
-          <p className="flex items-center gap-1.5 text-xs text-destructive">
-            <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {error}
-          </p>
-        )}
-      </DialogBody>
-      <DialogFooter>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onDismiss}
-          disabled={submitting}
-        >
-          Dismiss
-        </Button>
-        <Button
-          size="sm"
-          onClick={() => void submit()}
-          disabled={!allAnswered || submitting}
-        >
-          {submitting ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Send className="h-3.5 w-3.5" />
-          )}
-          Answer
-        </Button>
-      </DialogFooter>
-    </Dialog>
   );
 }
 
@@ -2879,4 +2590,3 @@ function ThinkingBlock({
     </div>
   );
 }
-
