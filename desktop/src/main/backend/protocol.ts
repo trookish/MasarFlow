@@ -1,7 +1,7 @@
 import { net, protocol } from "electron";
 import { Readable } from "node:stream";
 import { APP_SCHEME, TOKEN_HEADER } from "@shared/security";
-import { rewriteRedirectToApp, rewriteRequestToServer } from "./protocol-url";
+import { isNullBodyStatus, rewriteRedirectToApp, rewriteRequestToServer } from "./protocol-url";
 
 /** MUST be called before `app` is ready. */
 export function registerAppScheme(): void {
@@ -64,6 +64,17 @@ export function installAppProtocol(opts: AppProtocolOptions): void {
       req.on("response", (resp) => {
         if (settled) return;
         settled = true;
+        const responseHeaders: Record<string, string> = {};
+        for (const [key, value] of Object.entries(resp.headers)) {
+          responseHeaders[key] = Array.isArray(value) ? value.join(", ") : value;
+        }
+        const init = { status: resp.statusCode, statusText: resp.statusMessage, headers: responseHeaders };
+        // 204/304 etc. must not carry a body or `new Response` throws (Next sends 304 for cached assets).
+        if (isNullBodyStatus(resp.statusCode)) {
+          resp.on("data", () => {}); // drain so the request completes
+          resolve(new Response(null, init));
+          return;
+        }
         const stream = new ReadableStream<Uint8Array>({
           start(controller) {
             resp.on("data", (chunk) => controller.enqueue(new Uint8Array(chunk)));
@@ -71,17 +82,7 @@ export function installAppProtocol(opts: AppProtocolOptions): void {
             resp.on("error", (error) => controller.error(error));
           },
         });
-        const responseHeaders: Record<string, string> = {};
-        for (const [key, value] of Object.entries(resp.headers)) {
-          responseHeaders[key] = Array.isArray(value) ? value.join(", ") : value;
-        }
-        resolve(
-          new Response(stream, {
-            status: resp.statusCode,
-            statusText: resp.statusMessage,
-            headers: responseHeaders,
-          }),
-        );
+        resolve(new Response(stream, init));
       });
 
       req.on("error", (error) => {
