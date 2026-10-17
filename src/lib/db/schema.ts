@@ -517,20 +517,21 @@ export const aiConnectionSchema = z.object({
 });
 export type AiConnection = z.infer<typeof aiConnectionSchema>;
 
-export const chatThreadSchema = z.object({
+const chatThreadObject = z.object({
   id: z.string(),
   projectId: z.string(),
   title: z.string().default("New chat"),
   connectionId: z.string().default(""),
   modelId: z.string().default(""),
   /**
-   * Which backend powers this thread's turns:
-   *   opencode — the OpenCode server (default; fs/shell tools with approvals);
-   *   api      — a saved AI connection through /api/chat (browser Agent Loop);
-   *   ollama   — the local Ollama server (browser Agent Loop, no API key).
-   * Not indexed — added without a Dexie version bump.
+   * api    — a saved AI connection through /api/chat (Agent Loop, default);
+   * ollama — the local Ollama server (no API key).
+   * Legacy "opencode" threads map to "api". Not indexed.
    */
-  backend: z.enum(["opencode", "api", "ollama"]).default("opencode"),
+  backend: z.preprocess(
+    (v) => (v === "opencode" ? "api" : v),
+    z.enum(["api", "ollama"]).default("api"),
+  ),
   /**
    * agentic — grounded in the workspace briefing and able to act via tools;
    * chat — a direct conversation with the model, no workspace injection.
@@ -539,19 +540,23 @@ export const chatThreadSchema = z.object({
   mode: z.enum(["agentic", "chat"]).default("agentic"),
   /** Extended thinking/reasoning, for models that support it. Not indexed. */
   reasoningEnabled: z.boolean().default(false),
-  /**
-   * OpenCode-backed chat: the persistent OpenCode session this thread maps
-   * to (1:1). Blank until the first ensure — recreated automatically if the
-   * server lost it. Not indexed — added without a Dexie version bump.
-   */
-  opencodeSessionId: z.string().default(""),
-  /** The session's working directory (linked project root or workspace). */
-  opencodeDirectory: z.string().default(""),
-  /** OpenCode provider id (e.g. "anthropic", "opencode-go"). Not indexed. */
+  /** Reasoning effort (Hermes-style). Migrated from `reasoningEnabled`. Not indexed. */
+  effort: z.enum(["off", "low", "medium", "high"]).default("off"),
+  /** Ordered fallback targets tried when the primary connection fails. Not indexed. */
+  fallbacks: z
+    .array(z.object({ connectionId: z.string(), modelId: z.string() }))
+    .default([]),
+  /** Provider id of the selected connection (e.g. "anthropic"). Not indexed. */
   providerId: z.string().default(""),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
+export const chatThreadSchema = z.preprocess((raw) => {
+  const r = raw as Record<string, unknown> | null | undefined;
+  return r && r.effort === undefined && r.reasoningEnabled === true
+    ? { ...r, effort: "medium" }
+    : raw;
+}, chatThreadObject);
 export type ChatThread = z.infer<typeof chatThreadSchema>;
 export type ChatMode = ChatThread["mode"];
 export type ChatBackend = ChatThread["backend"];
