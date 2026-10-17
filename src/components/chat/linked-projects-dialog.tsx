@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FolderGit2,
+  FolderOpen,
   Plus,
   Trash2,
   Loader2,
@@ -10,6 +11,7 @@ import {
   CircleCheck,
 } from "lucide-react";
 import { linkedProjectsRepo } from "@/lib/db/repos";
+import { getDesktop } from "@/lib/desktop/bridge";
 import type { LinkedProject } from "@/lib/db/schema";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -33,10 +35,58 @@ export function LinkedProjectsDialog({
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Desktop: the path can only come from the native picker, and the main
+  // process tells us which registered roots cover each linked project.
+  const [desktop] = useState(() => getDesktop());
+  const [browseBusy, setBrowseBusy] = useState(false);
+  const [covers, setCovers] = useState<Record<string, boolean>>({});
+  const checkedRef = useRef<Set<string>>(new Set());
 
   function basename(p: string): string {
     const clean = p.trim().replace(/[/\\]+$/, "");
     return clean.split(/[/\\]/).pop() ?? clean;
+  }
+
+  useEffect(() => {
+    const d = getDesktop();
+    if (!d) return;
+    const toCheck = roots.filter((r) => !checkedRef.current.has(`${r.id}:${r.rootPath}`));
+    if (toCheck.length === 0) return;
+    let cancelled = false;
+    void Promise.all(
+      toCheck.map(async (r) => {
+        const allowed = await d.roots.covers(r.rootPath);
+        checkedRef.current.add(`${r.id}:${r.rootPath}`);
+        return [r.id, allowed] as const;
+      }),
+    ).then((entries) => {
+      if (!cancelled) setCovers((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [roots]);
+
+  async function browse() {
+    const d = getDesktop();
+    if (!d) return;
+    setBrowseBusy(true);
+    setError(null);
+    try {
+      const picked = await d.dialog.chooseFolder();
+      if (picked) setPath(picked);
+    } finally {
+      setBrowseBusy(false);
+    }
+  }
+
+  async function regrant(root: LinkedProject) {
+    const d = getDesktop();
+    if (!d) return;
+    const picked = await d.dialog.chooseFolder(root.rootPath);
+    if (!picked) return;
+    await linkedProjectsRepo.update(root.id, { rootPath: picked });
+    setCovers((prev) => ({ ...prev, [root.id]: true }));
   }
 
   async function add() {
@@ -108,6 +158,17 @@ export function LinkedProjectsDialog({
                       {r.rootPath}
                     </div>
                   </div>
+                  {covers[r.id] === false && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => regrant(r)}
+                      className="shrink-0 border-warning/40 text-warning hover:bg-warning/10"
+                    >
+                      <ShieldAlert className="h-3.5 w-3.5" />
+                      Re-grant access
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon-sm"
@@ -124,21 +185,45 @@ export function LinkedProjectsDialog({
         )}
 
         <div className="space-y-2">
-          <Input
-            value={path}
-            onChange={(e) => {
-              setPath(e.target.value);
-              if (!name) setName("");
-            }}
-            placeholder={
-              "Absolute folder path, e.g. " +
-              (typeof navigator !== "undefined" &&
-              navigator.userAgent.includes("Windows")
-                ? "C:\\Dev\\MyProject"
-                : "/home/you/my-project")
-            }
-            className="h-9 font-mono text-sm"
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              value={path}
+              onChange={(e) => {
+                setPath(e.target.value);
+                if (!name) setName("");
+              }}
+              readOnly={desktop !== null}
+              placeholder={
+                "Absolute folder path, e.g. " +
+                (typeof navigator !== "undefined" &&
+                navigator.userAgent.includes("Windows")
+                  ? "C:\\Dev\\MyProject"
+                  : "/home/you/my-project")
+              }
+              className="h-9 font-mono text-sm"
+            />
+            {desktop && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={browse}
+                disabled={browseBusy}
+                className="shrink-0"
+              >
+                {browseBusy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FolderOpen className="h-3.5 w-3.5" />
+                )}
+                Browse…
+              </Button>
+            )}
+          </div>
+          {desktop && (
+            <p className="text-[11px] text-muted-foreground">
+              Choose the project folder. MasarFlow can only read folders you select here.
+            </p>
+          )}
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}

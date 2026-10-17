@@ -9,7 +9,11 @@ const api: MasarflowApi = {
     openLogs: () => ipcRenderer.invoke(CH.appOpenLogs),
     relaunch: () => ipcRenderer.send(CH.appRelaunch),
   },
-  dialog: { chooseFolder: () => ipcRenderer.invoke(CH.dialogChooseFolder) },
+  dialog: { chooseFolder: (d) => ipcRenderer.invoke(CH.dialogChooseFolder, d) },
+  roots: {
+    list: () => ipcRenderer.invoke(CH.rootsList),
+    covers: (p) => ipcRenderer.invoke(CH.rootsCovers, p),
+  },
   shell: {
     openExternal: (url) => ipcRenderer.invoke(CH.shellOpenExternal, url),
     showItemInFolder: (p) => ipcRenderer.send(CH.shellShowItem, p),

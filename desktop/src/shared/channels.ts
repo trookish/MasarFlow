@@ -4,6 +4,8 @@ export const CH = {
   appOpenLogs: "app:open-logs",
   appRelaunch: "app:relaunch",
   dialogChooseFolder: "dialog:choose-folder",
+  rootsList: "roots:list",
+  rootsCovers: "roots:covers",
   shellOpenExternal: "shell:open-external",
   shellShowItem: "shell:show-item",
   clipboardWrite: "clipboard:write-text",

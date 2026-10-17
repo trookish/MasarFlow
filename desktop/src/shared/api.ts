@@ -24,8 +24,13 @@ export interface MasarflowApi {
     relaunch(): void;
   };
   dialog: {
-    /** Native folder picker. Returns the absolute path or null when cancelled. */
-    chooseFolder(): Promise<string | null>;
+    /** Native folder picker; the chosen folder is registered as an allowed root. */
+    chooseFolder(defaultPath?: string): Promise<string | null>;
+  };
+  roots: {
+    list(): Promise<string[]>;
+    /** True when `path` is a registered root or inside one. */
+    covers(path: string): Promise<boolean>;
   };
   shell: {
     openExternal(url: string): Promise<void>;
