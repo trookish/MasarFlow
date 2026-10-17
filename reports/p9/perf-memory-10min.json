@@ -1,0 +1,389 @@
+{
+  "startedAt": "2026-10-17T12:35:28.291Z",
+  "machine": {
+    "os": "win32 10.0.26300 x64",
+    "cpu": "12th Gen Intel(R) Core(TM) i5-12400F",
+    "cores": 12,
+    "memoryGb": 16,
+    "node": "v24.14.0"
+  },
+  "budgets": {
+    "mainRssMb": 600,
+    "rendererHeapMb": 400,
+    "growth2to10MinPct": 25
+  },
+  "timeline": [
+    {
+      "atMs": 4403,
+      "event": "launched",
+      "detail": {
+        "pid": 22044
+      }
+    },
+    {
+      "atMs": 4408,
+      "event": "diagnostics-attached"
+    },
+    {
+      "atMs": 30019,
+      "event": "sample",
+      "detail": {
+        "atMs": 30006,
+        "main": 131,
+        "renderer": 31,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 60034,
+      "event": "sample",
+      "detail": {
+        "atMs": 60010,
+        "main": 114,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 90013,
+      "event": "sample",
+      "detail": {
+        "atMs": 90002,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 120025,
+      "event": "at2",
+      "detail": {
+        "main": 112,
+        "renderer": 24
+      }
+    },
+    {
+      "atMs": 120026,
+      "event": "sample",
+      "detail": {
+        "atMs": 120015,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 150016,
+      "event": "sample",
+      "detail": {
+        "atMs": 150007,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 180022,
+      "event": "sample",
+      "detail": {
+        "atMs": 180012,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 210018,
+      "event": "sample",
+      "detail": {
+        "atMs": 210002,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 240018,
+      "event": "sample",
+      "detail": {
+        "atMs": 240011,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 270018,
+      "event": "sample",
+      "detail": {
+        "atMs": 270007,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 300016,
+      "event": "sample",
+      "detail": {
+        "atMs": 300008,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 330019,
+      "event": "sample",
+      "detail": {
+        "atMs": 330005,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 360019,
+      "event": "sample",
+      "detail": {
+        "atMs": 360008,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 390024,
+      "event": "sample",
+      "detail": {
+        "atMs": 390016,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 420127,
+      "event": "sample",
+      "detail": {
+        "atMs": 420002,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 450021,
+      "event": "sample",
+      "detail": {
+        "atMs": 450010,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 480020,
+      "event": "sample",
+      "detail": {
+        "atMs": 480008,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 510012,
+      "event": "sample",
+      "detail": {
+        "atMs": 510006,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 540025,
+      "event": "sample",
+      "detail": {
+        "atMs": 540014,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 570020,
+      "event": "sample",
+      "detail": {
+        "atMs": 570012,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 600053,
+      "event": "sample",
+      "detail": {
+        "atMs": 600004,
+        "main": 112,
+        "renderer": 24,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 600105,
+      "event": "page-close"
+    },
+    {
+      "atMs": 604025,
+      "event": "process-exit",
+      "detail": {
+        "code": 0,
+        "signal": null
+      }
+    },
+    {
+      "atMs": 604027,
+      "event": "app-close"
+    }
+  ],
+  "samples": [
+    {
+      "atMs": 30006,
+      "main": 131,
+      "renderer": 31,
+      "gone": []
+    },
+    {
+      "atMs": 60010,
+      "main": 114,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 90002,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 120015,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 150007,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 180012,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 210002,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 240011,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 270007,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 300008,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 330005,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 360008,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 390016,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 420002,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 450010,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 480008,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 510006,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 540014,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 570012,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 600004,
+      "main": 112,
+      "renderer": 24,
+      "gone": []
+    }
+  ],
+  "stdoutTail": [],
+  "stderrTail": [
+    "Debugger ending on ws://127.0.0.1:65199/71067a04-668d-41a5-ae08-455fb6bd42ac\r",
+    "For help, see: https://nodejs.org/learn/getting-started/debugging\r"
+  ],
+  "at2": {
+    "main": 112,
+    "renderer": 24
+  },
+  "at10": {
+    "main": 112,
+    "renderer": 24
+  },
+  "growthPct": 0,
+  "verdict": "pass"
+}
