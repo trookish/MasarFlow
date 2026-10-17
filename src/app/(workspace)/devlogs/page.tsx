@@ -1,7 +1,13 @@
 "use client";
 
+import { Suspense } from "react";
 import { DevLogsView } from "@/components/devlogs/devlogs-view";
 
 export default function DevLogsPage() {
-  return <DevLogsView />;
+  // DevLogsView reads ?devlog= via useSearchParams, which needs a Suspense boundary.
+  return (
+    <Suspense fallback={null}>
+      <DevLogsView />
+    </Suspense>
+  );
 }
