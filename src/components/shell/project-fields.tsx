@@ -111,6 +111,7 @@ export function ImagePicker({
       <div className="flex items-center gap-2">
         {value ? (
           <span className="relative h-14 w-24 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
+            {/* eslint-disable-next-line @next/next/no-img-element -- user upload (data: URL) or pasted URL; next/image cannot optimise either */}
             <img
               src={value}
               alt=""
@@ -211,6 +212,7 @@ export function ProjectIcon({
         )}
         style={{ backgroundColor: `${color}1f` }}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element -- project icon image: data: URL or arbitrary user URL; next/image cannot optimise it */}
         <img
           src={iconImage}
           alt=""
@@ -514,6 +516,7 @@ export function ProjectPreview({ value }: { value: ProjectFieldValues }) {
         style={{ backgroundColor: `${color}1f`, color }}
       >
         {value.iconImage ? (
+          // eslint-disable-next-line @next/next/no-img-element -- live preview of a user-supplied icon image (data: URL or arbitrary URL); next/image cannot optimise it
           <img
             src={value.iconImage}
             alt=""

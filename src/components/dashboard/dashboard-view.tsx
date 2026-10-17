@@ -309,6 +309,7 @@ export function DashboardView() {
           {/* Project banner (header mode) */}
           {project?.banner && project.bannerMode === "banner" ? (
             <div className="relative h-40 overflow-hidden rounded-xl border border-border">
+              {/* eslint-disable-next-line @next/next/no-img-element -- project banner: data: URL (upload) or arbitrary user URL; next/image cannot optimise it */}
               <img
                 src={project.banner}
                 alt={`${project.name} banner`}

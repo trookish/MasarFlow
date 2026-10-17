@@ -18,7 +18,11 @@ function waitForPort(port, timeoutMs = 120_000) {
     const probe = () => {
       const s = net.connect(port, "127.0.0.1");
       s.once("connect", () => { s.destroy(); resolve(); });
-      s.once("error", () => { s.destroy(); Date.now() > end ? reject(new Error("next dev did not start")) : setTimeout(probe, 500); });
+      s.once("error", () => {
+        s.destroy();
+        if (Date.now() > end) reject(new Error("next dev did not start"));
+        else setTimeout(probe, 500);
+      });
     };
     probe();
   });
