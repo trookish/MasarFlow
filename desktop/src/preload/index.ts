@@ -59,6 +59,33 @@ const api: MasarflowApi = {
     init: (root) => ipcRenderer.invoke(CH.gitInit, root),
     remote: (root) => ipcRenderer.invoke(CH.gitRemote, root),
   },
+  terminal: {
+    start: (input) => ipcRenderer.invoke(CH.terminalStart, input),
+    list: () => ipcRenderer.invoke(CH.terminalList),
+    write: (id, data) => {
+      ipcRenderer.send(CH.terminalWrite, id, data);
+    },
+    resize: (id, cols, rows) => {
+      ipcRenderer.send(CH.terminalResize, id, cols, rows);
+    },
+    kill: (id) => ipcRenderer.invoke(CH.terminalKill, id),
+    buffer: (id) => ipcRenderer.invoke(CH.terminalBuffer, id),
+    clear: (id) => ipcRenderer.invoke(CH.terminalClear, id),
+    onOutput: (cb) => {
+      const listener = (_e: unknown, payload: { id: string; data: string }): void => cb(payload);
+      ipcRenderer.on(CH.terminalOutput, listener);
+      return () => ipcRenderer.removeListener(CH.terminalOutput, listener);
+    },
+    onExit: (cb) => {
+      const listener = (_e: unknown, payload: { id: string; exitCode: number | null }): void => cb(payload);
+      ipcRenderer.on(CH.terminalExit, listener);
+      return () => ipcRenderer.removeListener(CH.terminalExit, listener);
+    },
+  },
+  logs: {
+    list: () => ipcRenderer.invoke(CH.logsList),
+    tail: (name, lines) => ipcRenderer.invoke(CH.logsTail, name, lines),
+  },
 };
 
 contextBridge.exposeInMainWorld("masarflow", api);

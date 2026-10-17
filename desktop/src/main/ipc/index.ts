@@ -9,6 +9,7 @@ import { SecretStore, createSafeStorageCodec, isValidSecretKey } from "../secret
 import { listBackups, readBackup, writeBackup } from "../backups";
 import { createExecGit } from "../git/exec";
 import { createGitService } from "../git/service";
+import { registerTerminalIpc } from "./terminal";
 
 const DISPLAY_VERSION = "0.2.0.0"; // single source for UI; package.json holds the semver
 
@@ -127,4 +128,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   );
   ipcMain.handle(CH.gitInit, (_e, root: unknown) => git.init(asPath(root)));
   ipcMain.handle(CH.gitRemote, (_e, root: unknown) => git.remote(asPath(root)));
+
+  /* ── Tool panels (P8) — terminal sessions, validated against roots.json ── */
+  registerTerminalIpc(getWindow);
 }

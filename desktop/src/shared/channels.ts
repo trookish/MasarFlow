@@ -35,4 +35,16 @@ export const CH = {
   gitCreateBranch: "git:create-branch",
   gitInit: "git:init",
   gitRemote: "git:remote",
+  // P8: tool panels
+  terminalStart: "terminal:start",
+  terminalList: "terminal:list",
+  terminalWrite: "terminal:write",
+  terminalResize: "terminal:resize",
+  terminalKill: "terminal:kill",
+  terminalBuffer: "terminal:buffer",
+  terminalClear: "terminal:clear",
+  terminalOutput: "terminal:output",
+  terminalExit: "terminal:exit",
+  logsList: "logs:list",
+  logsTail: "logs:tail",
 } as const;

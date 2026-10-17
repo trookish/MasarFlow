@@ -2,6 +2,7 @@ import { BrowserWindow, shell } from "electron";
 import { join } from "node:path";
 import { APP_ORIGIN } from "@shared/security";
 import { isInternalUrl, isSafeExternalUrl } from "../security/url-policy";
+import { ptyManager } from "../pty";
 
 export interface MainWindowOptions {
   /** Set only in `pnpm dev:desktop`: the Next dev server URL. */
@@ -43,6 +44,9 @@ export function createMainWindow(opts: MainWindowOptions): BrowserWindow {
 
   win.once("ready-to-show", () => win.show());
   win.on("close", opts.onClose);
+  // A closed window takes its shells with it: terminal sessions only make
+  // sense while the workspace is open (P8.T12).
+  win.on("closed", () => ptyManager.killAll());
   void win.loadURL(opts.devUrl ?? `${APP_ORIGIN}/`);
   return win;
 }

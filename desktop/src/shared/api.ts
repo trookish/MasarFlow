@@ -1,4 +1,5 @@
 import type { GitBranchInfo, GitCommitInfo, GitDiffFile, GitRepoStatus, GitResult } from "./git";
+import type { SessionInfo } from "./types";
 
 /**
  * Same union as `NodeJS.Platform` (see @types/node process.d.ts), declared locally so this
@@ -74,5 +75,26 @@ export interface MasarflowApi {
     createBranch(root: string, name: string, checkout?: boolean): Promise<GitResult<null>>;
     init(root: string): Promise<GitResult<null>>;
     remote(root: string): Promise<GitResult<{ url: string } | null>>;
+  };
+  terminal: {
+    /** Start a shell inside a registered root. Refused by the main process otherwise. */
+    start(input: {
+      cwd: string;
+      cols?: number;
+      rows?: number;
+    }): Promise<{ ok: true; session: SessionInfo } | { ok: false; error: string }>;
+    list(): Promise<SessionInfo[]>;
+    write(id: string, data: string): void;
+    resize(id: string, cols: number, rows: number): void;
+    kill(id: string): Promise<boolean>;
+    /** Everything the session printed, for re-attach after a reload. */
+    buffer(id: string): Promise<string>;
+    clear(id: string): Promise<void>;
+    onOutput(cb: (payload: { id: string; data: string }) => void): () => void;
+    onExit(cb: (payload: { id: string; exitCode: number | null }) => void): () => void;
+  };
+  logs: {
+    list(): Promise<{ name: string; bytes: number; modifiedAt: number }[]>;
+    tail(name: string, lines?: number): Promise<string[]>;
   };
 }
