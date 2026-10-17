@@ -1,13 +1,12 @@
 "use client";
 
+import { TodayView } from "@/components/today/today-view";
+
 /**
- * /today route — the real "what do I do now" view lands in a later P8 task;
- * this stub keeps the dock panel loader's dynamic import resolvable today.
+ * /today route — the real "what do I do now" view. The dock panel loader
+ * dynamic-imports this page module, so classic routing and the dock panel
+ * render the exact same component tree.
  */
 export default function TodayPage() {
-  return (
-    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-      Today view is coming in a later step.
-    </div>
-  );
+  return <TodayView />;
 }
