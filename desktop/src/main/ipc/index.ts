@@ -1,12 +1,15 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, safeStorage, shell } from "electron";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { applySettingsPatch } from "@shared/app-settings";
 import { CH } from "@shared/channels";
 import { envForDisplay } from "@shared/redact";
 import { isRootAllowed } from "@shared/roots";
+import type { AppSettings } from "@shared/types";
 import { addRootToFile, readRootsFile } from "../security/roots";
 import { isSafeExternalUrl } from "../security/url-policy";
 import { SecretStore, createSafeStorageCodec, isValidSecretKey } from "../secrets";
+import { settings } from "../settings";
 import { listBackups, readBackup, writeBackup } from "../backups";
 import { createExecGit } from "../git/exec";
 import { createGitService } from "../git/service";
@@ -28,6 +31,12 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   // The system panel may show MasarFlow's own environment — whitelisted and
   // redacted here, so no token ever crosses this boundary (P8.T15).
   ipcMain.handle(CH.appEnv, () => envForDisplay(process.env));
+  // App settings (P10.T1): the renderer may only patch the P10 keys — unknown
+  // keys and wrong types are dropped by applySettingsPatch, never thrown.
+  ipcMain.handle(CH.settingsGet, () => settings.get());
+  ipcMain.handle(CH.settingsSet, (_e, patch: unknown) =>
+    settings.set(applySettingsPatch(settings.get() as AppSettings, patch)),
+  );
   ipcMain.on(CH.appRelaunch, () => {
     app.relaunch();
     app.exit(0);

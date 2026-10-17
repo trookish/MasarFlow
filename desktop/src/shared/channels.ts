@@ -48,4 +48,7 @@ export const CH = {
   logsList: "logs:list",
   logsTail: "logs:tail",
   appEnv: "app:env",
+  // P10: app settings over IPC (close-to-tray, onboarding, update channel)
+  settingsGet: "settings:get",
+  settingsSet: "settings:set",
 } as const;

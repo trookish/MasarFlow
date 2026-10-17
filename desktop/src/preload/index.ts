@@ -87,6 +87,10 @@ const api: MasarflowApi = {
     list: () => ipcRenderer.invoke(CH.logsList),
     tail: (name, lines) => ipcRenderer.invoke(CH.logsTail, name, lines),
   },
+  settings: {
+    get: () => ipcRenderer.invoke(CH.settingsGet),
+    set: (patch) => ipcRenderer.invoke(CH.settingsSet, patch),
+  },
 };
 
 contextBridge.exposeInMainWorld("masarflow", api);

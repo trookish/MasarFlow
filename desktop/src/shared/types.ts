@@ -1,3 +1,5 @@
+import type { P10Settings } from "./app-settings";
+
 export type SessionKind = "run" | "build" | "test" | "setup" | "shell";
 export type SessionStatus = "running" | "exited";
 
@@ -44,7 +46,7 @@ export interface GradientStop {
   position: number;
 }
 
-export interface AppSettings {
+export interface AppSettings extends P10Settings {
   targetDir: string;
   /** Set to true after the launcher window is first opened (drives "Welcome back"). */
   hasLaunchedBefore: boolean;

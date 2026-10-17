@@ -1,5 +1,6 @@
 import type { GitBranchInfo, GitCommitInfo, GitDiffFile, GitRepoStatus, GitResult } from "./git";
 import type { EnvRow } from "./redact";
+import type { P10Settings } from "./app-settings";
 import type { SessionInfo } from "./types";
 
 /**
@@ -99,5 +100,11 @@ export interface MasarflowApi {
   logs: {
     list(): Promise<{ name: string; bytes: number; modifiedAt: number }[]>;
     tail(name: string, lines?: number): Promise<string[]>;
+  };
+  settings: {
+    /** The full main-process settings object (AppSettings). */
+    get(): Promise<Record<string, unknown>>;
+    /** Merge a partial patch; returns the settings after the merge. */
+    set(patch: Partial<P10Settings>): Promise<Record<string, unknown>>;
   };
 }

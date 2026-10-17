@@ -2,6 +2,7 @@ import { app } from "electron";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import type { AppSettings } from "@shared/types";
+import { P10_SETTING_DEFAULTS } from "@shared/app-settings";
 
 const ACCENTS = [
   "#dedede",
@@ -56,6 +57,8 @@ function findMasarFlowRoot(dir: string): string | null {
 
 function defaultSettings(): AppSettings {
   return {
+    // P10 keys live in one place (desktop/src/shared/app-settings.ts).
+    ...P10_SETTING_DEFAULTS,
     targetDir: defaultTargetDir(),
     hasLaunchedBefore: false,
     theme: "dark",

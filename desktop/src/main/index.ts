@@ -7,6 +7,7 @@ import { startBackend, type BackendHandle } from "./backend/server";
 import { registerIpc } from "./ipc";
 import { buildCsp } from "./security/csp";
 import { isPermissionAllowed } from "./security/permissions";
+import { settings } from "./settings";
 import { createMainWindow } from "./windows/main-window";
 
 app.setName("MasarFlow");
@@ -135,6 +136,10 @@ if (!app.requestSingleInstanceLock()) {
   app.on("second-instance", () => showWindow());
   app.whenReady().then(() => {
     Menu.setApplicationMenu(null);
+    // App settings (P10.T1): launcher-settings.json under userData. Nothing
+    // initialised this store before P10 — it was carried over from the launcher
+    // without a caller, so settings.get()/set() would have been no-ops on disk.
+    settings.init();
     // Hardening: deny-by-default permissions; in dev the Next dev server needs
     // eval and its HMR websocket, so it gets a looser CSP than the packaged app.
     session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(isPermissionAllowed(permission)));
