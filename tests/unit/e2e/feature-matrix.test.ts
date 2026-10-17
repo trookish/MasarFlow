@@ -25,28 +25,11 @@ function workspaceRoutes(): string[] {
 }
 
 /**
- * Routes with no listed features yet (verified 2026-10-17: /settings
- * promoted to real features). Must be [] by P9.
+ * Routes with no listed features yet. Empty as of P9.T18: /settings, /today,
+ * the three /tools routes, /files and /sync all carry real packaged features.
+ * Must stay [] — a new route needs a matcher and a passing packaged spec.
  */
-const ROUTES_WITHOUT_FEATURES = [
-  "/brain",
-  "/brain/graph",
-  "/brain/templates",
-  "/devlogs",
-  "/files",
-  "/knowledge",
-  "/search",
-  "/specs",
-  "/sprints",
-  "/standards",
-  "/sync",
-  "/tasks",
-  "/today",
-  "/tools/logs",
-  "/tools/system",
-  "/tools/terminal",
-  "/workflow",
-];
+const ROUTES_WITHOUT_FEATURES: string[] = [];
 
 describe("feature matrix", () => {
   it("lists every workspace route and no ghost routes", () => {
