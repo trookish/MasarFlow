@@ -22,11 +22,46 @@ import {
   type AiProvider,
 } from "@/lib/ai/catalog";
 import { probeConnection, type ProbeResult } from "@/lib/ai/probe";
+import { CUSTOM_PROVIDER_ID, customProvider } from "@/lib/ai/providers/custom";
+import { testConnection } from "@/lib/ai/providers/test-connection";
 import { cn } from "@/lib/utils/cn";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
+/** Pseudo-provider entry: any OpenAI-compatible endpoint the user points at. */
+const CUSTOM_ENTRY: AiProvider = {
+  id: CUSTOM_PROVIDER_ID,
+  name: "Custom (OpenAI-compatible)",
+  models: {},
+};
+
+const HTTP_URL_RE = /^https?:\/\/\S+$/i;
+
+/** POST {baseUrl, apiKey} to the discover proxy → the endpoint's model ids. */
+async function discoverModels(opts: {
+  baseUrl: string;
+  apiKey: string;
+}): Promise<{ ok: true; models: string[] } | { ok: false; error: string }> {
+  try {
+    const res = await fetch("/api/models/discover", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(opts),
+    });
+    const data = (await res.json()) as { models?: string[]; error?: string };
+    if (!res.ok) {
+      return {
+        ok: false,
+        error: data.error ?? `Request failed (${res.status})`,
+      };
+    }
+    return { ok: true, models: data.models ?? [] };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
 
 export function ConnectionsDialog({
   catalog,
@@ -36,8 +71,12 @@ export function ConnectionsDialog({
   onClose: () => void;
 }) {
   const connections = useLiveQuery(() => aiConnectionsRepo.list(), []) ?? [];
-  const providers = useMemo(() => flattenProviders(catalog), [catalog]);
-  const providerName = (id: string) => catalog[id]?.name ?? id;
+  const providers = useMemo(
+    () => [CUSTOM_ENTRY, ...flattenProviders(catalog)],
+    [catalog],
+  );
+  const providerName = (id: string) =>
+    id === CUSTOM_PROVIDER_ID ? "Custom endpoint" : (catalog[id]?.name ?? id);
 
   const [adding, setAdding] = useState(false);
 
@@ -107,10 +146,18 @@ function AddConnection({
   const [label, setLabel] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
+  const [modelId, setModelId] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{
+    ok: boolean;
+    detail: string;
+  } | null>(null);
 
   const selected = providers.find((p) => p.id === providerId) ?? null;
+  const isCustom = providerId === CUSTOM_PROVIDER_ID;
+  const baseUrlOk = HTTP_URL_RE.test(baseUrl.trim());
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return providers.slice(0, 50);
@@ -128,13 +175,40 @@ function AddConnection({
 
   async function save() {
     if (!providerId) return;
+    if (isCustom && !baseUrlOk) return;
     await aiConnectionsRepo.create({
       providerId,
-      label: label.trim() || selected?.name || providerId,
+      label:
+        label.trim() ||
+        (isCustom ? "Custom endpoint" : selected?.name || providerId),
       apiKey: apiKey.trim(),
       baseUrl: baseUrl.trim(),
     });
     onDone();
+  }
+
+  async function test() {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const provider = customProvider(
+        { id: "custom-draft", label, baseUrl: baseUrl.trim() },
+        [modelId.trim()],
+      );
+      const res = await testConnection({
+        provider,
+        apiKey,
+        baseUrl: baseUrl.trim(),
+        model: modelId.trim(),
+      });
+      setTestResult(
+        res.ok
+          ? { ok: true, detail: "Connected — the endpoint answered." }
+          : { ok: false, detail: res.error },
+      );
+    } finally {
+      setTesting(false);
+    }
   }
 
   return (
@@ -200,15 +274,15 @@ function AddConnection({
         <Input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="My OpenAI key"
+          placeholder={isCustom ? "LM Studio (local)" : "My OpenAI key"}
           className="h-9 text-sm"
         />
       </Field>
 
       <Field
         label={
-          selected?.noAuth
-            ? "API key (not required for local providers)"
+          selected?.noAuth || isCustom
+            ? "API key (only if the endpoint requires one)"
             : "API key"
         }
       >
@@ -216,28 +290,188 @@ function AddConnection({
           type="password"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
-          placeholder={selected?.noAuth ? "(none)" : "sk-…"}
+          placeholder={selected?.noAuth || isCustom ? "(none)" : "sk-…"}
           className="h-9 font-mono text-sm"
         />
       </Field>
 
-      <Field label="Base URL (optional override)">
+      <Field
+        label={isCustom ? "Base URL (required)" : "Base URL (optional override)"}
+      >
         <Input
           value={baseUrl}
           onChange={(e) => setBaseUrl(e.target.value)}
-          placeholder={selected ? defaultBaseUrl(selected) : "https://…"}
+          placeholder={
+            isCustom
+              ? "http://127.0.0.1:1234/v1"
+              : selected
+                ? defaultBaseUrl(selected)
+                : "https://…"
+          }
           className="h-9 font-mono text-sm"
         />
       </Field>
+      {isCustom && baseUrl.trim() && !baseUrlOk && (
+        <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+          <CircleAlert className="h-3 w-3 shrink-0" />
+          Only http: and https: base URLs are accepted (e.g.
+          http://127.0.0.1:1234/v1).
+        </p>
+      )}
+
+      {isCustom && (
+        <>
+          <ModelIdField
+            value={modelId}
+            onChange={(v) => setModelId(v)}
+            baseUrl={baseUrl.trim()}
+            apiKey={apiKey}
+            onFirst={(first) => setModelId(first)}
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void test()}
+              disabled={testing || !baseUrlOk || !modelId.trim()}
+              title={
+                !baseUrlOk
+                  ? "Enter an http(s) base URL first."
+                  : !modelId.trim()
+                    ? "Type or discover a model id first."
+                    : undefined
+              }
+            >
+              {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+              Test
+            </Button>
+            {testResult && (
+              <span
+                className={cn(
+                  "flex min-w-0 items-start gap-1.5 text-[11px]",
+                  testResult.ok ? "text-muted-foreground" : "text-destructive",
+                )}
+              >
+                {testResult.ok ? (
+                  <CircleCheck className="mt-0.5 h-3 w-3 shrink-0" />
+                ) : (
+                  <CircleAlert className="mt-0.5 h-3 w-3 shrink-0" />
+                )}
+                <span className="break-all">{testResult.detail}</span>
+              </span>
+            )}
+          </div>
+        </>
+      )}
 
       <div className="flex justify-end gap-2 pt-1">
         <Button variant="ghost" size="sm" onClick={onDone}>
           Cancel
         </Button>
-        <Button size="sm" disabled={!providerId} onClick={save}>
+        <Button
+          size="sm"
+          disabled={!providerId || (isCustom && !baseUrlOk)}
+          onClick={save}
+        >
           Add connection
         </Button>
       </div>
+    </div>
+  );
+}
+
+/* ── Model id + discovery (custom endpoints) ──────────────────────────── */
+
+function ModelIdField({
+  value,
+  onChange,
+  baseUrl,
+  apiKey,
+  onFirst,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  baseUrl: string;
+  apiKey: string;
+  /** Called with the first discovered id when the field is still empty. */
+  onFirst?: (first: string) => void;
+}) {
+  const [discovering, setDiscovering] = useState(false);
+  const [models, setModels] = useState<string[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function discover() {
+    setDiscovering(true);
+    setError(null);
+    setModels(null);
+    try {
+      const res = await discoverModels({ baseUrl, apiKey });
+      if (res.ok) {
+        setModels(res.models);
+        if (!value.trim() && res.models.length > 0) onFirst?.(res.models[0]);
+      } else {
+        setError(res.error);
+      }
+    } finally {
+      setDiscovering(false);
+    }
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-medium text-muted-foreground">
+        Model id
+      </label>
+      <div className="flex items-center gap-2">
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="qwen3-coder"
+          className="h-9 font-mono text-sm"
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void discover()}
+          disabled={discovering || !HTTP_URL_RE.test(baseUrl)}
+          title={
+            HTTP_URL_RE.test(baseUrl)
+              ? undefined
+              : "Enter an http(s) base URL first."
+          }
+        >
+          {discovering ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+          Discover
+        </Button>
+      </div>
+      {models && (
+        <div className="flex flex-wrap gap-1">
+          {models.length === 0 && (
+            <span className="text-[11px] text-muted-foreground">
+              The endpoint listed no models — type the model id directly.
+            </span>
+          )}
+          {models.slice(0, 40).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => onChange(m)}
+              className={cn(
+                "rounded border border-border px-1.5 py-0.5 font-mono text-[11px] hover:bg-accent",
+                m === value && "border-primary bg-primary/10",
+              )}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+      )}
+      {error && (
+        <p className="flex items-start gap-1.5 text-[11px] text-destructive">
+          <CircleAlert className="mt-0.5 h-3 w-3 shrink-0" />
+          <span className="break-all">{error}</span>
+        </p>
+      )}
     </div>
   );
 }
@@ -253,13 +487,42 @@ function ConnectionRow({
   catalog: Catalog;
   providerName: string;
 }) {
+  const isCustom = c.providerId === CUSTOM_PROVIDER_ID;
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<ProbeResult | null>(null);
+  const [modelId, setModelId] = useState("");
+  const [customResult, setCustomResult] = useState<{
+    ok: boolean;
+    detail: string;
+  } | null>(null);
 
   async function test() {
     setTesting(true);
     setResult(null);
+    setCustomResult(null);
     try {
+      if (isCustom) {
+        const model = modelId.trim();
+        if (!model) {
+          setCustomResult({
+            ok: false,
+            detail: "Type or discover a model id to test this endpoint.",
+          });
+          return;
+        }
+        const res = await testConnection({
+          provider: customProvider(c, [model]),
+          apiKey: c.apiKey,
+          baseUrl: c.baseUrl || undefined,
+          model,
+        });
+        setCustomResult(
+          res.ok
+            ? { ok: true, detail: "Connected — the endpoint answered." }
+            : { ok: false, detail: res.error },
+        );
+        return;
+      }
       const provider: AiProvider = catalog[c.providerId] ?? {
         id: c.providerId,
         name: c.providerId,
@@ -297,6 +560,7 @@ function ConnectionRow({
           <div className="truncate text-sm font-medium">{c.label}</div>
           <div className="truncate text-xs text-muted-foreground">
             {providerName} · {c.apiKey ? "key set" : "no key"}
+            {isCustom && c.baseUrl ? ` · ${c.baseUrl}` : ""}
           </div>
         </div>
         <Button
@@ -319,6 +583,31 @@ function ConnectionRow({
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
+      {isCustom && (
+        <div className="mt-2 space-y-2">
+          <ModelIdField
+            value={modelId}
+            onChange={setModelId}
+            baseUrl={c.baseUrl}
+            apiKey={c.apiKey}
+          />
+          {customResult && (
+            <div
+              className={cn(
+                "flex items-start gap-1.5 text-[11px]",
+                customResult.ok ? "text-muted-foreground" : "text-destructive",
+              )}
+            >
+              {customResult.ok ? (
+                <CircleCheck className="mt-0.5 h-3 w-3 shrink-0" />
+              ) : (
+                <CircleAlert className="mt-0.5 h-3 w-3 shrink-0" />
+              )}
+              <span>{customResult.detail}</span>
+            </div>
+          )}
+        </div>
+      )}
       {result && (
         <div
           className={cn(
