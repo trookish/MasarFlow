@@ -4,10 +4,7 @@ import { readSources } from "../_helpers/fs-scan";
 import { expectShrinkingAllowlist } from "../_helpers/shrinking-allowlist";
 
 /** Catalog plugins nothing consumes (verified 2026-10-16). Must be [] by P9. */
-const UNWIRED_PLUGINS = [
-  "github-commits",
-  "obsidian-sync",
-];
+const UNWIRED_PLUGINS: string[] = [];
 
 describe("plugin catalog is real", () => {
   it("every catalog plugin id is referenced outside the catalog", () => {

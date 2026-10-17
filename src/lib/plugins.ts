@@ -43,40 +43,6 @@ export const PLUGIN_CATEGORIES = [
  */
 export const PLUGIN_CATALOG: PluginDef[] = [
   {
-    id: "obsidian-sync",
-    name: "Obsidian Sync",
-    description:
-      "Two-way sync between your workspace notes and an Obsidian vault on disk.",
-    category: "Sync",
-    author: "MasarFlow",
-    version: "1.4.0",
-    icon: "refresh",
-    capabilities: ["Vault", "Two-way"],
-    settings: [
-      { key: "vaultPath", label: "Vault path", type: "text", default: "", placeholder: "~/Vaults/MyVault" },
-      { key: "autoSync", label: "Auto-sync on change", type: "boolean", default: true },
-    ],
-    href: "/sync",
-    hrefLabel: "Open Sync Panel",
-  },
-  {
-    id: "github-commits",
-    name: "GitHub Commits",
-    description:
-      "Pull commit history from a GitHub repository into the dev log and graph.",
-    category: "Sync",
-    author: "MasarFlow",
-    version: "0.9.2",
-    icon: "github",
-    capabilities: ["Git", "Import"],
-    settings: [
-      { key: "repo", label: "Repository", type: "text", default: "", placeholder: "owner/name" },
-      { key: "branch", label: "Branch", type: "text", default: "main" },
-    ],
-    href: "/dashboard",
-    hrefLabel: "Open Commits (Dashboard)",
-  },
-  {
     id: "mermaid-diagrams",
     name: "Mermaid Diagrams",
     description: "Render Mermaid code blocks as diagrams in notes and docs.",

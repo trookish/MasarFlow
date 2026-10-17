@@ -20,13 +20,13 @@ describe("filterPlugins", () => {
   });
 
   it("filters by category", () => {
-    const out = filterPlugins(PLUGIN_CATALOG, { category: "Sync" });
+    const out = filterPlugins(PLUGIN_CATALOG, { category: "Editor" });
     expect(out.length).toBeGreaterThan(0);
-    expect(out.every((p) => p.category === "Sync")).toBe(true);
+    expect(out.every((p) => p.category === "Editor")).toBe(true);
   });
 
   it("matches query against name, description, and capabilities", () => {
-    expect(filterPlugins(PLUGIN_CATALOG, { query: "obsidian" })).toHaveLength(1);
+    expect(filterPlugins(PLUGIN_CATALOG, { query: "mermaid" })).toHaveLength(1);
     // "writing" is a capability shared by spell-check + word-count.
     const writing = filterPlugins(PLUGIN_CATALOG, { query: "writing" });
     expect(writing.map((p) => p.id).sort()).toEqual(["spell-check", "word-count"]);
@@ -44,8 +44,10 @@ describe("filterPlugins", () => {
 
 describe("defaultSettings", () => {
   it("builds defaults from a plugin's setting fields", () => {
-    const obsidian = PLUGIN_CATALOG.find((p) => p.id === "obsidian-sync")!;
-    expect(defaultSettings(obsidian)).toEqual({ vaultPath: "", autoSync: true });
+    // obsidian-sync was deleted in P9 (its capability shipped as core in /sync);
+    // pomodoro carries the same single-text-field-default shape.
+    const pomodoro = PLUGIN_CATALOG.find((p) => p.id === "pomodoro")!;
+    expect(defaultSettings(pomodoro)).toEqual({ minutes: "25" });
   });
 
   it("returns an empty object for plugins without settings", () => {
