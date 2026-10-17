@@ -41,6 +41,7 @@ import {
   createSearchIndex,
   type SearchItem,
 } from "@/lib/utils/search";
+import { semanticSearch } from "@/lib/ai/embeddings/search";
 import type { ToolCallRequest } from "./workspace-tool-defs";
 
 /**
@@ -163,27 +164,14 @@ export async function executeWorkspaceTool(
         const limit = Math.min(Math.max(n("limit") ?? 10, 1), 25);
         const items = await buildSearchItems(projectId);
 
-        // Try the local AI service's real vector search first; fall back to
-        // Fuse fuzzy search when it's unavailable or returns nothing.
+        // Try the local semantic index first; fall back to Fuse fuzzy search
+        // when the index is unavailable or returns nothing.
         let ranked: SearchItem[] | null = null;
         try {
-          const res = await fetch("/api/python/search", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ projectId, query, limit }),
-            signal: AbortSignal.timeout(4000),
-          });
-          const data = (await res.json()) as {
-            ok?: boolean;
-            results?: { id: string; kind: string }[];
-          };
-          if (data.ok && data.results?.length) {
-            const byKey = new Map(
-              items.map((it) => [`${it.kind}:${it.id}`, it]),
-            );
-            ranked = data.results
-              .map((r) => byKey.get(`${r.kind}:${r.id}`))
-              .filter((it): it is SearchItem => Boolean(it));
+          const hits = await semanticSearch(projectId, query, limit);
+          if (hits.length) {
+            const byKey = new Map(items.map((it) => [`${it.kind}:${it.id}`, it]));
+            ranked = hits.map((h) => byKey.get(`${h.kind}:${h.id}`)).filter((it): it is SearchItem => Boolean(it));
           }
         } catch {
           ranked = null;

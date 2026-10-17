@@ -26,6 +26,7 @@ import type {
   Commit,
 } from "@/lib/db/schema";
 import { stripMarkdown } from "@/lib/utils/markdown";
+import { retrieveRagChunks } from "@/lib/ai/embeddings/search";
 
 /**
  * The workspace context engine. Assembles everything the workspace knows —
@@ -52,7 +53,7 @@ export interface WorkspaceSnapshot {
   commits: Commit[];
 }
 
-/** A query-relevant passage retrieved from the local AI service's RAG index. */
+/** A query-relevant passage retrieved from the local semantic RAG index. */
 export interface RagChunk {
   entityId: string;
   kind: "note" | "doc";
@@ -406,10 +407,10 @@ export function formatWorkspaceContext(
 }
 
 /**
- * Retrieves query-relevant note/doc chunks from the optional local AI
- * service. Returns `undefined` (never throws) when the service isn't
- * running, times out, or returns nothing — callers fall back to the
- * Fuse-based `pickFullBodies` path in that case.
+ * Retrieves query-relevant note/doc chunks from the local semantic index
+ * (IndexedDB + the in-browser embedding worker). Returns `undefined` (never
+ * throws) when the index is empty, times out, or errors — callers fall back
+ * to the Fuse-based `pickFullBodies` path in that case.
  */
 async function fetchRagChunks(
   projectId: string,
@@ -419,25 +420,14 @@ async function fetchRagChunks(
 ): Promise<RagChunk[] | undefined> {
   if (typeof window === "undefined") return undefined;
   try {
-    // The caller's cancellation wins over the 4s backstop when both exist.
-    const abort = signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(4000)])
-      : AbortSignal.timeout(4000);
-    const res = await fetch("/api/python/rag", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        projectId,
-        query,
-        topK,
-        budgetChars: RAG_BUDGET_CHARS,
-      }),
-      signal: abort,
+    const work = retrieveRagChunks(projectId, query, topK * 3, RAG_BUDGET_CHARS);
+    const timeout = new Promise<never>((_, reject) => {
+      const t = setTimeout(() => reject(new Error("rag timeout")), 6000);
+      signal?.addEventListener("abort", () => (clearTimeout(t), reject(new Error("aborted"))), { once: true });
     });
-    if (!res.ok) return undefined;
-    const data = (await res.json()) as { ok?: boolean; chunks?: RagChunk[] };
-    if (!data.ok || !data.chunks?.length) return undefined;
-    return data.chunks;
+    const chunks = await Promise.race([work, timeout]);
+    const usable = chunks.filter((c): c is RagChunk & { kind: "note" | "doc" } => c.kind === "note" || c.kind === "doc");
+    return usable.length ? usable : undefined;
   } catch {
     return undefined;
   }

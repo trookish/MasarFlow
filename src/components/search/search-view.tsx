@@ -15,6 +15,9 @@ import { highlightSegments, snippetAround, type Segment } from "@/lib/highlight"
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { usePageSettings } from "@/lib/stores/page-settings";
 import { reindexProject } from "@/lib/ai/embedding-sync";
+import { getEmbedClient } from "@/lib/ai/embeddings/client";
+import { semanticSearch } from "@/lib/ai/embeddings/search";
+import type { EmbedderStatus } from "@/lib/ai/embeddings/embedder-core";
 import { cn } from "@/lib/utils/cn";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -84,31 +87,36 @@ export function SearchView() {
     };
   }, [projectId]);
 
-  // Freshen the local AI service's index for this project when the page
-  // opens — a no-op if the service isn't running (see embedding-sync.ts).
+  // Freshen the local semantic index for this project when the page opens —
+  // it runs in the background and never blocks the UI.
   useEffect(() => {
     if (projectId) void reindexProject(projectId);
   }, [projectId]);
 
-  // Health-check the local AI service once — semantic/hybrid modes fall back
-  // to Fuse when it isn't reachable.
-  const [semanticHealthy, setSemanticHealthy] = useState(false);
+  // Track the in-browser embedder — it warms up on first use, so
+  // semantic/hybrid modes fall back to Fuse until it has answered.
+  const [semanticState, setSemanticState] = useState<EmbedderStatus["state"]>("idle");
   useEffect(() => {
     let on = true;
-    fetch("/api/python/health")
-      .then((r) => r.json())
-      .then((d: { ok?: boolean }) => {
-        if (on) setSemanticHealthy(d.ok === true);
-      })
-      .catch(() => {
-        if (on) setSemanticHealthy(false);
-      });
+    const poll = () =>
+      getEmbedClient()
+        .status()
+        .then((s) => {
+          if (on) setSemanticState(s.state);
+        })
+        .catch(() => {
+          if (on) setSemanticState("error");
+        });
+    void poll();
+    const t = setInterval(poll, 2000);
     return () => {
       on = false;
+      clearInterval(t);
     };
   }, []);
+  const semanticAvailable = semanticState !== "error";
 
-  // Debounced real semantic search against the local AI service. Results are
+  // Debounced real semantic search against the local index. Results are
   // mapped back to the local `items` so existing highlighting/snippet/href
   // rendering can be reused as-is. `semanticQueryFor` tracks which query
   // `semanticItems` answers, so the `ranked` memo below can ignore stale
@@ -118,33 +126,28 @@ export function SearchView() {
   useEffect(() => {
     const q = query.trim();
     const wantsSemantic = defaultMode === "semantic" || defaultMode === "hybrid";
-    if (!wantsSemantic || !semanticHealthy || !q || !projectId) return;
+    if (!wantsSemantic || !semanticAvailable || !q || !projectId) return;
     let cancelled = false;
     const handle = setTimeout(() => {
-      fetch("/api/python/search", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ projectId, query: q, limit: perPage * 2 }),
-      })
-        .then((res) => res.json())
-        .then((data: { ok?: boolean; results?: { id: string; kind: SearchKind }[] }) => {
-          if (cancelled || !data.ok || !data.results) return;
+      semanticSearch(projectId, q, 25)
+        .then((hits) => {
+          if (cancelled) return;
           const byKey = new Map(items.map((it) => [`${it.kind}:${it.id}`, it]));
-          const mapped = data.results
-            .map((r) => byKey.get(`${r.kind}:${r.id}`))
+          const mapped = hits
+            .map((h) => byKey.get(`${h.kind}:${h.id}`))
             .filter((it): it is SearchItem => Boolean(it));
           setSemanticItems(mapped);
           setSemanticQueryFor(q);
         })
         .catch(() => {
-          /* local AI service unavailable — ranked memo falls back to Fuse */
+          /* local index unavailable — ranked memo falls back to Fuse */
         });
     }, 300);
     return () => {
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [defaultMode, semanticHealthy, query, projectId, items, perPage]);
+  }, [defaultMode, semanticAvailable, query, projectId, items]);
 
   const fuse = useMemo(() => createSearchIndex(items), [items]);
 
@@ -183,16 +186,16 @@ export function SearchView() {
       matches: [] as FuseResultMatch[],
     });
     // Only trust semanticItems when they actually answer the current query —
-    // the debounced fetch may not have resolved yet for a just-typed query.
-    const semanticReady = semanticHealthy && semanticQueryFor === q;
+    // the debounced search may not have resolved yet for a just-typed query.
+    const semanticReady = semanticAvailable && semanticQueryFor === q;
 
     // Keyword mode: exact case-insensitive substring match (no fuzzy).
     if (defaultMode === "keyword") {
       return substringMatch(q.toLowerCase()).map(noMatch);
     }
 
-    // Semantic: real vector search via the local AI service when reachable
-    // (see the debounced effect above); Fuse fuzzy search otherwise.
+    // Semantic: real vector search over the local index when the embedder is
+    // usable (see the debounced effect above); Fuse fuzzy search otherwise.
     if (defaultMode === "semantic") {
       if (semanticReady && semanticItems.length > 0) {
         return semanticItems.map(noMatch);
@@ -220,7 +223,7 @@ export function SearchView() {
     }
     if (merged.length === 0) return fuzzy();
     return merged.map(noMatch);
-  }, [query, items, fuse, defaultMode, semanticHealthy, semanticItems, semanticQueryFor]);
+  }, [query, items, fuse, defaultMode, semanticAvailable, semanticItems, semanticQueryFor]);
 
   const results = useMemo(() => {
     const filtered = active
@@ -308,6 +311,17 @@ export function SearchView() {
               </button>
             );
           })}
+          <span
+            data-testid="semantic-index-status"
+            className="ml-auto pl-2 text-[11px] text-muted-foreground"
+          >
+            Semantic index:{" "}
+            {semanticState === "ready"
+              ? "ready"
+              : semanticState === "error"
+                ? "unavailable"
+                : "loading"}
+          </span>
         </div>
       </div>
 

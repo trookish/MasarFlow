@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
@@ -53,8 +53,7 @@ import {
 import { useUIStore } from "@/lib/stores/ui";
 import { MasarFlowLogo } from "@/components/shell/logo";
 import { useProjectStore } from "@/lib/stores/project";
-import { useActiveProject, useActiveProjectId } from "@/lib/hooks/use-project";
-import { reindexProject } from "@/lib/ai/embedding-sync";
+import { useActiveProject } from "@/lib/hooks/use-project";
 import { useMounted } from "@/lib/hooks/use-mounted";
 import {
   usePageSettings,
@@ -83,6 +82,7 @@ import {
   removeProjectQuietly,
 } from "@/components/shell/remove-project-dialog";
 import { GradientEditorDialog } from "@/components/settings/gradient-editor-dialog";
+import { SemanticIndexCard } from "@/components/settings/semantic-index-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1455,101 +1455,6 @@ function WorkflowSection() {
   );
 }
 
-function AiServiceSection() {
-  const projectId = useActiveProjectId();
-  const [health, setHealth] = useState<
-    | { checked: false }
-    | { checked: true; ok: boolean; ollamaAvailable: boolean }
-  >({ checked: false });
-  const [reindexing, setReindexing] = useState(false);
-  const [lastReindexed, setLastReindexed] = useState<number | null>(null);
-
-  async function checkHealth() {
-    try {
-      const res = await fetch("/api/python/health");
-      const data = (await res.json()) as {
-        ok?: boolean;
-        ollama?: { available?: boolean };
-      };
-      setHealth({
-        checked: true,
-        ok: data.ok === true,
-        ollamaAvailable: data.ollama?.available === true,
-      });
-    } catch {
-      setHealth({ checked: true, ok: false, ollamaAvailable: false });
-    }
-  }
-
-  useEffect(() => {
-    // Deferred via a microtask (rather than an immediate `void checkHealth()`)
-    // so this effect never synchronously triggers a setState call.
-    void Promise.resolve().then(() => checkHealth());
-  }, []);
-
-  async function runReindex() {
-    if (!projectId) return;
-    setReindexing(true);
-    try {
-      await reindexProject(projectId);
-      setLastReindexed(Date.now());
-      await checkHealth();
-    } finally {
-      setReindexing(false);
-    }
-  }
-
-  return (
-    <SectionPanel
-      title="Local AI Service"
-      description="The local Python service (python-service/) powers semantic search, RAG-grounded chat, code analysis, and graph intelligence. It's a required runtime — the workspace won't open without it."
-    >
-      <SettingRow
-        label="Status"
-        description="Whether the local service — and Ollama, for local model chat — are reachable."
-      >
-        <div className="flex items-center gap-2 text-xs">
-          {!health.checked ? (
-            <span className="text-muted-foreground">Checking…</span>
-          ) : health.ok ? (
-            <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{" "}
-              Connected
-              {health.ollamaAvailable ? " · Ollama detected" : ""}
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />{" "}
-              Not running
-            </span>
-          )}
-          <Button variant="ghost" size="sm" onClick={() => void checkHealth()}>
-            <RefreshCw className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </SettingRow>
-      <SettingRow
-        label="Reindex workspace"
-        description={
-          lastReindexed
-            ? `Last reindexed ${new Date(lastReindexed).toLocaleTimeString()}. Notes, specs, tasks, docs, and more are also reindexed automatically every ~10 minutes.`
-            : "Sends the current workspace to the local service for embedding. Also runs automatically every ~10 minutes."
-        }
-      >
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={!projectId || !health.checked || !health.ok || reindexing}
-          onClick={() => void runReindex()}
-        >
-          <Cpu className="h-3.5 w-3.5" />{" "}
-          {reindexing ? "Reindexing…" : "Reindex now"}
-        </Button>
-      </SettingRow>
-    </SectionPanel>
-  );
-}
-
 function DocsSection() {
   const { docs, update, reset } = usePageSettings();
   const set = <K extends keyof AllPageSettings["docs"]>(
@@ -1986,7 +1891,7 @@ const SECTION_COMPONENTS: Record<Section, () => React.ReactElement> = {
   agent: AgentSection,
   agents: AgentsSection,
   workflow: WorkflowSection,
-  "ai-service": AiServiceSection,
+  "ai-service": SemanticIndexCard,
   docs: DocsSection,
   devlogs: DevlogsSection,
   sync: SyncSection,
