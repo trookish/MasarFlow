@@ -3,10 +3,13 @@ import type { Doc, Note } from "@/lib/db/schema";
 import {
   RESERVED_KEYS,
   applyVaultDoc,
+  parseSpecBody,
   parseVaultDoc,
   propsFromFields,
   serializeEntity,
+  serializeSpecBody,
 } from "@/lib/vault/serialize";
+import { specRow, taskRow } from "./_fixtures";
 
 const note = (over: Partial<Note> = {}): Note => ({
   id: "n1", projectId: "p1", type: "idea", title: "Auth design", body: "JWT everywhere",
@@ -107,5 +110,59 @@ describe("applyVaultDoc", () => {
     const dback = applyVaultDoc("doc", parseVaultDoc(serializeEntity("doc", d, { projectSlug: "p1" })));
     if (dback.kind !== "doc") throw new Error("wrong kind");
     expect(dback.patch).toEqual({ title: d.title, body: d.body, category: d.category, props: {} });
+  });
+});
+
+describe("spec markdown sections", () => {
+  it("serializes every spec section as an H2 section and restores it", () => {
+    const body = serializeSpecBody(specRow());
+    expect(body).toContain("## Purpose\n\nAuthenticate users.");
+    expect(body).toContain("## Goals\n\n- No plaintext passwords\n- SSO ready\n");
+    expect(body).toContain("## Dependencies\n\n- Postgres\n");
+    expect(body).toContain("## Technical notes\n\nJWT with rotating keys.");
+    expect(parseSpecBody(body)).toEqual({
+      purpose: "Authenticate users.",
+      goals: ["No plaintext passwords", "SSO ready"],
+      features: ["Login form"],
+      constraints: ["No third-party auth"],
+      dependencies: ["Postgres"],
+      acceptance: ["A user can log in"],
+      risks: ["Token theft"],
+      futureImprovements: ["Passkeys"],
+      technicalNotes: "JWT with rotating keys.",
+    });
+  });
+});
+
+describe("spec + task entities", () => {
+  it("round-trips a spec through frontmatter + sections", () => {
+    const s = specRow();
+    const patch = applyVaultDoc("spec", parseVaultDoc(serializeEntity("spec", s, { projectSlug: "p1" })));
+    if (patch.kind !== "spec") throw new Error("wrong kind");
+    expect(patch.patch).toEqual({
+      title: s.title,
+      number: s.number,
+      status: s.status,
+      implementationProgress: s.implementationProgress,
+      purpose: s.purpose,
+      goals: s.goals,
+      features: s.features,
+      constraints: s.constraints,
+      dependencies: s.dependencies,
+      acceptance: s.acceptance,
+      risks: s.risks,
+      futureImprovements: s.futureImprovements,
+      technicalNotes: s.technicalNotes,
+      props: {},
+    });
+  });
+
+  it("drops invalid enum values and keeps the body as description for tasks", () => {
+    const patch = applyVaultDoc("task", parseVaultDoc("---\ntitle: T\nstatus: nope\npriority: 7\n---\nb"));
+    if (patch.kind !== "task") throw new Error("wrong kind");
+    expect(patch.patch).toEqual({ title: "T", description: "b", tags: [], props: {} });
+    const ok = applyVaultDoc("task", parseVaultDoc(serializeEntity("task", taskRow(), { projectSlug: "p1" })));
+    if (ok.kind !== "task") throw new Error("wrong kind");
+    expect(ok.patch).toMatchObject({ status: "in_progress", priority: "high", tags: ["auth"] });
   });
 });

@@ -1,5 +1,8 @@
 import {
   NOTE_TYPES,
+  specStatusSchema,
+  taskPrioritySchema,
+  taskStatusSchema,
   type Doc,
   type Note,
   type NoteType,
@@ -103,8 +106,97 @@ export function bodyOf(kind: MirrorKind, row: Note | Doc | Spec | Task): string 
     case "task":
       return (row as Task).description;
     case "spec":
-      throw new Error("spec body is wired in P7.T4");
+      return serializeSpecBody(row as Spec);
   }
+}
+
+export const SPEC_SECTIONS = [
+  "Purpose", "Goals", "Features", "Constraints", "Dependencies",
+  "Acceptance", "Risks", "Future improvements", "Technical notes",
+] as const;
+
+export type SpecSections = Pick<
+  Spec,
+  "purpose" | "goals" | "features" | "constraints" | "dependencies" |
+  "acceptance" | "risks" | "futureImprovements" | "technicalNotes"
+>;
+
+const SECTION_FIELD: Record<string, keyof SpecSections> = {
+  Purpose: "purpose",
+  Goals: "goals",
+  Features: "features",
+  Constraints: "constraints",
+  Dependencies: "dependencies",
+  Acceptance: "acceptance",
+  Risks: "risks",
+  "Future improvements": "futureImprovements",
+  "Technical notes": "technicalNotes",
+};
+const LIST_FIELDS = new Set<keyof SpecSections>([
+  "goals", "features", "constraints", "dependencies", "acceptance", "risks", "futureImprovements",
+]);
+
+/** Spec body = one H2 section per field, in a fixed order. */
+export function serializeSpecBody(spec: Spec): string {
+  const part = (title: string, items: string[] | string): string => {
+    const text = Array.isArray(items)
+      ? items.map((i) => `- ${i}`).join("\n")
+      : items.trim();
+    return `## ${title}\n\n${text}`;
+  };
+  return [
+    part("Purpose", spec.purpose),
+    part("Goals", spec.goals),
+    part("Features", spec.features),
+    part("Constraints", spec.constraints),
+    part("Dependencies", spec.dependencies),
+    part("Acceptance", spec.acceptance),
+    part("Risks", spec.risks),
+    part("Future improvements", spec.futureImprovements),
+    part("Technical notes", spec.technicalNotes),
+    "",
+  ].join("\n\n");
+}
+
+/** Parse spec sections. Unknown sections keep their text under technicalNotes. */
+export function parseSpecBody(body: string): SpecSections {
+  const out: SpecSections = {
+    purpose: "", goals: [], features: [], constraints: [], dependencies: [],
+    acceptance: [], risks: [], futureImprovements: [], technicalNotes: "",
+  };
+  const stray: string[] = [];
+  let current: keyof SpecSections | null = null;
+  let buffer: string[] = [];
+  const flush = (): void => {
+    const text = buffer.join("\n").trim();
+    buffer = [];
+    if (!current) {
+      if (text) stray.push(text);
+      return;
+    }
+    if (LIST_FIELDS.has(current)) {
+      out[current as "goals"] = text
+        ? text.split("\n").map((l) => l.replace(/^[-*]\s+/, "").trim()).filter(Boolean)
+        : [];
+      return;
+    }
+    if (current === "technicalNotes") out.technicalNotes = text;
+    else out.purpose = text;
+  };
+  for (const line of body.replace(/\r\n/g, "\n").split("\n")) {
+    const heading = /^##\s+(.+?)\s*$/.exec(line);
+    if (heading && (SPEC_SECTIONS as readonly string[]).includes(heading[1])) {
+      flush();
+      current = SECTION_FIELD[heading[1]] ?? "purpose";
+      continue;
+    }
+    buffer.push(line);
+  }
+  flush();
+  if (stray.length) {
+    out.technicalNotes = [stray.join("\n\n"), out.technicalNotes].filter(Boolean).join("\n\n");
+  }
+  return out;
 }
 
 export function parseVaultDoc(content: string): ParsedVaultDoc {
@@ -158,8 +250,35 @@ export function applyVaultDoc(kind: MirrorKind, doc: ParsedVaultDoc): VaultPatch
           props,
         }),
       };
-    case "spec":
-    case "task":
-      throw new Error(`vault kind ${kind} is wired in P7.T4`);
+    case "spec": {
+      const rawStatus = asString(doc.fields.status);
+      const progress = typeof doc.fields.progress === "number" ? doc.fields.progress : undefined;
+      return {
+        kind: "spec",
+        patch: compact({
+          title: doc.title || "untitled",
+          number: asString(doc.fields.number) || undefined,
+          status: specStatusSchema.safeParse(rawStatus).success ? (rawStatus as Spec["status"]) : undefined,
+          implementationProgress: progress,
+          ...parseSpecBody(doc.body),
+          props,
+        }),
+      };
+    }
+    case "task": {
+      const rawStatus = asString(doc.fields.status);
+      const rawPriority = asString(doc.fields.priority);
+      return {
+        kind: "task",
+        patch: compact({
+          title: doc.title || "untitled",
+          description: doc.body,
+          status: taskStatusSchema.safeParse(rawStatus).success ? (rawStatus as Task["status"]) : undefined,
+          priority: taskPrioritySchema.safeParse(rawPriority).success ? (rawPriority as Task["priority"]) : undefined,
+          tags: doc.tags,
+          props,
+        }),
+      };
+    }
   }
 }
