@@ -2317,7 +2317,7 @@ async function seedWorkflow(
         "Pulled hitstop + combo-graph notes and the frame-budget audit. Risk: particle spike during the forge burst (5.1ms).",
     },
     {
-      key: "spec",
+      key: "requirements",
       output:
         "Drafted SPEC-005 (Echo Forge Ability) with goals, acceptance (forge/swap < 200ms), and risks.",
     },
@@ -2948,7 +2948,7 @@ async function seedDraftDeckWorkflow(
         "WASM host + manifest registry reviewed; API churn risk flagged for version pinning.",
     },
     {
-      key: "spec",
+      key: "requirements",
       output:
         "SPEC-001 (Plugin API) drafted with acceptance: hello-world plugin loads in < 300ms.",
     },
