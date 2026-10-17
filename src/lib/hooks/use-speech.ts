@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getDesktop } from "@/lib/desktop/bridge";
 
 /**
  * Voice input via the browser's Web Speech API (SpeechRecognition). Fully
@@ -25,12 +26,27 @@ interface SpeechResultEvent {
   results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }>;
 }
 
+export interface SpeechWindowLike {
+  SpeechRecognition?: new () => SpeechRecognitionLike;
+  webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+}
+
+/**
+ * Whether this runtime can actually do speech recognition.
+ *
+ * Chromium exposes the constructor even where no speech backend exists (Electron
+ * ships no Google speech service), so a constructor check alone would render a
+ * microphone that fails on the first click. The desktop shell therefore reports
+ * unavailable; see reports/p9/voice-probe.json for the probe that decided this.
+ */
+export function speechAvailability(win: SpeechWindowLike | null, desktop: boolean): boolean {
+  if (!win || desktop) return false;
+  return Boolean(win.SpeechRecognition ?? win.webkitSpeechRecognition);
+}
+
 function getRecognitionCtor(): (new () => SpeechRecognitionLike) | null {
   if (typeof window === "undefined") return null;
-  const w = window as unknown as {
-    SpeechRecognition?: new () => SpeechRecognitionLike;
-    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-  };
+  const w = window as unknown as SpeechWindowLike;
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
@@ -62,7 +78,10 @@ export function useSpeechInput(opts: {
     optsRef.current = opts;
   });
 
-  const supported = getRecognitionCtor() !== null;
+  const supported = speechAvailability(
+    typeof window === "undefined" ? null : (window as unknown as SpeechWindowLike),
+    getDesktop() !== null,
+  );
 
   const stop = useCallback(() => {
     recRef.current?.stop();
