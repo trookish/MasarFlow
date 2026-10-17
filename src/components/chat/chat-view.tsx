@@ -45,11 +45,14 @@ import {
   FolderGit2,
   ShieldAlert,
   Terminal,
+  CheckSquare,
+  FilePlus,
 } from "lucide-react";
 import {
   chatThreadsRepo,
   chatMessagesRepo,
   notesRepo,
+  tasksRepo,
   linkedProjectsRepo,
   aiUndoRepo,
   aiConnectionsRepo,
@@ -149,6 +152,8 @@ import {
 } from "@/lib/chat/mentions";
 import { resolveRecordMention } from "@/lib/chat/mention-resolve";
 import { createEchoStripper } from "@/lib/chat/echo-strip";
+import { openEntity } from "@/lib/entities/open";
+import { noteFromText, taskFromText } from "@/lib/entities/send-to";
 
 /* ── Suggestions shown on an empty thread ─────────────────────────────── */
 
@@ -446,6 +451,20 @@ export function ChatView() {
       body: `\`\`\`${language}\n${code}\n\`\`\``,
       type: "note",
     });
+  }
+
+  /** Send a message's text to the Task Boards as a new task (opens it). */
+  async function sendToTask(text: string) {
+    if (!projectId) return;
+    const task = await tasksRepo.create({ projectId, ...taskFromText(text) });
+    openEntity({ kind: "task", id: task.id });
+  }
+
+  /** Send a message's text to the Brain as a new note (opens it). */
+  async function sendToNote(text: string) {
+    if (!projectId) return;
+    const note = await notesRepo.create({ projectId, ...noteFromText(text) });
+    openEntity({ kind: "note", id: note.id });
   }
 
   /* ── In-browser fs/shell approval (API / Ollama backends) ────────────── */
@@ -1386,6 +1405,8 @@ export function ChatView() {
                     onDelete={() => chatMessagesRepo.remove(m.id)}
                     onRegenerate={() => void regenerate(m.id)}
                     onSaveCodeAsNote={saveCodeAsNote}
+                    onCreateTask={() => void sendToTask(m.content)}
+                    onCreateNote={() => void sendToNote(m.content)}
                     onKeepModel={(tid, target) => void keepModel(tid, target)}
                   />
                 ))}
@@ -2122,6 +2143,8 @@ const MessageRow = memo(
     onDelete,
     onRegenerate,
     onSaveCodeAsNote,
+    onCreateTask,
+    onCreateNote,
     onUndoFiles,
     onKeepModel,
   }: {
@@ -2133,6 +2156,8 @@ const MessageRow = memo(
     onDelete: () => void;
     onRegenerate: () => void;
     onSaveCodeAsNote: (code: string, language: string) => void;
+    onCreateTask: () => void;
+    onCreateNote: () => void;
     onUndoFiles?: () => void;
     /** Accept a fallback switch shown on a notice ("Keep using this model"). */
     onKeepModel?: (threadId: string, target: FallbackTarget) => void;
@@ -2367,6 +2392,32 @@ const MessageRow = memo(
                     )}
                   </Button>
                 </Tooltip>
+              )}
+              {m.content && (
+                <>
+                  <Tooltip label="Create task" side="bottom">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Create task from this message"
+                      onClick={onCreateTask}
+                      className="h-6 w-6 text-muted-foreground"
+                    >
+                      <CheckSquare className="h-3 w-3" />
+                    </Button>
+                  </Tooltip>
+                  <Tooltip label="Save as note" side="bottom">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Save this message as a note"
+                      onClick={onCreateNote}
+                      className="h-6 w-6 text-muted-foreground"
+                    >
+                      <FilePlus className="h-3 w-3" />
+                    </Button>
+                  </Tooltip>
+                </>
               )}
               {m.role === "assistant" && (
                 <Tooltip label="Regenerate" side="bottom">
