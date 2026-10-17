@@ -822,7 +822,7 @@ async function seedPulseWorkflow(
         "Backpressure study: cap queues at 64KB, delta-compress, prune sockets after 30s.",
     },
     {
-      key: "spec",
+      key: "requirements",
       output:
         "Drafted SPEC-001 (Realtime Presence & Deploy Streams) with acceptance and risks.",
     },

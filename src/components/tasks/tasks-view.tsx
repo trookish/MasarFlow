@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, ChevronDown, Filter } from "lucide-react";
 import { tasksRepo, specsRepo, sprintsRepo } from "@/lib/db/repos";
@@ -23,6 +23,7 @@ import { TaskDetail } from "./task-detail";
 export function TasksView() {
   const projectId = useActiveProjectId();
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [selectedId, select] = useUrlSelection("/tasks", "task");
 
@@ -63,12 +64,14 @@ export function TasksView() {
   // intent: replace it with an explicit empty value FIRST (so a reload can't
   // re-trigger the create, and the dock's panel snapshot stops carrying it),
   // then run the create flow — this works even when this panel is already the
-  // focused one, where a push to the same route would change nothing.
-  const wantsNew = searchParams.get("new") === "1";
+  // focused one, where a push to the same route would change nothing. The
+  // intent is route-scoped: another view's ?new=1 (e.g. /specs?new=1) must
+  // not create a task here.
+  const wantsNew = pathname === "/tasks" && searchParams.get("new") === "1";
   useEffect(() => {
     if (!wantsNew || !projectId) return;
     router.replace("/tasks?new=", { scroll: false });
-    void createTask({ status: "todo" });
+    void createTask({ status: "todo" }, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fires on the intent transition only; createTask is a fresh closure per render.
   }, [wantsNew, projectId, router]);
 
@@ -91,7 +94,7 @@ export function TasksView() {
     await recompute(t?.specId);
   }
 
-  async function createTask(patch: Partial<Task>) {
+  async function createTask(patch: Partial<Task>, consumeIntent = false) {
     if (!projectId) return;
     const task = await tasksRepo.create({
       projectId,
@@ -99,7 +102,14 @@ export function TasksView() {
       status: "todo",
       ...patch,
     });
-    select(task.id);
+    if (consumeIntent) {
+      // select() merges THIS render's search — which still holds ?new=1 — back
+      // into the URL and re-triggers the effect. Replace with the selection
+      // alone so the intent is consumed in one step.
+      router.replace(`/tasks?task=${task.id}`, { scroll: false });
+    } else {
+      select(task.id);
+    }
   }
 
   const sprintLabel =

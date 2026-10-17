@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, FileText } from "lucide-react";
 import { specsRepo, tasksRepo, notesRepo } from "@/lib/db/repos";
@@ -19,6 +19,7 @@ import { SpecEditor } from "./spec-editor";
 export function SpecsView() {
   const projectId = useActiveProjectId();
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [selectedId, select] = useUrlSelection("/specs", "spec");
   const { defaultSort, showCompleted } = usePageSettings((s) => s.specs);
@@ -69,16 +70,18 @@ export function SpecsView() {
   // intent: replace it with an explicit empty value FIRST (so a reload can't
   // re-trigger the create, and the dock's panel snapshot stops carrying it),
   // then run the create flow — this works even when this panel is already the
-  // focused one, where a push to the same route would change nothing.
-  const wantsNew = searchParams.get("new") === "1";
+  // focused one, where a push to the same route would change nothing. The
+  // intent is route-scoped: another view's ?new=1 (e.g. /tasks?new=1) must
+  // not create a spec here.
+  const wantsNew = pathname === "/specs" && searchParams.get("new") === "1";
   useEffect(() => {
     if (!wantsNew || !projectId) return;
     router.replace("/specs?new=", { scroll: false });
-    void createSpec();
+    void createSpec(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fires on the intent transition only; createSpec is a fresh closure per render.
   }, [wantsNew, projectId, router]);
 
-  async function createSpec() {
+  async function createSpec(consumeIntent = false) {
     if (!projectId) return;
     const count = (specs ?? []).length;
     const number = `RFC-${String(count + 1).padStart(3, "0")}`;
@@ -87,7 +90,14 @@ export function SpecsView() {
       number,
       title: "Untitled spec",
     });
-    select(spec.id);
+    if (consumeIntent) {
+      // select() merges THIS render's search — which still holds ?new=1 — back
+      // into the URL and re-triggers the effect. Replace with the selection
+      // alone so the intent is consumed in one step.
+      router.replace(`/specs?spec=${spec.id}`, { scroll: false });
+    } else {
+      select(spec.id);
+    }
   }
 
   async function deleteSpec() {
@@ -115,7 +125,7 @@ export function SpecsView() {
           <Button
             size="icon-sm"
             aria-label="New spec"
-            onClick={createSpec}
+            onClick={() => void createSpec()}
             disabled={!projectId}
           >
             <Plus className="h-4 w-4" />
@@ -176,7 +186,7 @@ export function SpecsView() {
             title="No spec selected"
             description="Specifications turn an idea into an RFC with goals, constraints, and acceptance criteria — then link tasks to track implementation."
             action={
-              <Button onClick={createSpec} disabled={!projectId}>
+              <Button onClick={() => void createSpec()} disabled={!projectId}>
                 <Plus className="h-4 w-4" /> New spec
               </Button>
             }
