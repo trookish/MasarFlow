@@ -163,38 +163,6 @@ export const PLUGIN_CATALOG: PluginDef[] = [
     capabilities: ["Export"],
     settings: [],
   },
-  {
-    id: "canvas-ai-assist",
-    name: "Canvas AI Assist",
-    description:
-      "AI-powered canvas operations: mind-map generation, auto-summary cards, and smart arrangement. Exposes the canvas AI seam to the chat agent.",
-    category: "Canvas",
-    author: "MasarFlow",
-    version: "0.1.0",
-    icon: "sparkles",
-    capabilities: ["AI", "Canvas"],
-    settings: [
-      { key: "model", label: "Model", type: "text", default: "claude-sonnet-4-5", placeholder: "claude-sonnet-4-5" },
-    ],
-    href: "/brain/canvas",
-    hrefLabel: "Open Canvas",
-  },
-  {
-    id: "canvas-mermaid",
-    name: "Canvas Mermaid Renderer",
-    description:
-      "Render Mermaid diagrams as interactive canvas cards. Registers a custom 'mermaid' card type via the canvas plugin registry.",
-    category: "Canvas",
-    author: "Community",
-    version: "0.1.0",
-    icon: "network",
-    capabilities: ["Canvas", "Rendering"],
-    settings: [
-      { key: "theme", label: "Diagram theme", type: "select", default: "default", options: ["default", "dark", "forest", "neutral"] },
-    ],
-    href: "/brain/canvas",
-    hrefLabel: "Open Canvas",
-  },
 ];
 
 /** Build the default settings object for a plugin from its field defaults. */

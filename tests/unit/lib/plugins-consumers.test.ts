@@ -5,8 +5,6 @@ import { expectShrinkingAllowlist } from "../_helpers/shrinking-allowlist";
 
 /** Catalog plugins nothing consumes (verified 2026-10-16). Must be [] by P9. */
 const UNWIRED_PLUGINS = [
-  "canvas-ai-assist",
-  "canvas-mermaid",
   "github-commits",
   "obsidian-sync",
 ];
