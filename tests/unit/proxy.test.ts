@@ -1,11 +1,15 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { proxy } from "@/proxy";
 
 const url = "http://127.0.0.1:41000/api/fs/list";
+// Hermetic: the shell running the tests may itself carry a launch token.
+beforeEach(() => {
+  vi.stubEnv("MASARFLOW_TOKEN", "");
+  vi.stubEnv("PORT", "");
+});
 afterEach(() => {
-  delete process.env.MASARFLOW_TOKEN;
-  delete process.env.PORT;
+  vi.unstubAllEnvs();
 });
 
 describe("proxy", () => {
