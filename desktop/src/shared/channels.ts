@@ -15,4 +15,8 @@ export const CH = {
   winClose: "window:close",
   winIsMax: "window:is-maximized",
   winMaximized: "window:maximized",
+  secretsAvailable: "secrets:available",
+  secretsGet: "secrets:get",
+  secretsSet: "secrets:set",
+  secretsDelete: "secrets:delete",
 } as const;

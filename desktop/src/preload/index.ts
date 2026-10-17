@@ -33,6 +33,12 @@ const api: MasarflowApi = {
       return () => ipcRenderer.removeListener(CH.winMaximized, listener);
     },
   },
+  secrets: {
+    available: () => ipcRenderer.invoke(CH.secretsAvailable),
+    get: (key) => ipcRenderer.invoke(CH.secretsGet, key),
+    set: (key, value) => ipcRenderer.invoke(CH.secretsSet, key, value),
+    delete: (key) => ipcRenderer.invoke(CH.secretsDelete, key),
+  },
 };
 
 contextBridge.exposeInMainWorld("masarflow", api);

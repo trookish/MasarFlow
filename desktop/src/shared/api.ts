@@ -47,4 +47,10 @@ export interface MasarflowApi {
     isMaximized(): Promise<boolean>;
     onMaximized(cb: (maximized: boolean) => void): () => void;
   };
+  secrets: {
+    available(): Promise<boolean>;
+    get(key: string): Promise<string>;
+    set(key: string, value: string): Promise<void>;
+    delete(key: string): Promise<void>;
+  };
 }

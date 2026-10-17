@@ -1,9 +1,10 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, clipboard, dialog, ipcMain, safeStorage, shell } from "electron";
 import { join } from "node:path";
 import { CH } from "@shared/channels";
 import { isRootAllowed } from "@shared/roots";
 import { addRootToFile, readRootsFile } from "../security/roots";
 import { isSafeExternalUrl } from "../security/url-policy";
+import { SecretStore, createSafeStorageCodec, isValidSecretKey } from "../secrets";
 
 const DISPLAY_VERSION = "0.2.0.0"; // single source for UI; package.json holds the semver
 
@@ -61,4 +62,19 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   });
   ipcMain.on(CH.winClose, () => win()?.close());
   ipcMain.handle(CH.winIsMax, () => win()?.isMaximized() ?? false);
+
+  // Secrets are encrypted with the OS keychain (DPAPI / Keychain / libsecret)
+  // and never leave the main process except over these validated channels.
+  const secrets = new SecretStore(join(app.getPath("userData"), "secrets.json"), createSafeStorageCodec(safeStorage));
+  const checkedKey = (key: unknown): string => {
+    if (typeof key !== "string" || !isValidSecretKey(key)) throw new Error("Invalid secret key");
+    return key;
+  };
+  ipcMain.handle(CH.secretsAvailable, () => secrets.available());
+  ipcMain.handle(CH.secretsGet, (_e, key: unknown) => secrets.get(checkedKey(key)));
+  ipcMain.handle(CH.secretsSet, (_e, key: unknown, value: unknown) => {
+    if (typeof value !== "string") throw new Error("Invalid secret value");
+    secrets.set(checkedKey(key), value);
+  });
+  ipcMain.handle(CH.secretsDelete, (_e, key: unknown) => secrets.delete(checkedKey(key)));
 }
