@@ -123,3 +123,26 @@ describe("uniquePaths", () => {
     expect(out.map((e) => e.path)).toEqual(["notes/x.md", "notes/X-2.md", "notes/x-3.md"]);
   });
 });
+
+describe("windows-hostile paths", () => {
+  it("neutralises reserved names in generated segments and rejects them in hand-built paths", () => {
+    expect(fileSegment("CON")).toBe("_CON");
+    expect(fileSegment("nul")).toBe("_nul");
+    expect(fileSegment("COM1")).toBe("_COM1");
+    expect(fileSegment("COM10")).toBe("COM10");
+    expect(pathFor("note", note({ title: "CON" }))).toBe("notes/_CON.md");
+    expect(assertRelativeVaultPath("notes/_CON.md")).toBe("notes/_CON.md");
+    expect(() => assertRelativeVaultPath("notes/CON.md")).toThrow(VaultPathError);
+    expect(() => assertRelativeVaultPath("notes/nul.md")).toThrow(VaultPathError);
+    expect(() => assertRelativeVaultPath("notes/LPT1.md")).toThrow(VaultPathError);
+  });
+
+  it("rejects drive letters, backslashes and trailing dot/space segments", () => {
+    expect(() => assertRelativeVaultPath("D:/x.md")).toThrow(VaultPathError);
+    expect(() => assertRelativeVaultPath("d:x.md")).toThrow(VaultPathError);
+    expect(() => assertRelativeVaultPath("notes/a\\b.md")).toThrow(VaultPathError);
+    expect(() => assertRelativeVaultPath("notes/a./b.md")).toThrow(VaultPathError);
+    expect(() => assertRelativeVaultPath("notes/a /b.md")).toThrow(VaultPathError);
+    expect(fileSegment("trailing space ")).toBe("trailing space");
+  });
+});

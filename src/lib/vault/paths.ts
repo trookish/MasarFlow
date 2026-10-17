@@ -16,10 +16,12 @@ const ILLEGAL_ALL = /[<>:"/\\|?*\u0000-\u001f]/g;
 const ILLEGAL_ONE = /[<>:"/\\|?*\u0000-\u001f]/;
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_PATH = 240;
+/** Windows refuses these stems even with an extension (CON.txt is invalid). */
+const WIN_RESERVED = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
 
 /** Windows/macOS/Linux-safe single segment. Keeps unicode letters. */
 export function fileSegment(input: string, fallback = "untitled"): string {
-  const cleaned = (input || "")
+  let cleaned = (input || "")
     .normalize("NFC")
     .replace(ILLEGAL_ALL, " ")
     .replace(/\s+/g, " ")
@@ -27,7 +29,9 @@ export function fileSegment(input: string, fallback = "untitled"): string {
     .replace(/[.\s]+$/, "")
     .slice(0, 64)
     .trim();
-  return cleaned || fallback;
+  if (!cleaned) return fallback;
+  if (WIN_RESERVED.test(cleaned.split(".")[0])) cleaned = `_${cleaned}`;
+  return cleaned;
 }
 
 /** Validate a mirror-relative path. Returns it unchanged when it is safe. */
@@ -40,6 +44,7 @@ export function assertRelativeVaultPath(rel: string): string {
     if (seg === "" || seg === "." || seg === "..") throw new VaultPathError(`illegal "${seg}" segment in: ${rel}`);
     if (ILLEGAL_ONE.test(seg)) throw new VaultPathError(`illegal character in path segment: ${seg}`);
     if (/[.\s]$/.test(seg)) throw new VaultPathError(`segment ends with dot/space: ${seg}`);
+    if (WIN_RESERVED.test(seg.split(".")[0])) throw new VaultPathError(`windows-reserved name: ${seg}`);
   }
   return rel;
 }
