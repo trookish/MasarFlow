@@ -19,12 +19,17 @@ import type {
   DockZone,
   ProjectDockState,
 } from "@/lib/dock/types";
+import { pageIdOf } from "@/lib/dock/types";
 import {
+  applyLayout,
   applyUrlFocus,
   closeEverywhere,
+  deleteWorkspace,
   dockFloater,
+  exportLayout,
   floatPanel,
   focusFloater,
+  importLayout,
   moveFloater,
   resizeFloater,
   resetWorkspace,
@@ -43,6 +48,9 @@ import {
   reorderTab,
   resizeSplit,
 } from "@/lib/dock/tree";
+import { rememberUndo, takeUndo } from "@/lib/dock/undo";
+import { getPageDef } from "@/lib/dock/registry";
+import { pushToast } from "@/lib/stores/toast";
 
 /** In-memory Storage shim for non-DOM environments (tests / SSR helpers). */
 export const memoryStorage: Storage = (() => {
@@ -117,6 +125,14 @@ interface DockStore {
   setWorkspace: (name: string) => void;
   saveWorkspaceAs: (name: string) => void;
   resetWorkspace: () => void;
+  /** Undo the last destructive dock action (close / reset / delete workspace). */
+  undo: () => void;
+  /** Delete a named workspace (refused for the last one). */
+  deleteWorkspace: (name: string) => void;
+  /** The active workspace as a portable JSON layout file. */
+  exportLayout: () => string;
+  /** Install a layout file as a new workspace; returns the workspace name or null. */
+  importLayout: (text: string) => string | null;
 
   // Drag
   setDrag: (drag: DockDragState | null) => void;
@@ -143,6 +159,11 @@ function update(
   const current = id ? s.projects[id] : undefined;
   if (!id || !current) return {};
   return { projects: { ...s.projects, [id]: fn(current) } };
+}
+
+/** Display label for a panel id — never a raw path in user-facing copy. */
+function panelLabel(panelId: string): string {
+  return getPageDef(panelId)?.label ?? pageIdOf(panelId);
 }
 
 export const useDockStore = create<DockStore>()(
@@ -173,7 +194,22 @@ export const useDockStore = create<DockStore>()(
         ),
 
       close: (panelId) =>
-        set((s) => update(s, (state) => closeEverywhere(state, panelId))),
+        set((s) => {
+          const id = s.activeProjectId;
+          const before = id ? s.projects[id] : undefined;
+          const next = update(s, (state) => closeEverywhere(state, panelId));
+          if (id && before) {
+            const label = panelLabel(panelId);
+            rememberUndo(id, `Closed ${label}`, before);
+            pushToast({
+              title: `Closed ${label}`,
+              description: "Reopen it any time from the command palette.",
+              actionLabel: "Undo",
+              onAction: () => useDockStore.getState().undo(),
+            });
+          }
+          return next;
+        }),
 
       focus: (panelId) =>
         set((s) =>
@@ -319,15 +355,78 @@ export const useDockStore = create<DockStore>()(
         ),
 
       resetWorkspace: () =>
-        set((s) =>
-          update(s, (state) => {
+        set((s) => {
+          const id = s.activeProjectId;
+          const before = id ? s.projects[id] : undefined;
+          const next = update(s, (state) => {
             const preset = WORKSPACE_PRESETS[state.activeWorkspace];
             return resetWorkspace(
               state,
               preset ? cloneTree(preset.tree) : state.workspaces[state.activeWorkspace].tree,
             );
+          });
+          if (id && before) {
+            rememberUndo(id, `Reset ${before.activeWorkspace}`, before);
+            pushToast({
+              title: `Reset “${before.activeWorkspace}” to its preset`,
+              actionLabel: "Undo",
+              onAction: () => useDockStore.getState().undo(),
+            });
+          }
+          return next;
+        }),
+
+      undo: () =>
+        set((s) => {
+          const id = s.activeProjectId;
+          if (!id) return {};
+          const entry = takeUndo(id);
+          if (!entry) return {};
+          pushToast({ title: `Restored “${entry.label}”`, tone: "success" });
+          return { projects: { ...s.projects, [id]: entry.state } };
+        }),
+
+      deleteWorkspace: (name) =>
+        set((s) => {
+          const id = s.activeProjectId;
+          const before = id ? s.projects[id] : undefined;
+          const next = update(s, (state) => deleteWorkspace(state, name));
+          if (id && before && next.projects) {
+            rememberUndo(id, `Deleted workspace ${name}`, before);
+            pushToast({
+              title: `Deleted workspace “${name}”`,
+              actionLabel: "Undo",
+              onAction: () => useDockStore.getState().undo(),
+            });
+          }
+          return next;
+        }),
+
+      exportLayout: () => {
+        const s = get();
+        const state = s.activeProjectId ? s.projects[s.activeProjectId] : undefined;
+        return state ? exportLayout(state) : "";
+      },
+
+      importLayout: (text) => {
+        const layout = importLayout(text);
+        if (!layout) return null;
+        let installed: string | null = null;
+        set((s) =>
+          update(s, (state) => {
+            const next = applyLayout(state, layout);
+            installed = next.activeWorkspace;
+            return next;
           }),
-        ),
+        );
+        if (installed) {
+          pushToast({
+            title: `Imported layout as “${installed}”`,
+            tone: "success",
+          });
+        }
+        return installed;
+      },
 
       setDrag: (drag) => set({ drag }),
     }),
