@@ -67,6 +67,7 @@ export function GitDiffView({
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset while the new diff loads
     setFiles(null);
     setFailed(null);
     void (async () => {

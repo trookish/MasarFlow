@@ -109,6 +109,7 @@ export function useGitRepo() {
   }, [bridge, desktop, projectId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial status read
     void refresh();
   }, [refresh]);
 

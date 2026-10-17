@@ -56,7 +56,7 @@ export function GitStatusPanel({ repo }: { repo: GitRepo }) {
       <div className="flex flex-col items-start gap-3 rounded border border-border p-4">
         <p className="text-sm text-muted-foreground">
           No linked folder is available for git. Link a folder to this project, or pick one now
-          (it is added to the app's allow-list).
+          (it is added to the app&apos;s allow-list).
         </p>
         <Button size="sm" onClick={() => void repo.pickRoot()}>
           <FolderOpen className="h-4 w-4" /> Choose a folder…
