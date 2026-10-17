@@ -27,13 +27,11 @@ export interface PluginDef {
 
 export type PluginSettings = Record<string, string | boolean>;
 
-/** Categories in display order. */
+/** Categories in display order. Every category must have at least one entry (tested). */
 export const PLUGIN_CATEGORIES = [
-  "Sync",
   "Editor",
   "Tasks",
   "Productivity",
-  "Canvas",
   "Export",
 ] as const;
 

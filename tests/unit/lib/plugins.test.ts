@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   PLUGIN_CATALOG,
+  PLUGIN_CATEGORIES,
   filterPlugins,
   defaultSettings,
 } from "@/lib/plugins";
@@ -9,6 +10,16 @@ describe("PLUGIN_CATALOG", () => {
   it("has unique plugin ids", () => {
     const ids = PLUGIN_CATALOG.map((p) => p.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("offers no category chip that leads to an empty list", () => {
+    const empty = PLUGIN_CATEGORIES.filter((c) => !PLUGIN_CATALOG.some((p) => p.category === c));
+    expect(empty).toEqual([]);
+  });
+
+  it("files every plugin under a listed category", () => {
+    const listed = new Set<string>(PLUGIN_CATEGORIES);
+    expect(PLUGIN_CATALOG.filter((p) => !listed.has(p.category)).map((p) => p.id)).toEqual([]);
   });
 });
 
