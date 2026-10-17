@@ -7,3 +7,19 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Feature truth (enforced in `pnpm test`)
+
+Four guards fail the build when the code and its claims drift apart. Their allow-lists shrink with every
+fix and must end **empty**. Adding an entry requires a written reason in the commit message and a task that removes it.
+
+| Rule | Test |
+|---|---|
+| Every catalog plugin id is referenced by real code | `tests/unit/lib/plugins-consumers.test.ts` |
+| Every API route is called; every page is a dock page | `tests/unit/repo-truth/dead-routes.test.ts` |
+| Every page setting is consumed outside the settings screen | `tests/unit/repo-truth/setting-consumers.test.ts` |
+| Every feature in `tests/e2e/feature-matrix.json` has a passing packaged-app spec titled `<route>: <feature>` | `tests/unit/e2e/feature-matrix.test.ts` + `pnpm e2e:desktop` |
+
+A new feature adds its title to `tests/e2e/feature-matrix.json` **in the same commit as its spec**.
+A spec that only asserts "the page rendered" is not a test. The packaged app is the target:
+`pnpm desktop:dist:dir && pnpm e2e:desktop`. `pnpm e2e` (browser, dev server) is a development convenience only.
