@@ -3,7 +3,7 @@
 All notable changes to MasarFlow. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions use the project's 4-part display style (`0.2.0.0`); the packaged version is valid semver (`0.2.0`).
 
-## [0.2.0.0] - 2026-10-XX
+## [0.2.0.0] - 2026-10-17
 
 ### Added
 - One desktop application: the workspace now runs inside the app window on `masarflow://app` (P1).

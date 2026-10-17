@@ -88,7 +88,7 @@ More detail: [docs/development.md](docs/development.md). Architecture and securi
 
 ## Security
 
-The workspace service binds `127.0.0.1` only and every request must carry a per-launch token the renderer never sees; `Host` and `Origin` are checked (anti DNS-rebinding / anti CSRF); filesystem and shell routes only accept paths inside folders you picked with the native picker; Electron runs sandboxed with context isolation, a CSP and a navigation lock; API keys, the GitHub token and the Obsidian key are encrypted with the OS credential store. The Windows installer is **unsigned** — see the install note above.
+The workspace service binds `127.0.0.1` only and every request must carry a per-launch token the renderer never sees; `Host` and `Origin` are checked (anti DNS-rebinding / anti CSRF); filesystem and shell routes only accept paths inside folders you picked with the native picker; Electron runs sandboxed with context isolation, a CSP and a navigation lock; API keys, the GitHub token and the Obsidian key are encrypted with the OS credential store. The Windows installer is **unsigned** — see the install note above. How to report a vulnerability, the full threat model and known limits: [SECURITY.md](SECURITY.md).
 
 ## Contributing
 
