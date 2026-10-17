@@ -195,22 +195,6 @@ export const PLUGIN_CATALOG: PluginDef[] = [
     href: "/brain/canvas",
     hrefLabel: "Open Canvas",
   },
-  {
-    id: "canvas-collab",
-    name: "Canvas Collaboration (Preview)",
-    description:
-      "Real-time multi-user canvas editing with presence indicators and conflict resolution. Architecture-ready; transport backend not yet implemented.",
-    category: "Canvas",
-    author: "MasarFlow",
-    version: "0.1.0",
-    icon: "users",
-    capabilities: ["Canvas", "Collaboration"],
-    settings: [
-      { key: "transport", label: "Transport", type: "select", default: "local", options: ["local", "websocket", "webrtc"] },
-    ],
-    href: "/brain/canvas",
-    hrefLabel: "Open Canvas",
-  },
 ];
 
 /** Build the default settings object for a plugin from its field defaults. */
