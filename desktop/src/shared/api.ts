@@ -59,6 +59,16 @@ export interface MasarflowApi {
     get(key: string): Promise<string>;
     set(key: string, value: string): Promise<void>;
     delete(key: string): Promise<void>;
+    /** Presence only — the value never crosses IPC. */
+    has(key: string): Promise<boolean>;
+  };
+  diagnostics: {
+    /** Redacted markdown report built in the main process. */
+    collect(input: { secretKeys: string[] }): Promise<{ markdown: string; generatedAt: string }>;
+  };
+  changelog: {
+    /** The shipped CHANGELOG.md, or "" when the build did not include it. */
+    read(): Promise<string>;
   };
   backups: {
     write(json: string): Promise<{ name: string; mtimeMs: number }>;
@@ -100,6 +110,8 @@ export interface MasarflowApi {
   logs: {
     list(): Promise<{ name: string; bytes: number; modifiedAt: number }[]>;
     tail(name: string, lines?: number): Promise<string[]>;
+    /** Opens the logs folder in the OS file manager. */
+    openFolder(): Promise<void>;
   };
   settings: {
     /** The full main-process settings object (AppSettings). */

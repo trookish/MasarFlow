@@ -39,6 +39,13 @@ const api: MasarflowApi = {
     get: (key) => ipcRenderer.invoke(CH.secretsGet, key),
     set: (key, value) => ipcRenderer.invoke(CH.secretsSet, key, value),
     delete: (key) => ipcRenderer.invoke(CH.secretsDelete, key),
+    has: (key) => ipcRenderer.invoke(CH.secretsHas, key),
+  },
+  diagnostics: {
+    collect: (input) => ipcRenderer.invoke(CH.diagnosticsCollect, input),
+  },
+  changelog: {
+    read: () => ipcRenderer.invoke(CH.changelogRead),
   },
   backups: {
     write: (json) => ipcRenderer.invoke(CH.backupsWrite, json),
@@ -86,6 +93,7 @@ const api: MasarflowApi = {
   logs: {
     list: () => ipcRenderer.invoke(CH.logsList),
     tail: (name, lines) => ipcRenderer.invoke(CH.logsTail, name, lines),
+    openFolder: () => ipcRenderer.invoke(CH.logsOpenFolder),
   },
   settings: {
     get: () => ipcRenderer.invoke(CH.settingsGet),

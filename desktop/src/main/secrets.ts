@@ -60,6 +60,11 @@ export class SecretStore {
     }
   }
 
+  /** Presence only. Main process answers; the value never crosses IPC (P10 B5). */
+  has(key: string): boolean {
+    return this.get(key) !== "";
+  }
+
   set(key: string, value: string): void {
     if (!this.codec.available()) throw new Error("Secret storage is unavailable on this system");
     const map = this.read();

@@ -38,6 +38,12 @@ describe("SecretStore", () => {
     writeFileSync(f, "{broken");
     expect(new SecretStore(f, codec).get("a")).toBe("");
   });
+  it("reports presence without returning the value", () => {
+    const s = new SecretStore(file(), codec);
+    s.set("github:pat", "ghp_x");
+    expect(s.has("github:pat")).toBe(true);
+    expect(s.has("ai-connection:missing")).toBe(false);
+  });
 });
 
 describe("isValidSecretKey", () => {

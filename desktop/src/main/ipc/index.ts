@@ -12,6 +12,8 @@ import { isSafeExternalUrl } from "../security/url-policy";
 import { SecretStore, createSafeStorageCodec, isValidSecretKey } from "../secrets";
 import { settings } from "../settings";
 import { listBackups, readBackup, writeBackup } from "../backups";
+import { collectDiagnostics, readChangelog } from "../diagnostics";
+import { logDir } from "../logging";
 import { createExecGit } from "../git/exec";
 import { createGitService } from "../git/service";
 import { registerTerminalIpc } from "./terminal";
@@ -95,6 +97,17 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     secrets.set(checkedKey(key), value);
   });
   ipcMain.handle(CH.secretsDelete, (_e, key: unknown) => secrets.delete(checkedKey(key)));
+  ipcMain.handle(CH.secretsHas, (_e, key: unknown) => secrets.has(checkedKey(key)));
+
+  // Diagnostics (P10.T7): the collector never returns secret values or raw
+  // files — only redacted markdown. The renderer may name at most 50 keys.
+  ipcMain.handle(CH.diagnosticsCollect, (_e, input: unknown) => {
+    const raw = (input as { secretKeys?: unknown } | null)?.secretKeys;
+    const secretKeys = (Array.isArray(raw) ? raw : []).filter((k): k is string => typeof k === "string").slice(0, 50);
+    return collectDiagnostics({ secretKeys });
+  });
+  ipcMain.handle(CH.changelogRead, () => readChangelog());
+  ipcMain.handle(CH.logsOpenFolder, () => shell.openPath(logDir()));
 
   // Automatic backups: gzipped JSON under userData/backups. Only file names
   // matching the app's own pattern are ever read back.

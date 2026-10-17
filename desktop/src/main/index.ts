@@ -8,9 +8,11 @@ import { registerIpc } from "./ipc";
 import { buildCsp } from "./security/csp";
 import { isPermissionAllowed } from "./security/permissions";
 import { settings } from "./settings";
+import { installLogBuffer, pruneRotatedLogs, rotateServerLogs } from "./logging";
 import { createMainWindow } from "./windows/main-window";
 
 app.setName("MasarFlow");
+installLogBuffer(); // P10.T7: main-process console output -> in-memory tail for diagnostics
 registerAppScheme(); // must run before 'ready'
 
 const DEV_URL = process.env.MASARFLOW_DEV_URL?.trim() || undefined;
@@ -140,6 +142,11 @@ if (!app.requestSingleInstanceLock()) {
     // initialised this store before P10 — it was carried over from the launcher
     // without a caller, so settings.get()/set() would have been no-ops on disk.
     settings.init();
+    // Log rotation (P10.T7 / P8's R-P8-5): the app-server child appends to
+    // logs/server.log — rotate + prune before it spawns so no file is written
+    // by two processes at once, and long-running installs stop growing forever.
+    rotateServerLogs();
+    pruneRotatedLogs();
     // Hardening: deny-by-default permissions; in dev the Next dev server needs
     // eval and its HMR websocket, so it gets a looser CSP than the packaged app.
     session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => cb(isPermissionAllowed(permission)));

@@ -51,4 +51,9 @@ export const CH = {
   // P10: app settings over IPC (close-to-tray, onboarding, update channel)
   settingsGet: "settings:get",
   settingsSet: "settings:set",
+  // P10.T7: diagnostics — secret presence, redacted report, changelog, logs folder
+  secretsHas: "secrets:has",
+  diagnosticsCollect: "diagnostics:collect",
+  changelogRead: "changelog:read",
+  logsOpenFolder: "logs:open-folder",
 } as const;
