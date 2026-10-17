@@ -48,6 +48,10 @@ const ROUTES_WITHOUT_FEATURES = [
   "/standards",
   "/sync",
   "/tasks",
+  "/today",
+  "/tools/logs",
+  "/tools/system",
+  "/tools/terminal",
   "/watcher",
   "/workflow",
 ];
