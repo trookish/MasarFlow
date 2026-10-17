@@ -1,8 +1,8 @@
 /**
- * Shared plumbing for the non-OpenCode chat backends — saved API connections
- * and local Ollama. Both run the in-browser Agent Loop (AgentController via
- * /api/chat); this module resolves the backend context from a thread, rebuilds
- * the wire history from the stored messages, and converts attachments.
+ * Shared plumbing for the chat backends — saved API connections and local
+ * Ollama. Both run the in-browser Agent Loop (AgentController via /api/chat);
+ * this module resolves the backend context from a thread, rebuilds the wire
+ * history from the stored messages, and converts attachments.
  * Kept pure and unit-testable.
  */
 
@@ -10,10 +10,9 @@ import type { ChatAttachment, ChatMessage } from "@/lib/db/schema";
 import type { WireImage, WireMessage } from "./chat-client";
 import type { AiProvider, Catalog } from "./catalog";
 
-export type ChatBackend = "opencode" | "api" | "ollama";
+export type ChatBackend = "api" | "ollama";
 
 export const BACKEND_LABELS: Record<ChatBackend, string> = {
-  opencode: "OpenCode",
   api: "API",
   ollama: "Local (Ollama)",
 };

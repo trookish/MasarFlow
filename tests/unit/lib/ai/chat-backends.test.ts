@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   attachmentsToWire,
+  BACKEND_LABELS,
   buildLegacyMessages,
   dataUrlToWireImage,
   providerForConnection,
@@ -184,5 +185,11 @@ describe("providerForConnection", () => {
     ).toBeNull();
     expect(providerForConnection(FALLBACK_CATALOG, null)).toBeNull();
     expect(providerForConnection(FALLBACK_CATALOG, undefined)).toBeNull();
+  });
+});
+
+describe("BACKEND_LABELS", () => {
+  it("labels exactly the two real backends", () => {
+    expect(BACKEND_LABELS).toEqual({ api: "API", ollama: "Local (Ollama)" });
   });
 });
