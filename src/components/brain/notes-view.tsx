@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Search, PenTool } from "lucide-react";
 import { notesRepo, foldersRepo, specsRepo } from "@/lib/db/repos";
 import type { Note } from "@/lib/db/schema";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
+import { useUrlSelection } from "@/lib/hooks/use-url-selection";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -20,8 +21,11 @@ import { ColumnResizer, useColumnWidth } from "./column-resizer";
 export function NotesView() {
   const projectId = useActiveProjectId();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const selectedId = searchParams.get("note");
+  const pathname = usePathname();
+  // ?note= lives in the URL; the dock keeps a per-panel snapshot of it, so the
+  // selection survives a reload even when the Brain panel is restored unfocused
+  // (P9: "the dock's persisted panel URL brings it back").
+  const [selectedId, select] = useUrlSelection("/brain", "note");
 
   const [query, setQuery] = useState("");
   const [folder, setFolder] = useState<FolderFilter>("all");
@@ -88,18 +92,17 @@ export function NotesView() {
     return [...list].sort((a, b) => b.updatedAt - a.updatedAt);
   }, [allNotes, folder, query, folderDescendants]);
 
-  // Clear a stale ?note= param (e.g. after switching projects) so the URL
-  // never points at a note that doesn't exist here.
+  // Clear a stale ?note= selection (e.g. after switching projects) so neither
+  // the URL nor the dock's panel snapshot points at a note that isn't here.
+  // Only when this panel owns the URL — while unfocused the app URL belongs to
+  // another page, and the panel just renders "No note selected".
   useEffect(() => {
+    if (pathname !== "/brain") return;
     if (!notes || !selectedId) return;
     if (!allNotes.some((n) => n.id === selectedId)) {
-      router.replace("/brain", { scroll: false });
+      select(null);
     }
-  }, [notes, selectedId, allNotes, router]);
-
-  function select(id: string | null) {
-    router.replace(id ? `/brain?note=${id}` : "/brain", { scroll: false });
-  }
+  }, [pathname, notes, selectedId, allNotes, select]);
 
   async function createNote() {
     if (!projectId) return;

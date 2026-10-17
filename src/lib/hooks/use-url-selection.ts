@@ -3,6 +3,21 @@
 import { useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { readSelection, selectionFor, withSelection } from "@/lib/entities/url";
+import { useDockStore } from "@/lib/stores/dock";
+
+/**
+ * The selection this page last had while focused, as persisted in the dock's
+ * per-panel URL snapshot. A panel restored after a reload starts unfocused, so
+ * the app URL belongs to another panel; the snapshot is the only place its
+ * selection survives (P9: the dock's persisted panel URL brings it back).
+ */
+function usePanelSnapshot(path: string, param: string): string | null {
+  return useDockStore((s) => {
+    const st = s.activeProjectId ? s.projects[s.activeProjectId] : null;
+    const entry = st?.workspaces[st.activeWorkspace];
+    return readSelection(entry?.params[path] ?? "", param);
+  });
+}
 
 /**
  * Selection stored in the URL so it can be deep-linked and opened by openEntity().
@@ -18,7 +33,8 @@ export function useUrlSelection(
   const search = useSearchParams()?.toString() ?? "";
   const onThisPage = pathname === path;
   const live = onThisPage ? readSelection(search, param) : null;
-  const [kept, setKept] = useState<string | null>(live);
+  const snapshot = usePanelSnapshot(path, param);
+  const [kept, setKept] = useState<string | null>(live ?? snapshot);
   // Remember the last value seen while THIS page was focused (derived state,
   // adjusted during render). An effect would be the other option, but the
   // repo's react-hooks rules reject setState-in-effect; this also skips the
