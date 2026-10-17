@@ -29,3 +29,38 @@ export function readSources(dir = SRC_DIR, exts?: string[]): SourceFile[] {
     text: readFileSync(p, "utf8"),
   }));
 }
+
+export interface ScanHit {
+  /** Repo-relative path, forward slashes, e.g. "scripts/start.mjs". */
+  file: string;
+  /** 1-based line number. */
+  line: number;
+  /** The matching line, trimmed. */
+  text: string;
+}
+
+/**
+ * Search every source file under the given repo-relative roots for `pattern`,
+ * one hit per matching line. Paths are repo-relative (forward slashes) so
+ * callers can print or whitelist exact files.
+ */
+export function scanFiles(
+  roots: string[],
+  pattern: RegExp,
+  exts = [".ts", ".tsx", ".mjs", ".js", ".mts", ".cjs"],
+): ScanHit[] {
+  const hits: ScanHit[] = [];
+  for (const root of roots) {
+    for (const p of walk(join(REPO_ROOT, root), exts)) {
+      const file = p.slice(REPO_ROOT.length).replaceAll("\\", "/");
+      const lines = readFileSync(p, "utf8").split("\n");
+      lines.forEach((text, i) => {
+        if (!text) return;
+        // A caller may pass a /g regex — reset so `test` never skips lines.
+        pattern.lastIndex = 0;
+        if (pattern.test(text)) hits.push({ file, line: i + 1, text: text.trim() });
+      });
+    }
+  }
+  return hits;
+}
