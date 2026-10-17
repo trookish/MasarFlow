@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MarkdownPreview } from "@/components/brain/markdown-preview";
 import { RichMarkdownEditor } from "@/components/brain/rich-markdown-editor";
+import { BacklinksSection } from "@/components/entities/backlinks-section";
 
 /** Common documentation buckets offered as a datalist (category is free-text). */
 export const DOC_CATEGORY_SUGGESTIONS = [
@@ -156,6 +157,11 @@ export function DocEditor({
             <MarkdownPreview content={form.body} />
           </div>
         )}
+      </div>
+
+      {/* Entity connections (knowledge graph) */}
+      <div className="shrink-0 px-6 pb-4">
+        <BacklinksSection projectId={doc.projectId} entity={{ kind: "doc", id: docId }} />
       </div>
     </div>
   );

@@ -28,6 +28,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { TagInput } from "@/components/brain/tag-input";
+import { BacklinksSection } from "@/components/entities/backlinks-section";
 
 interface TaskDetailProps {
   task: Task;
@@ -247,6 +248,12 @@ export function TaskDetail({
             onChange={(tags) => onPatch({ tags })}
           />
         </Field>
+
+        {/* Entity connections (knowledge graph) */}
+        <BacklinksSection
+          projectId={task.projectId}
+          entity={{ kind: "task", id: task.id }}
+        />
       </DialogBody>
 
       <DialogFooter>

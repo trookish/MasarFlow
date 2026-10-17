@@ -19,6 +19,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { StringListEditor } from "./string-list-editor";
+import { BacklinksSection } from "@/components/entities/backlinks-section";
 
 interface SpecEditorProps {
   spec: Spec;
@@ -350,6 +351,12 @@ export function SpecEditor({
               </ul>
             )}
           </div>
+
+          {/* Entity connections (knowledge graph) */}
+          <BacklinksSection
+            projectId={spec.projectId}
+            entity={{ kind: "spec", id: specId }}
+          />
         </div>
       </ScrollArea>
     </div>

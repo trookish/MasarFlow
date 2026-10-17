@@ -22,6 +22,7 @@ import { TagInput } from "./tag-input";
 import { TemplatePicker } from "./template-picker";
 import { RichMarkdownEditor } from "./rich-markdown-editor";
 import { BacklinksPanel } from "./backlinks-panel";
+import { BacklinksSection } from "@/components/entities/backlinks-section";
 
 interface NoteEditorProps {
   note: Note;
@@ -202,6 +203,11 @@ export function NoteEditor({
             <MarkdownPreview content={body} onWikilink={onNavigateToTitle} />
           </div>
         )}
+      </div>
+
+      {/* Entity connections (knowledge graph) */}
+      <div className="shrink-0 px-6 pb-2">
+        <BacklinksSection projectId={projectId} entity={{ kind: "note", id: noteId }} />
       </div>
 
       {/* Obsidian-style connections pane */}
