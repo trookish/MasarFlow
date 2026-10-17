@@ -1,5 +1,6 @@
 import type { MasarFlowDB } from "@/lib/db";
 import { BACKUP_FORMAT, BACKUP_VERSION, decodeValue, type BackupFile } from "./backup";
+import { withoutActivity } from "@/lib/activity/track";
 
 export type BackupErrorCode = "not-json" | "wrong-format" | "too-new" | "unknown-table";
 
@@ -41,22 +42,24 @@ export interface ImportSummary {
 /** Atomic: either everything lands or nothing changes. */
 export async function importBackup(db: MasarFlowDB, file: BackupFile, mode: "replace" | "merge"): Promise<ImportSummary> {
   const summary: ImportSummary = { tables: {} };
-  await db.transaction("rw", db.tables, async () => {
-    if (mode === "replace") await Promise.all(db.tables.map((t) => t.clear()));
-    for (const table of db.tables) {
-      const rows = file.tables[table.name];
-      if (!rows) continue;
-      const decoded = rows.map(decodeValue);
-      if (mode === "replace") {
-        await table.bulkAdd(decoded);
-        summary.tables[table.name] = decoded.length;
-      } else {
-        const have = new Set(await table.toCollection().primaryKeys());
-        const fresh = decoded.filter((r) => !have.has((r as { id: string }).id));
-        if (fresh.length) await table.bulkAdd(fresh);
-        summary.tables[table.name] = fresh.length;
+  await withoutActivity(() =>
+    db.transaction("rw", db.tables, async () => {
+      if (mode === "replace") await Promise.all(db.tables.map((t) => t.clear()));
+      for (const table of db.tables) {
+        const rows = file.tables[table.name];
+        if (!rows) continue;
+        const decoded = rows.map(decodeValue);
+        if (mode === "replace") {
+          await table.bulkAdd(decoded);
+          summary.tables[table.name] = decoded.length;
+        } else {
+          const have = new Set(await table.toCollection().primaryKeys());
+          const fresh = decoded.filter((r) => !have.has((r as { id: string }).id));
+          if (fresh.length) await table.bulkAdd(fresh);
+          summary.tables[table.name] = fresh.length;
+        }
       }
-    }
-  });
+    }),
+  );
   return summary;
 }

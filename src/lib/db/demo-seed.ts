@@ -49,6 +49,7 @@ import type {
   TaskPriority,
   TaskStatus,
 } from "@/lib/db/schema";
+import { withoutActivity } from "@/lib/activity/track";
 
 const DEMO_SLUGS = {
   web: "pulse-realtime-team-dashboard",
@@ -67,10 +68,12 @@ function ago(ms: number): number {
 
 /** Seed all demo projects and return the primary (web app) project id. */
 export async function seedDemoProject(): Promise<string> {
-  const webId = await seedPulseDemo();
-  await seedLumenDemo();
-  await seedDraftDeckDemo();
-  return webId;
+  return withoutActivity(async () => {
+    const webId = await seedPulseDemo();
+    await seedLumenDemo();
+    await seedDraftDeckDemo();
+    return webId;
+  });
 }
 
 async function seedProjectIfMissing(
