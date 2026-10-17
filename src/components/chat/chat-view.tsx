@@ -354,7 +354,7 @@ export function ChatView() {
   const thread = threads.find((t) => t.id === threadId) ?? null;
 
   const mode = thread?.mode ?? "agentic";
-  const backend: ChatBackend = thread?.backend ?? "opencode";
+  const backend: ChatBackend = thread?.backend === "ollama" ? "ollama" : "api";
   const opencodeProvider = thread
     ? (models?.providers.find((p) => p.providerId === thread.providerId) ??
       null)
@@ -446,35 +446,13 @@ export function ChatView() {
 
   async function newChat() {
     if (!projectId) return;
-    const backendForNew: ChatBackend = defaultBackend;
+    // Coerce legacy/junk persisted values ("opencode") to the API backend.
+    const backendForNew: ChatBackend = defaultBackend === "ollama" ? "ollama" : "api";
     let firstModel = "";
     let providerId = "";
     let connectionId = "";
 
-    if (backendForNew === "opencode") {
-      // Chat runs on OpenCode's own provider configuration.
-      let current = models;
-      if (!current) {
-        try {
-          current = await fetchOpenCodeModels();
-          setModels(current);
-        } catch {
-          setSendError(
-            "The AI agent service is unavailable — start OpenCode (or run `pnpm run dev:full`) and try again.",
-          );
-          return;
-        }
-      }
-      const providers = current.providers;
-      if (providers.length === 0) {
-        setSendError(
-          "No AI providers are configured in OpenCode. Run `opencode auth` to add one, then create a new chat.",
-        );
-        return;
-      }
-      providerId = providers[0].providerId;
-      firstModel = providers[0].models[0]?.id ?? "";
-    } else if (backendForNew === "api") {
+    if (backendForNew === "api") {
       if (connections.length === 0) {
         setConnDialog(true);
         setSendError(
@@ -509,11 +487,6 @@ export function ChatView() {
       // (API backend only — Ollama is a single local target).
       fallbacks: backendForNew === "api" ? (chatFallbacks ?? []) : [],
     });
-    if (backendForNew === "opencode") {
-      void ensureSessionForThread(t.id).catch(() => {
-        // Session creation is lazy anyway — the first send recreates it.
-      });
-    }
     select(t.id);
   }
 
@@ -546,9 +519,9 @@ export function ChatView() {
   }
 
   /**
-   * Switch a thread between the OpenCode / API / Ollama backends. Keeps the
-   * conversation (messages persist in the DB) and fills sensible defaults for
-   * the target backend. OpenCode sessions are left in place — harmless.
+   * Switch a thread between the API and Ollama backends. Keeps the
+   * conversation (messages persist in the DB) and fills sensible defaults
+   * for the target backend.
    */
   async function switchBackend(next: ChatBackend) {
     if (!thread || next === backend) return;
@@ -563,31 +536,16 @@ export function ChatView() {
         const provider = catalog ? providerForConnection(catalog, conn) : null;
         patch.modelId = provider ? defaultModelId(provider) : "";
       }
-    } else if (next === "ollama") {
+    } else {
       patch.connectionId = "";
       patch.providerId = "ollama";
       patch.modelId = ollamaProvider ? defaultModelId(ollamaProvider) : "";
-    } else {
-      // opencode — provider/model are picked from the OpenCode catalog; send()
-      // fills defaults when the thread predates the switch.
-      patch.connectionId = "";
     }
     await chatThreadsRepo.update(thread.id, patch);
   }
 
   async function deleteThread(id: string) {
-    const t = threads.find((x) => x.id === id);
     await chatThreadsRepo.remove(id);
-    if (t?.opencodeSessionId) {
-      try {
-        await fetch(
-          `/api/opencode/session?sessionId=${encodeURIComponent(t.opencodeSessionId)}`,
-          { method: "DELETE" },
-        );
-      } catch {
-        // Best effort — orphan sessions are harmless and still listed in OpenCode.
-      }
-    }
     if (id === threadId) select(null);
   }
 
@@ -2737,18 +2695,13 @@ function EffortSelector({
   );
 }
 
-/* ── Backend switch (OpenCode / API / Local Ollama) ───────────────────── */
+/* ── Backend switch (API / Local Ollama) ──────────────────────────────── */
 
 const BACKEND_OPTIONS: {
   value: ChatBackend;
   label: string;
   hint: string;
 }[] = [
-  {
-    value: "opencode",
-    label: "OpenCode",
-    hint: "Runs on the OpenCode server — full fs/shell/bash tools with per-action approvals.",
-  },
   {
     value: "api",
     label: "API",
