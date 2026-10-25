@@ -87,6 +87,24 @@ export interface LaunchOptions {
    *             measurements, restart loops).
    */
   seed?: "none" | "demo" | "project";
+  /**
+   * Shell layout. Specs written for v0.2 drive the dock, so the harness opens them in the Studio
+   * layout; "standard" leaves the 0.3 default (six surfaces) in place.
+   */
+  layout?: "studio" | "standard";
+}
+
+/** Persists the layout and reloads the renderer (the ui store reads it on start). */
+async function applyLayout(page: Page, layout: "studio" | "standard"): Promise<void> {
+  await page.evaluate((mode) => {
+    const raw = localStorage.getItem("masarflow-ui");
+    const parsed = raw ? (JSON.parse(raw) as { state?: Record<string, unknown>; version?: number }) : {};
+    const state = { ...(parsed.state ?? {}), layoutMode: mode, layoutNoticeSeen: true };
+    localStorage.setItem("masarflow-ui", JSON.stringify({ state, version: parsed.version ?? 1 }));
+  }, layout);
+  await page.reload();
+  await page.waitForSelector('[data-testid="app-shell"]', { timeout: 120_000 });
+  await page.waitForSelector(`[data-layout="${layout}"]`, { timeout: 60_000 });
 }
 
 /**
@@ -104,10 +122,16 @@ export async function launchApp(opts: LaunchOptions = {}): Promise<AppHandle> {
   // P3 removed the Python boot gate (src/components/shell/python-required-screen.tsx);
   // its heading must never appear in the shipped app.
   await expect(page.getByRole("heading", { name: /Python/i })).toHaveCount(0);
+  // Seeding drives the dock, so every launch starts in Studio and switches afterwards.
+  await applyLayout(page, "studio");
   if (opts.seed === "demo") await seedDemoProjects(page);
   else if (opts.seed === "project") {
     await createFirstProject(page, "E2E Project");
     await waitForShellReady(page);
+  }
+  if (opts.layout === "standard") {
+    await applyLayout(page, "standard");
+    if (opts.seed && opts.seed !== "none") await waitForShellReady(page);
   }
   return {
     app,

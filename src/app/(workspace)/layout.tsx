@@ -24,6 +24,9 @@ import { useUpdatesStore } from "@/lib/stores/updates";
 import { useDockSync } from "@/lib/hooks/use-dock-sync";
 import { useActivityTracking } from "@/lib/hooks/use-activity-tracking";
 import { DockWorkspace } from "@/components/dock/dock-workspace";
+import { SurfaceSidebar } from "@/components/shell/surface-sidebar";
+import { LayoutRouter } from "@/components/shell/layout-router";
+import { LayoutNotice } from "@/components/shell/layout-notice";
 import { getDesktop } from "@/lib/desktop/bridge";
 import { shouldShowWizard } from "@/lib/onboarding/state";
 import { projectsRepo } from "@/lib/db/repos";
@@ -54,7 +57,9 @@ export default function WorkspaceLayout({
   useActivityTracking();
   const mounted = useMounted();
   const taskbarDirection = useUIStore((s) => s.taskbarDirection);
-  const dockEnabled = useUIStore((s) => s.dockEnabled);
+  const layoutMode = useUIStore((s) => s.layoutMode);
+  // Hydration-safe: the server and first client render use the standard layout.
+  const studio = mounted && layoutMode === "studio";
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
   const activeProject = useActiveProject();
@@ -173,9 +178,11 @@ export default function WorkspaceLayout({
       <div className="flex h-screen overflow-hidden" data-testid="app-shell">
         <SecretsBootstrap />
         <AutoBackup />
-        {sidebarOnLeft && <Sidebar />}
-        <div className="flex min-w-0 flex-1 flex-col">
+        <LayoutRouter mode={studio ? "studio" : "standard"} />
+        {studio ? sidebarOnLeft && <Sidebar /> : <SurfaceSidebar />}
+        <div className="flex min-w-0 flex-1 flex-col" data-layout={studio ? "studio" : "standard"}>
           <Topbar />
+          {studio ? null : <LayoutNotice />}
           <main className="relative min-h-0 flex-1 overflow-hidden">
             {projectBackground ? (
               <div
@@ -188,7 +195,7 @@ export default function WorkspaceLayout({
               />
             ) : null}
             <div className="relative z-10 h-full">
-              {dockEnabled ? (
+              {studio ? (
                 <Suspense fallback={null}>
                   <DockWorkspaceLive />
                 </Suspense>
@@ -198,7 +205,7 @@ export default function WorkspaceLayout({
             </div>
           </main>
         </div>
-        {!sidebarOnLeft && <Sidebar />}
+        {studio && !sidebarOnLeft && <Sidebar />}
         <CommandPalette />
         <QuickSwitcher />
         <Toaster />

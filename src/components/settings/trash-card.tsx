@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { emptyTrash, purgeTrash, restoreEntity } from "@/lib/domain/commands";
 import { useActiveProject } from "@/lib/hooks/use-project";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const KIND_LABEL: Record<string, string> = { task: "Task", spec: "Specification", doc: "Document", note: "Note" };
 
@@ -20,6 +21,7 @@ export function TrashCard() {
     [projectId],
   );
   const [message, setMessage] = useState<string | null>(null);
+  const [confirmEmpty, setConfirmEmpty] = useState(false);
   if (!projectId) return null;
   const list = entries ?? [];
 
@@ -33,11 +35,7 @@ export function TrashCard() {
           size="sm"
           variant="outline"
           disabled={list.length === 0}
-          onClick={async () => {
-            if (!window.confirm(`Permanently delete ${list.length} item(s) from the trash?`)) return;
-            const n = await emptyTrash(projectId);
-            setMessage(`${n} item(s) permanently deleted.`);
-          }}
+          onClick={() => setConfirmEmpty(true)}
         >
           Empty trash
         </Button>
@@ -81,6 +79,17 @@ export function TrashCard() {
           </li>
         ))}
       </ul>
+      <ConfirmDialog
+        open={confirmEmpty}
+        onOpenChange={setConfirmEmpty}
+        title="Empty trash?"
+        description={`${list.length} item(s) will be permanently deleted. This cannot be undone.`}
+        confirmLabel="Empty trash"
+        onConfirm={async () => {
+          const n = await emptyTrash(projectId);
+          setMessage(`${n} item(s) permanently deleted.`);
+        }}
+      />
       {message ? (
         <p className="mt-2 text-xs text-muted-foreground" role="status">
           {message}

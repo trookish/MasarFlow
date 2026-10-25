@@ -1,12 +1,14 @@
 "use client";
 
 import { TodayView } from "@/components/today/today-view";
+import { SurfaceView } from "@/components/shell/surface-view";
+import { useUIStore } from "@/lib/stores/ui";
 
 /**
- * /today route — the real "what do I do now" view. The dock panel loader
- * dynamic-imports this page module, so classic routing and the dock panel
- * render the exact same component tree.
+ * /today is the Today surface in the standard layout and the plain view in a Studio dock panel
+ * (the dock dynamic-imports this module, so both layouts share one component tree).
  */
 export default function TodayPage() {
-  return <TodayView />;
+  const studio = useUIStore((s) => s.layoutMode === "studio");
+  return studio ? <TodayView /> : <SurfaceView id="today" />;
 }

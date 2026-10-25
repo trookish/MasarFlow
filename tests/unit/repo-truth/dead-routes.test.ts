@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { ALL_NAV_ITEMS } from "@/lib/nav";
 import { PAGE_PATHS } from "@/lib/dock/registry";
+import { SURFACES, SURFACE_ROUTES } from "@/lib/navigation/surfaces";
 
 /**
  * Dead routes: API route files nothing in the app calls.
@@ -91,9 +92,17 @@ function workspaceRoutes(): string[] {
 }
 
 describe("workspace pages are reachable", () => {
-  it("every page is a dock page (no orphan route)", () => {
-    const orphans = workspaceRoutes().filter((r) => !PAGE_PATHS.includes(r));
+  it("every page is a dock page or a surface (no orphan route)", () => {
+    const orphans = workspaceRoutes().filter((r) => !PAGE_PATHS.includes(r) && !SURFACE_ROUTES.has(r));
     expect(orphans).toEqual([]);
+  });
+
+  it("every surface has a page and every section hosts a dock page", () => {
+    const routes = workspaceRoutes();
+    for (const s of SURFACES) {
+      expect(routes, s.route).toContain(s.route);
+      for (const x of s.sections) expect(PAGE_PATHS, `${s.id}.${x.id}`).toContain(x.href);
+    }
   });
 
   it("every nav entry has a page (no ghost link)", () => {

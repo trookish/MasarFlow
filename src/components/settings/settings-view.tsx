@@ -698,8 +698,8 @@ function RangeField({
 function InterfaceSection() {
   const taskbarDirection = useUIStore((s) => s.taskbarDirection);
   const setTaskbarDirection = useUIStore((s) => s.setTaskbarDirection);
-  const dockEnabled = useUIStore((s) => s.dockEnabled);
-  const setDockEnabled = useUIStore((s) => s.setDockEnabled);
+  const layoutMode = useUIStore((s) => s.layoutMode);
+  const setLayoutMode = useUIStore((s) => s.setLayoutMode);
 
   return (
     <SectionPanel
@@ -708,20 +708,20 @@ function InterfaceSection() {
       onReset={() => setTaskbarDirection("bottom")}
     >
       <SettingRow
-        label="Dock window manager"
-        description="Docked mode turns every page into a draggable panel with splits, tab groups, floating windows, and per-project workspaces. Turning it off restores the classic single-page routing layout."
+        label="Layout"
+        description="Standard shows six surfaces (Today, Capture, Work, Library, Ask, System) with one page at a time. Studio turns every page into a draggable panel with splits, tab groups, floating windows and per-project workspaces."
       >
-        <SegmentedControl<"on" | "off">
-          value={dockEnabled ? "on" : "off"}
+        <SegmentedControl<"standard" | "studio">
+          value={layoutMode}
           options={[
-            { value: "on", label: "On" },
-            { value: "off", label: "Off" },
+            { value: "standard", label: "Standard" },
+            { value: "studio", label: "Studio" },
           ]}
-          onChange={(v) => setDockEnabled(v === "on")}
+          onChange={setLayoutMode}
         />
       </SettingRow>
       <SettingRow
-        label="Taskbar direction"
+        label="Taskbar direction (Studio)"
         description="Left docks the nav rail on the left edge, Right mirrors it to the right edge, and Bottom turns it into a floating dock — click a group to pop its pages up above it."
       >
         <SegmentedControl

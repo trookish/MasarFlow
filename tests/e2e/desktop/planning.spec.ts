@@ -79,35 +79,6 @@ test(TASK_CREATE_TITLE, async ({ desktop }) => {
   expect(saved[0].status).toBe("todo");
 });
 
-test(TRASH_TITLE, async ({ desktop }) => {
-  const { page } = desktop;
-  await navigateTo(page, "Task Boards");
-  const tasks = panel(page, "/tasks");
-  await expect(tasks.getByRole("heading", { name: "Task Boards" })).toBeVisible({ timeout: 20_000 });
-
-  const title = `Trash task ${Date.now()}`;
-  await tasks.getByRole("button", { name: "New task" }).first().click();
-  const titleInput = page.getByPlaceholder("Task title");
-  await expect(titleInput).toHaveValue("New task", { timeout: 15_000 });
-  await titleInput.fill(title);
-  await page.keyboard.press("Tab");
-  await expect(tasks.getByText(title, { exact: true })).toBeVisible({ timeout: 15_000 });
-
-  page.once("dialog", (d) => void d.accept());
-  await page.getByRole("dialog").getByRole("button", { name: "Delete task" }).click();
-  await expect(tasks.getByText(title, { exact: true })).toBeHidden({ timeout: 15_000 });
-  const trashed = await readTable<{ title: string }>(page, "trash");
-  expect(trashed.some((e) => e.title === title)).toBe(true);
-
-  await navigateTo(page, "Settings");
-  await page.getByRole("button", { name: "Data", exact: true }).first().click();
-  await page.getByRole("button", { name: `Restore ${title}` }).click();
-  await expect(page.getByRole("status").filter({ hasText: `Restored “${title}”.` })).toBeVisible({ timeout: 15_000 });
-  const rows = await readTable<{ title: string }>(page, "tasks");
-  expect(rows.filter((t) => t.title === title)).toHaveLength(1);
-  expect((await readTable<{ title: string }>(page, "trash")).some((e) => e.title === title)).toBe(false);
-});
-
 test(TASK_DONE_TITLE, async ({ desktop }) => {
   const { page } = desktop;
   await navigateTo(page, "Task Boards");
@@ -323,4 +294,37 @@ test(DASHBOARD_TITLE, async ({ desktop }) => {
     .toBe(tasksBefore + 2);
   await page.waitForTimeout(2_000);
   expect((await readTable<{ id: string }>(page, "tasks")).length).toBe(tasksBefore + 2);
+});
+
+// Last on purpose: it leaves a Settings pane open in the shared app, which narrows the dashboard
+// pane enough for a split separator to cover its header buttons (tracked in reports/v0.3).
+test(TRASH_TITLE, async ({ desktop }) => {
+  const { page } = desktop;
+  // The dashboard test ends with a task dialog open.
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0, { timeout: 10_000 });
+  await navigateTo(page, "Task Boards");
+  const tasks = panel(page, "/tasks");
+  await expect(tasks.getByRole("heading", { name: "Task Boards" })).toBeVisible({ timeout: 20_000 });
+
+  const title = `Trash task ${Date.now()}`;
+  await tasks.getByRole("button", { name: "New task" }).first().click();
+  const titleInput = page.getByPlaceholder("Task title");
+  await expect(titleInput).toHaveValue("New task", { timeout: 15_000 });
+  await titleInput.fill(title);
+  await page.keyboard.press("Tab");
+  await expect(tasks.getByText(title, { exact: true })).toBeVisible({ timeout: 15_000 });
+
+  await page.getByRole("dialog").getByRole("button", { name: "Delete task" }).click();
+  await expect(tasks.getByText(title, { exact: true })).toBeHidden({ timeout: 15_000 });
+  const trashed = await readTable<{ title: string }>(page, "trash");
+  expect(trashed.some((e) => e.title === title)).toBe(true);
+
+  await navigateTo(page, "Settings");
+  await page.getByRole("button", { name: "Data", exact: true }).first().click();
+  await page.getByRole("button", { name: `Restore ${title}` }).click();
+  await expect(page.getByRole("status").filter({ hasText: `Restored “${title}”.` })).toBeVisible({ timeout: 15_000 });
+  const rows = await readTable<{ title: string }>(page, "tasks");
+  expect(rows.filter((t) => t.title === title)).toHaveLength(1);
+  expect((await readTable<{ title: string }>(page, "trash")).some((e) => e.title === title)).toBe(false);
 });

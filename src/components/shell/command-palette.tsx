@@ -320,7 +320,7 @@ function PalettePanel({ onClose }: { onClose: () => void }) {
           onClick={() => setDockEnabled(!dockEnabled)}
           className="rounded px-1.5 py-0.5 hover:bg-accent hover:text-foreground"
         >
-          {dockEnabled ? "Dock: on — click to use full pages" : "Dock: off — click to use panels"}
+          {dockEnabled ? "Studio layout: select to use the standard layout" : "Standard layout: select to use the Studio layout"}
         </button>
       </div>
 
