@@ -1,7 +1,13 @@
 import type { MasarFlowDB } from "@/lib/db";
 
 export const BACKUP_FORMAT = "masarflow-backup";
+/** File layout version (unchanged since 0.2). */
 export const BACKUP_VERSION = 1;
+/**
+ * Meaning of the rows. 2 = 0.2.x (sync rows without an adapter, no events/trash tables);
+ * 3 = 0.3 (replica adapter on sync rows, domain events and trash). Older values migrate forward.
+ */
+export const DATA_VERSION = 3;
 
 /** Rebuildable data that is not worth shipping in a backup. */
 const EXCLUDED_TABLES = new Set(["embeddings"]);
@@ -12,6 +18,8 @@ export interface BackupFile {
   appVersion: string;
   /** Dexie schema version of the exporting database. */
   dexieVersion: number;
+  /** absent in files written by 0.2.x (read as 2) */
+  dataVersion?: number;
   exportedAt: number;
   tables: Record<string, unknown[]>;
 }
@@ -71,7 +79,10 @@ export async function exportBackup(db: MasarFlowDB, appVersion: string): Promise
     const rows = await table.toArray();
     tables[table.name] = await Promise.all(rows.map((r) => encodeValue(redactRow(table.name, r))));
   }
-  return { format: BACKUP_FORMAT, version: BACKUP_VERSION, appVersion, dexieVersion: db.verno, exportedAt: Date.now(), tables };
+  return {
+    format: BACKUP_FORMAT, version: BACKUP_VERSION, dataVersion: DATA_VERSION, appVersion,
+    dexieVersion: db.verno, exportedAt: Date.now(), tables,
+  };
 }
 
 export function serializeBackup(file: BackupFile): string {

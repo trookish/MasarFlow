@@ -6,8 +6,9 @@ import { db } from "@/lib/db";
 import { exportBackup, serializeBackup } from "@/lib/db/backup";
 import { BackupError, importBackup, parseBackup } from "@/lib/db/backup-import";
 import { Button } from "@/components/ui/button";
+import { APP_DISPLAY_VERSION } from "@desktop-shared/version";
 
-const APP_VERSION = "0.2.0.0";
+const APP_VERSION = APP_DISPLAY_VERSION;
 
 type Pending = { text: string; summary: string };
 
@@ -59,7 +60,10 @@ export function DataBackupCard() {
     try {
       const summary = await importBackup(db, parseBackup(pending.text, db), mode);
       const total = Object.values(summary.tables).reduce((a, b) => a + b, 0);
-      setMessage({ kind: "ok", text: mode === "replace" ? `Workspace restored (${total} records).` : `${total} new records merged.` });
+      const keys = summary.redactedConnections.length
+        ? ` Re-enter the API key for ${summary.redactedConnections.map((c) => c.name).join(", ")} in AI settings.`
+        : "";
+      setMessage({ kind: "ok", text: (mode === "replace" ? `Workspace restored (${total} records).` : `${total} new records merged.`) + keys });
       setPending(null);
     } catch (e) {
       setMessage({ kind: "error", text: `Import failed and nothing was changed. ${e instanceof Error ? e.message : ""}` });

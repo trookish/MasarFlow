@@ -2,9 +2,10 @@ import { db } from "@/lib/db";
 import { exportBackup, serializeBackup } from "@/lib/db/backup";
 import { installDirtyTracking, takeDirty } from "@/lib/db/dirty";
 import { getDesktop } from "@/lib/desktop/bridge";
+import { APP_DISPLAY_VERSION } from "@desktop-shared/version";
 
 const H = 3_600_000;
-const APP_VERSION = "0.2.0.0";
+const APP_VERSION = APP_DISPLAY_VERSION;
 
 export interface BackupDecisionInput {
   now: number;

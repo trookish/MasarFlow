@@ -50,6 +50,7 @@ import type {
   TaskStatus,
 } from "@/lib/db/schema";
 import { withoutActivity } from "@/lib/activity/track";
+import type { SyncFileInput } from "@/lib/db/repos/sync";
 
 const DEMO_SLUGS = {
   web: "pulse-realtime-team-dashboard",
@@ -711,13 +712,13 @@ async function seedPulseWatchAndSync(projectId: string): Promise<void> {
     systemId: null,
     createdAt: ago(1 * DAY),
   });
-  await syncRepo.reconcile(projectId, [
+  await seedObsidianIndex(projectId, [
     {
       path: "product/north-star.md",
       hash: "w1",
       status: "synced",
       entityType: "note",
-      entityId: "demo",
+      entityId: null,
       lastSyncedAt: ago(2 * DAY),
     },
     {
@@ -725,7 +726,7 @@ async function seedPulseWatchAndSync(projectId: string): Promise<void> {
       hash: "w2",
       status: "local_modified",
       entityType: "spec",
-      entityId: "demo",
+      entityId: null,
       lastSyncedAt: ago(1 * DAY),
     },
     {
@@ -733,7 +734,7 @@ async function seedPulseWatchAndSync(projectId: string): Promise<void> {
       hash: "w3",
       status: "synced",
       entityType: "doc",
-      entityId: "demo",
+      entityId: null,
       lastSyncedAt: ago(2 * DAY),
     },
     {
@@ -2153,14 +2154,37 @@ async function seedWatchEvents(projectId: string): Promise<void> {
 
 /* ── Sync index ───────────────────────────────────────────────────────────── */
 
+const SYNC_TABLE = { note: "notes", spec: "specs", doc: "docs", task: "tasks" } as const;
+
+/**
+ * The demo Obsidian index. Rows that name an entity type point at real entities of the project
+ * (in creation order), so the data doctor and the replica engine never see dangling references.
+ */
+async function seedObsidianIndex(projectId: string, rows: SyncFileInput[]): Promise<void> {
+  const used: Record<string, number> = {};
+  const resolved: SyncFileInput[] = [];
+  for (const row of rows) {
+    const table = row.entityType ? SYNC_TABLE[row.entityType as keyof typeof SYNC_TABLE] : undefined;
+    if (!table) {
+      resolved.push({ ...row, entityType: null, entityId: null });
+      continue;
+    }
+    const ids = (await db.table(table).where("projectId").equals(projectId).sortBy("createdAt")).map((r: { id: string }) => r.id);
+    const i = used[table] ?? 0;
+    used[table] = i + 1;
+    resolved.push(ids[i] ? { ...row, entityId: ids[i] } : { ...row, entityType: null, entityId: null });
+  }
+  await syncRepo.reconcile(projectId, resolved, "obsidian");
+}
+
 async function seedSyncFiles(projectId: string): Promise<void> {
-  await syncRepo.reconcile(projectId, [
+  await seedObsidianIndex(projectId, [
     {
       path: "design/north-star.md",
       hash: "d1",
       status: "synced",
       entityType: "note",
-      entityId: "demo",
+      entityId: null,
       lastSyncedAt: ago(2 * DAY),
     },
     {
@@ -2168,7 +2192,7 @@ async function seedSyncFiles(projectId: string): Promise<void> {
       hash: "d2",
       status: "local_modified",
       entityType: "note",
-      entityId: "demo",
+      entityId: null,
       lastSyncedAt: ago(2 * DAY),
     },
     {
@@ -2176,7 +2200,7 @@ async function seedSyncFiles(projectId: string): Promise<void> {
       hash: "d3",
       status: "local_modified",
       entityType: "spec",
-      entityId: "demo",
+      entityId: null,
       lastSyncedAt: ago(1 * DAY),
     },
     {
@@ -2184,7 +2208,7 @@ async function seedSyncFiles(projectId: string): Promise<void> {
       hash: "d4",
       status: "new",
       entityType: "spec",
-      entityId: "demo",
+      entityId: null,
       lastSyncedAt: null,
     },
     {
@@ -2192,7 +2216,7 @@ async function seedSyncFiles(projectId: string): Promise<void> {
       hash: "d5",
       status: "synced",
       entityType: "doc",
-      entityId: "demo",
+      entityId: null,
       lastSyncedAt: ago(3 * DAY),
     },
     {
@@ -2200,7 +2224,7 @@ async function seedSyncFiles(projectId: string): Promise<void> {
       hash: "d6",
       status: "synced",
       entityType: "doc",
-      entityId: "demo",
+      entityId: null,
       lastSyncedAt: ago(2 * DAY),
     },
     {
@@ -2851,7 +2875,7 @@ async function seedDraftDeckWatchAndSync(projectId: string): Promise<void> {
       hash: "s1",
       status: "synced",
       entityType: "note",
-      entityId: "demo",
+      entityId: null,
       lastSyncedAt: ago(2 * DAY),
     },
     {
@@ -2859,7 +2883,7 @@ async function seedDraftDeckWatchAndSync(projectId: string): Promise<void> {
       hash: "s2",
       status: "new",
       entityType: "spec",
-      entityId: "demo",
+      entityId: null,
       lastSyncedAt: null,
     },
     {
@@ -2867,7 +2891,7 @@ async function seedDraftDeckWatchAndSync(projectId: string): Promise<void> {
       hash: "s3",
       status: "synced",
       entityType: "doc",
-      entityId: "demo",
+      entityId: null,
       lastSyncedAt: ago(2 * DAY),
     },
   ]);

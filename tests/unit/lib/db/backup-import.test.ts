@@ -73,3 +73,36 @@ describe("importBackup", () => {
     expect((await db.projects.toArray()).map((p) => p.name)).toEqual(["Keep me"]);
   });
 });
+
+describe("backup v2 (0.3)", () => {
+  it("refuses the whole file when one row is invalid, naming the table and row", async () => {
+    const file = parseBackup(await seedAndExport(), db);
+    (file.tables.notes[0] as Record<string, unknown>).title = 42;
+    await Promise.all(db.tables.map((t) => t.clear()));
+    await expect(importBackup(db, file, "replace")).rejects.toThrow(/Record 1 in notes is invalid \(title/);
+    expect(await db.projects.count()).toBe(0);
+  });
+
+  it("imports a 0.2 file (no dataVersion) and gives its sync rows the folder adapter", async () => {
+    const file = parseBackup(await seedAndExport(), db);
+    delete (file as { dataVersion?: number }).dataVersion;
+    file.tables.syncFiles = [
+      { id: "s1", projectId: "p", path: "notes/a.md", hash: "h", status: "synced", entityType: "note", entityId: "n", lastSyncedAt: 1 },
+    ];
+    await importBackup(db, file, "replace");
+    expect((await db.syncFiles.get("s1"))?.adapter).toBe("folder");
+  });
+
+  it("reports connections whose key was redacted", async () => {
+    await db.aiConnections.add({ id: "c1", label: "OpenRouter", providerId: "openrouter", apiKey: "k", baseUrl: "", createdAt: 1, updatedAt: 1 });
+    const file = parseBackup(serializeBackup(await exportBackup(db, "0.3.0.0")), db);
+    expect(file.dataVersion).toBe(3);
+    const summary = await importBackup(db, file, "replace");
+    expect(summary.redactedConnections).toEqual([{ id: "c1", name: "OpenRouter" }]);
+  });
+
+  it("refuses a file from a newer data version", () => {
+    const text = JSON.stringify({ format: BACKUP_FORMAT, version: BACKUP_VERSION, dataVersion: 99, dexieVersion: 1, tables: {} });
+    expect(() => parseBackup(text, db)).toThrow(/newer version/);
+  });
+});
