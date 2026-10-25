@@ -10,6 +10,7 @@ import { useEffect, useRef } from "react";
 import { X, MoreHorizontal, PictureInPicture2, Maximize2, PanelBottomClose, PanelLeftClose } from "lucide-react";
 import { getPageDef } from "@/lib/dock/registry";
 import { pageIdOf } from "@/lib/dock/types";
+import { showPanel, useIsMounted } from "@/lib/dock/mount-cap";
 import { useDockStore } from "@/lib/stores/dock";
 import { shouldUseTabMenu, tabCounts } from "@/lib/dock/overflow";
 import { startPanelDrag } from "./use-dock-dnd";
@@ -229,9 +230,12 @@ export function DockGroup({ nodeId, pages, activePage, collapsed }: DockGroupPro
 
 function PanelTab({ panelId, active }: { panelId: string; active: boolean }) {
   const Component = PAGE_COMPONENTS[pageIdOf(panelId)] ?? null;
+  useEffect(() => (active ? showPanel(panelId) : undefined), [active, panelId]);
+  // Studio keeps four panels mounted; a hidden tab past the cap unmounts (P5 T6).
+  const mounted = useIsMounted(panelId) || active;
   return (
     <PanelContent active={active}>
-      {Component ? (
+      {!mounted ? null : Component ? (
         <PanelErrorBoundary panelId={panelId}>
           <Component />
         </PanelErrorBoundary>
