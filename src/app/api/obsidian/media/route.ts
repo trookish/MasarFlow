@@ -5,7 +5,7 @@ import { MEDIA_SESSION_TTL_MS, createMediaSession, getMediaSession } from "@/lib
 
 export const runtime = "nodejs";
 
-const LOOPBACK = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
+import { OBSIDIAN_LOOPBACK as LOOPBACK, obsidianTlsOptions, obsidianUrl } from "@/lib/server/obsidian-target";
 
 function loopbackUrl(raw: unknown): URL | null {
   if (typeof raw !== "string") return null;
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
   const { baseUrl, apiKey } = session;
 
   // Obsidian REST API file endpoint
-  const obsUrl = new URL(`/vault/${path.split('/').map(encodeURIComponent).join('/')}`, baseUrl);
+  const obsUrl = obsidianUrl(`/vault/${path.split("/").map(encodeURIComponent).join("/")}`, baseUrl);
   const isHttps = obsUrl.protocol === "https:";
   const lib = isHttps ? https : http;
 
@@ -64,8 +64,7 @@ export async function GET(request: NextRequest) {
       {
         method: "GET",
         headers: reqHeaders,
-        // Obsidian Local REST API serves a self-signed certificate; the target is loopback-only (above).
-        ...(isHttps ? { rejectUnauthorized: false } : {}),
+        ...obsidianTlsOptions(obsUrl),
       },
       (res) => {
         // Build the headers to return

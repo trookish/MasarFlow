@@ -86,7 +86,7 @@ function WebNodeComponent({
     } finally {
       setLoading(false);
     }
-  }, [data, id, ytId, videoSrc]);
+  }, [data, id, kind, ytId, videoSrc]);
 
   // Auto-fetch metadata for article/github on first render if not cached.
   // fetchMeta's setState calls are inside an async function (after await), so

@@ -5,8 +5,7 @@ import * as https from "node:https";
 // Node runtime — we need node:http(s) to accept Obsidian's self-signed cert.
 export const runtime = "nodejs";
 
-/** Obsidian runs on the same machine; only ever proxy to loopback addresses. */
-const LOOPBACK = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
+import { OBSIDIAN_LOOPBACK as LOOPBACK, obsidianTlsOptions, obsidianUrl } from "@/lib/server/obsidian-target";
 
 interface ProxyRequest {
   baseUrl: string;
@@ -31,7 +30,7 @@ function forward(opts: {
   binary?: boolean;
 }): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
-    const url = new URL(opts.path, opts.baseUrl);
+    const url = obsidianUrl(opts.path, opts.baseUrl);
     const isHttps = url.protocol === "https:";
     const lib = isHttps ? https : http;
 
@@ -57,8 +56,7 @@ function forward(opts: {
       {
         method: opts.method,
         headers,
-        // The plugin uses a self-signed certificate on localhost.
-        ...(isHttps ? { rejectUnauthorized: false } : {}),
+        ...obsidianTlsOptions(url),
       },
       (res) => {
         if (opts.binary && opts.method === "GET") {

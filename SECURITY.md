@@ -24,11 +24,31 @@ visit — can try to talk to a loopback port, so the app assumes it will:
    Only presence is ever displayed (Control Center → Secrets).
 6. Diagnostics are redacted: no keys, tokens or PATs, `%USERPROFILE%` instead of your home directory, and
    `<redacted-path>` for everything outside your linked folders.
+7. Server-side fetches (canvas web embeds) resolve every host and refuse loopback, private, link-local
+   (cloud metadata), carrier-grade NAT, multicast and reserved addresses, including IPv4-mapped IPv6. The
+   check repeats on every redirect hop (at most three), the connection is pinned to the vetted address, and
+   TLS certificates are always verified.
+8. Third-party frames on the canvas are limited to known video players (YouTube, Vimeo, Dailymotion, Loom),
+   sandboxed and sent without a referrer. The CSP lists the same players in `frame-src` and only the public
+   hosts the window reads directly (`models.dev`, `api.github.com`) in `connect-src`; AI providers, GitHub
+   sync and Obsidian are reached through the local server.
+9. No secret appears in a URL. Obsidian attachments stream through a short-lived media session id; the
+   Obsidian key is sent only in request bodies. Obsidian traffic is restricted to loopback, the only place
+   its self-signed certificate is accepted.
 
-## Known limits (0.2.0.0)
+## Browser development mode
+
+`pnpm dev` runs the same server without a launch token, for contributors. It is still guarded: `Host` must
+be `localhost` or `127.0.0.1` on the configured port, and every `/api/*` request must be same-origin
+(`Origin` and `Sec-Fetch-Site`; state-changing requests without an `Origin` are refused). Filesystem and
+shell routes fail closed unless `MASARFLOW_DEV_ROOTS` lists the folders to expose (see
+`docs/development.md`). Development mode is not a supported way to run MasarFlow day to day.
+
+## Known limits
 
 - The Windows installer is **not code-signed**: SmartScreen warns, and Windows cannot prove the binary came
   from us. Verify the SHA-256 of the installer against the release notes if you care.
 - macOS/Linux builds are not produced (D12/Q4).
-- A malicious local process running as your user can read your app data; MasarFlow protects the data from
-  *remote* and *other-app* access, not from you.
+- A malicious local process running as your user can read your app data and forge any request header;
+  MasarFlow protects the data from *remote* and *web-page* access, not from code already running as you.
+  This is why development mode relies on header checks rather than a secret.
