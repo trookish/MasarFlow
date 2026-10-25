@@ -16,7 +16,8 @@ export interface VaultSyncApi {
   running: boolean;
   summary: VaultRunSummary | null;
   message: string;
-  run: (opts?: { autoImport?: boolean }) => Promise<VaultRunSummary | null>;
+  /** `adoptUntracked` imports files the index has never seen (only on an explicit user action). */
+  run: (opts?: { autoImport?: boolean; adoptUntracked?: boolean }) => Promise<VaultRunSummary | null>;
   resolve: (entityId: string, choice: "app" | "file" | "recreate") => Promise<void>;
   pickFolder: () => Promise<string | null>;
   setBinding: (root: string) => void;
@@ -52,7 +53,10 @@ export function useVaultSync(projectId: string | null, projectSlug: string): Vau
 
   const run = useCallback<VaultSyncApi["run"]>(
     async (opts) => {
-      const deps = depsFor(opts?.autoImport === undefined ? undefined : { autoImport: opts.autoImport });
+      const deps = depsFor({
+        ...(opts?.autoImport === undefined ? {} : { autoImport: opts.autoImport }),
+        ...(opts?.adoptUntracked ? { adoptUntracked: true } : {}),
+      });
       if (!deps) {
         setMessage("Pick a folder for this project first.");
         return null;
