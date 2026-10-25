@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { checkRequest, guardConfigFromEnv, type GuardConfig, type GuardRequest } from "@/lib/server/request-guard";
+import {
+  checkDevRequest,
+  checkRequest,
+  guardConfigFromEnv,
+  type DevGuardRequest,
+  type GuardConfig,
+  type GuardRequest,
+} from "@/lib/server/request-guard";
 
 const cfg: GuardConfig = {
   token: "T".repeat(64),
@@ -59,5 +66,41 @@ describe("guardConfigFromEnv", () => {
       allowedHosts: ["127.0.0.1:41000", "localhost:41000"],
       allowedOrigins: ["masarflow://app"],
     });
+  });
+});
+
+describe("checkDevRequest", () => {
+  const dev = { port: "3000" };
+  const r = (o: Partial<DevGuardRequest> = {}): DevGuardRequest => ({
+    method: "GET",
+    pathname: "/api/fs/list",
+    host: "localhost:3000",
+    origin: null,
+    token: null,
+    fetchSite: null,
+    ...o,
+  });
+  it("accepts same-origin API calls", () => {
+    expect(checkDevRequest(dev, r({ method: "POST", origin: "http://localhost:3000" }))).toEqual({ ok: true });
+    expect(checkDevRequest(dev, r({ host: "127.0.0.1:3000", fetchSite: "same-origin" }))).toEqual({ ok: true });
+  });
+  it("rejects a rebinding host", () => {
+    expect(checkDevRequest(dev, r({ host: "evil.test:3000" }))).toMatchObject({ ok: false, status: 403 });
+  });
+  it("rejects a cross-origin POST", () => {
+    expect(checkDevRequest(dev, r({ method: "POST", origin: "https://evil.test" }))).toMatchObject({
+      ok: false,
+      status: 403,
+    });
+  });
+  it("rejects an origin-less POST", () => {
+    expect(checkDevRequest(dev, r({ method: "POST" }))).toMatchObject({ ok: false, status: 403 });
+  });
+  it("rejects cross-site fetch metadata even on GET", () => {
+    expect(checkDevRequest(dev, r({ fetchSite: "cross-site" }))).toMatchObject({ ok: false, status: 403 });
+  });
+  it("does not guard non-API pages beyond the host check", () => {
+    expect(checkDevRequest(dev, r({ pathname: "/today", fetchSite: "cross-site" }))).toEqual({ ok: true });
+    expect(checkDevRequest(dev, r({ pathname: "/today", host: "evil.test" }))).toMatchObject({ ok: false });
   });
 });

@@ -1,14 +1,28 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { TOKEN_HEADER, checkRequest, guardConfigFromEnv } from "@/lib/server/request-guard";
+import { TOKEN_HEADER, checkDevRequest, checkRequest, guardConfigFromEnv } from "@/lib/server/request-guard";
 
 /**
- * Next 16 proxy (the renamed `middleware`). Enforcement is off unless Electron
- * main started this server with a launch token, so `next dev` in a plain
- * browser keeps working. The guard has no exempt paths — see request-guard.ts.
+ * Next 16 proxy (the renamed `middleware`). Every mode is guarded:
+ * - packaged app: Electron main supplies a launch token; Host, token and Origin are checked;
+ * - browser development (no token): Host, Origin and Fetch Metadata are checked on `/api/*`.
+ * The guard has no exempt paths — see request-guard.ts.
  */
 export function proxy(request: NextRequest): NextResponse {
   const cfg = guardConfigFromEnv(process.env);
-  if (!cfg) return NextResponse.next();
+  if (!cfg) {
+    const dev = checkDevRequest(
+      { port: process.env.PORT?.trim() || "3000" },
+      {
+        method: request.method,
+        pathname: request.nextUrl.pathname,
+        host: request.headers.get("host"),
+        origin: request.headers.get("origin"),
+        token: null,
+        fetchSite: request.headers.get("sec-fetch-site"),
+      },
+    );
+    return dev.ok ? NextResponse.next() : NextResponse.json({ error: dev.reason }, { status: dev.status });
+  }
   const result = checkRequest(cfg, {
     method: request.method,
     pathname: request.nextUrl.pathname,

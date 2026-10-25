@@ -57,3 +57,29 @@ export function guardConfigFromEnv(env: Record<string, string | undefined>): Gua
     allowedOrigins: ["masarflow://app"],
   };
 }
+
+export interface DevGuardRequest extends GuardRequest {
+  /** `Sec-Fetch-Site` header; browsers set it on every fetch. */
+  fetchSite: string | null;
+}
+
+/**
+ * Guard for browser development (`next dev`, no launch token). It cannot prove the caller is
+ * MasarFlow, but it blocks the two browser-borne attacks: DNS rebinding (Host allow-list) and
+ * cross-site requests (Origin + Fetch Metadata). A local process can forge headers; that attacker
+ * already runs code as the user and is out of scope (SECURITY.md).
+ */
+export function checkDevRequest(cfg: { port: string }, r: DevGuardRequest): GuardResult {
+  const hosts = [`localhost:${cfg.port}`, `127.0.0.1:${cfg.port}`];
+  const host = r.host?.toLowerCase() ?? "";
+  if (!hosts.includes(host)) return deny(403, "host not allowed");
+  if (!r.pathname.startsWith("/api/")) return { ok: true };
+  if (r.fetchSite?.toLowerCase() === "cross-site") return deny(403, "cross-site request");
+  const origins = hosts.map((h) => `http://${h}`);
+  if (r.origin !== null) {
+    if (!origins.includes(r.origin)) return deny(403, "origin not allowed");
+  } else if (!READ_ONLY.has(r.method.toUpperCase())) {
+    return deny(403, "state-changing requests must carry an allowed origin");
+  }
+  return { ok: true };
+}
