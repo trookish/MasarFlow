@@ -11,73 +11,10 @@
  */
 
 import type { NextRequest } from "next/server";
-import * as http from "node:http";
-import * as https from "node:https";
+import { BlockedUrlError } from "@/lib/server/net-policy";
+import { safeFetchText } from "@/lib/server/safe-fetch";
 
 export const runtime = "nodejs";
-
-/** Fetch a URL as text via Node's http/https, with redirects and a timeout. */
-function fetchText(
-  rawUrl: string,
-  maxRedirects = 4,
-  timeoutMs = 8000,
-): Promise<{ status: number; body: string; contentType: string; finalUrl: string }> {
-  return new Promise((resolve, reject) => {
-    let target: URL;
-    try {
-      target = new URL(rawUrl);
-    } catch {
-      reject(new Error("Invalid URL"));
-      return;
-    }
-
-    const lib = target.protocol === "https:" ? https : http;
-    const req = lib.request(
-      target,
-      {
-        method: "GET",
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (compatible; MasarFlow/1.0; +https://masarflow.dev) Canvas-Embed-Bot",
-          Accept: "text/html,application/xhtml+xml",
-        },
-        ...(target.protocol === "https:" ? { rejectUnauthorized: false } : {}),
-      },
-      (res) => {
-        // Follow redirects.
-        if (
-          (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307 || res.statusCode === 308) &&
-          res.headers.location &&
-          maxRedirects > 0
-        ) {
-          const next = new URL(res.headers.location, target).toString();
-          res.resume();
-          fetchText(next, maxRedirects - 1, timeoutMs).then(resolve, reject);
-          return;
-        }
-
-        const chunks: Buffer[] = [];
-        res.on("data", (c: Buffer) => chunks.push(c));
-        res.on("end", () => {
-          const body = Buffer.concat(chunks).toString("utf-8");
-          resolve({
-            status: res.statusCode ?? 200,
-            body,
-            contentType: res.headers["content-type"] ?? "text/html",
-            finalUrl: target.toString(),
-          });
-        });
-        res.on("error", reject);
-      },
-    );
-
-    req.setTimeout(timeoutMs, () => {
-      req.destroy(new Error("Request timed out"));
-    });
-    req.on("error", reject);
-    req.end();
-  });
-}
 
 /** Extract <meta> tag content by name or property. */
 function metaContent(html: string, key: string): string | null {
@@ -167,21 +104,8 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: "Invalid URL" }, { status: 400 });
   }
 
-  // Block loopback / private ranges for safety.
-  const host = parsed.hostname;
-  if (
-    host === "localhost" ||
-    host === "127.0.0.1" ||
-    host === "::1" ||
-    host.startsWith("10.") ||
-    host.startsWith("192.168.") ||
-    /^172\.(1[6-9]|2[0-9]|3[01])\./.test(host)
-  ) {
-    return Response.json({ error: "Blocked: private address" }, { status: 400 });
-  }
-
   try {
-    const { body, finalUrl } = await fetchText(url);
+    const { body, finalUrl } = await safeFetchText(parsed.toString());
 
     const title =
       metaContent(body, "og:title") ??
@@ -211,6 +135,7 @@ export async function GET(request: NextRequest) {
       headers: { "Cache-Control": "public, max-age=3600" },
     });
   } catch (e) {
+    if (e instanceof BlockedUrlError) return Response.json({ error: e.message }, { status: 400 });
     const msg = e instanceof Error ? e.message : "Fetch failed";
     return Response.json({ error: msg }, { status: 502 });
   }
