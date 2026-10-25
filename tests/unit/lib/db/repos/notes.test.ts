@@ -18,13 +18,14 @@ describe("notesRepo wikilink syncing", () => {
     expect(note.excerpt).toBe("Heading This is the body text.");
   });
 
-  it("creates a placeholder note and wikilink edge for [[Title]]", async () => {
+  it("keeps an unknown [[Title]] unresolved until the note exists (D7: saving never creates notes)", async () => {
     const source = await notesRepo.create({ projectId: "p1", title: "Source" });
     await notesRepo.update(source.id, { body: "Link to [[Target Note]]" });
 
-    const target = await notesRepo.getByTitle("p1", "target note");
-    expect(target).toBeDefined();
+    expect(await notesRepo.getByTitle("p1", "target note")).toBeUndefined();
+    expect((await linksRepo.listUnresolved("p1")).map((l) => l.unresolvedTitle)).toEqual(["Target Note"]);
 
+    const target = await notesRepo.ensureByTitle("p1", "Target Note");
     const links = await linksRepo.listBySource("note", source.id);
     expect(links).toHaveLength(1);
     expect(links[0].linkType).toBe("wikilink");
@@ -48,13 +49,14 @@ describe("notesRepo wikilink syncing", () => {
 
   it("removes a note and its links on delete", async () => {
     const a = await notesRepo.create({ projectId: "p1", title: "A" });
+    const b = await notesRepo.create({ projectId: "p1", title: "B" });
     await notesRepo.update(a.id, { body: "[[B]]" });
-    const b = await notesRepo.getByTitle("p1", "B");
+    expect(await linksRepo.listByTarget("note", b.id)).toHaveLength(1);
 
     await notesRepo.remove(a.id);
     expect(await notesRepo.get(a.id)).toBeUndefined();
     // The outgoing wikilink from A is gone.
-    expect(await linksRepo.listByTarget("note", b!.id)).toHaveLength(0);
+    expect(await linksRepo.listByTarget("note", b.id)).toHaveLength(0);
   });
 });
 

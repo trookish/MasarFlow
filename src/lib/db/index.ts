@@ -1,3 +1,4 @@
+import type { DomainEvent, TrashEntry } from "@/lib/domain/events";
 import Dexie, { type EntityTable } from "dexie";
 import { uuid, now } from "@/lib/utils/ids";
 import type {
@@ -86,6 +87,8 @@ export class MasarFlowDB extends Dexie {
   aiUndo!: EntityTable<AiUndo, "id">;
   embeddings!: EntityTable<EmbeddingRow, "id">;
   activity!: EntityTable<Activity, "id">;
+  events!: EntityTable<DomainEvent, "id">;
+  trash!: EntityTable<TrashEntry, "id">;
 
   constructor() {
     super("masarflow");
@@ -240,6 +243,12 @@ export class MasarFlowDB extends Dexie {
     // v12: activity log (additive).
     this.version(12).stores({
       activity: "id, projectId, [projectId+createdAt], [projectId+entityKind+entityId]",
+    });
+    // v13 (v0.3 P2): domain event feed and trash (additive). Removed entities move to `trash` with
+    // the links and references needed to restore them; see src/lib/domain/commands/trash.ts.
+    this.version(13).stores({
+      events: "id, projectId, [projectId+at], [entityKind+entityId]",
+      trash: "id, projectId, kind, deletedAt",
     });
   }
 }

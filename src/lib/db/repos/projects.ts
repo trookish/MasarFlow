@@ -1,29 +1,7 @@
 import { db } from "@/lib/db";
 import type { Project } from "@/lib/db/schema";
 import { uuid, now, slugify } from "@/lib/utils/ids";
-
-const PROJECT_TABLES = [
-  db.projectCategories,
-  db.folders,
-  db.notes,
-  db.noteTemplates,
-  db.specs,
-  db.standards,
-  db.tasks,
-  db.sprints,
-  db.systems,
-  db.archNodes,
-  db.archEdges,
-  db.docs,
-  db.devLogs,
-  db.agentRuns,
-  db.commits,
-  db.memories,
-  db.links,
-  db.canvases,
-  db.syncFiles,
-  db.attachments,
-] as const;
+import { removeProject } from "@/lib/domain/commands";
 
 export const projectsRepo = {
   all(): Promise<Project[]> {
@@ -70,25 +48,9 @@ export const projectsRepo = {
     await db.projects.update(id, { ...patch, updatedAt: now() });
   },
 
-  /** Delete a project and every record that belongs to it. */
+  /** Delete a project and every record that belongs to it (tables discovered from the schema). */
   async remove(id: string): Promise<void> {
-    await db.transaction(
-      "rw",
-      [db.projects, ...PROJECT_TABLES, db.canvasNodes, db.canvasEdges],
-      async () => {
-        for (const table of PROJECT_TABLES) {
-          await table.where("projectId").equals(id).delete();
-        }
-        // Canvas children are keyed by canvasId — clear them by ownership.
-        const canvasIds = await db.canvases
-          .where("projectId")
-          .equals(id)
-          .primaryKeys();
-        await db.canvasNodes.where("canvasId").anyOf(canvasIds).delete();
-        await db.canvasEdges.where("canvasId").anyOf(canvasIds).delete();
-        await db.projects.delete(id);
-      },
-    );
+    await removeProject(id);
   },
 
   /**

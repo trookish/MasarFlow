@@ -24,6 +24,7 @@ import { RichMarkdownEditor } from "./rich-markdown-editor";
 import { BacklinksPanel } from "./backlinks-panel";
 import { BacklinksSection } from "@/components/entities/backlinks-section";
 import { PropertiesPanel } from "@/components/vault/properties-panel";
+import { asList } from "@/lib/vault/frontmatter";
 
 interface NoteEditorProps {
   note: Note;
@@ -58,6 +59,15 @@ export function NoteEditor({
   const spellPlugin = usePlugin("spell-check");
   const pdfPlugin = usePlugin("export-pdf");
   const spellLang = settingStr(spellPlugin.settings, "language", "en");
+  // Titles and aliases that resolve to a note; anything else renders as "Create note".
+  const isUnresolved = useMemo(() => {
+    const known = new Set<string>();
+    for (const n of allNotes) {
+      known.add(n.title.trim().toLowerCase());
+      for (const a of asList(n.props?.aliases)) known.add(a.trim().toLowerCase());
+    }
+    return (title: string) => !known.has(title.trim().toLowerCase());
+  }, [allNotes]);
   const noteId = note.id;
   const [title, setTitle] = useState(note.title);
   const [body, setBody] = useState(note.body);
@@ -210,7 +220,11 @@ export function NoteEditor({
           />
         ) : (
           <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-6 py-4">
-            <MarkdownPreview content={body} onWikilink={onNavigateToTitle} />
+            <MarkdownPreview
+              content={body}
+              onWikilink={onNavigateToTitle}
+              isUnresolved={isUnresolved}
+            />
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { taskSchema, type Task } from "@/lib/db/schema";
 import { uuid, now } from "@/lib/utils/ids";
+import { removeEntity } from "@/lib/domain/commands";
 
 type TaskInput = Partial<Task> & Pick<Task, "projectId" | "title">;
 
@@ -48,7 +49,8 @@ export const tasksRepo = {
   async update(id: string, patch: Partial<Task>): Promise<void> {
     await db.tasks.update(id, { ...patch, updatedAt: now() });
   },
+  /** Moves the task to the trash and cleans every reference to it (links, linkedTaskIds, spec progress). */
   async remove(id: string): Promise<void> {
-    await db.tasks.delete(id);
+    await removeEntity("task", id);
   },
 };

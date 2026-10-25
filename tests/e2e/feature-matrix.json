@@ -1,7 +1,7 @@
 {
   "/agents": ["roster seeds the default agents"],
   "/architecture": ["create a system and open its diagram"],
-  "/brain": ["create a note and read it back", "wikilinks open in preview", "connections list", "reload restores the open note"],
+  "/brain": ["create a note and read it back", "wikilinks open in preview", "create note from unresolved link", "connections list", "reload restores the open note"],
   "/brain/canvas": ["add a card to the canvas"],
   "/brain/graph": ["linked notes render as graph nodes"],
   "/brain/templates": ["create a template"],
@@ -20,7 +20,7 @@
   "/sprints": ["create a sprint"],
   "/standards": ["create a standard"],
   "/sync": ["vault mirror writes markdown files", "file edits import without touching the file", "conflicting edits are never overwritten", "a deleted file is reported, not re-created"],
-  "/tasks": ["create a task on the board", "task done writes a dev log"],
+  "/tasks": ["create a task on the board", "task done writes a dev log", "deleted task goes to the trash and restores"],
   "/today": ["TODAY view groups overdue, due today, in progress and up next from the local database", "TODAY opens (creating once) the daily note and focuses it in the dock"],
   "/tools/logs": ["LOGS lists log files, tails one and filters to errors only"],
   "/tools/system": ["SYSTEM reports version, allowed folders and table counts read-only"],

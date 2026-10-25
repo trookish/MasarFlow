@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { removeEntity } from "@/lib/domain/commands";
 import { specSchema, type Spec } from "@/lib/db/schema";
 import { uuid, now } from "@/lib/utils/ids";
 
@@ -49,8 +50,9 @@ export const specsRepo = {
   async update(id: string, patch: Partial<Spec>): Promise<void> {
     await db.specs.update(id, { ...patch, updatedAt: now() });
   },
+  /** Moves the spec to the trash; its tasks stay and lose the `specId` pointer. */
   async remove(id: string): Promise<void> {
-    await db.specs.delete(id);
+    await removeEntity("spec", id);
   },
   /**
    * Recompute a spec's implementation progress from its linked tasks

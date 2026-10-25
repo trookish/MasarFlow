@@ -90,6 +90,7 @@ import { GradientEditorDialog } from "@/components/settings/gradient-editor-dial
 import { SemanticIndexCard } from "@/components/settings/semantic-index-card";
 import { DataBackupCard } from "@/components/settings/data-backup-card";
 import { AutoBackupsCard } from "@/components/settings/auto-backups-card";
+import { TrashCard } from "@/components/settings/trash-card";
 import { backupNow } from "@/lib/db/auto-backup";
 import { getDesktop } from "@/lib/desktop/bridge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -872,6 +873,9 @@ function DataSection() {
         </div>
         <div className="py-3.5">
           <AutoBackupsCard />
+        </div>
+        <div className="py-3.5">
+          <TrashCard />
         </div>
         <SettingRow
           label="Control Center"

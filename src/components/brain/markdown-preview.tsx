@@ -36,6 +36,11 @@ interface MarkdownPreviewProps {
   content: string;
   /** Invoked when a wikilink is clicked, with the target note title. */
   onWikilink?: (title: string) => void;
+  /**
+   * Returns true when a `[[title]]` matches no note. Unresolved links render as a "Create note"
+   * action instead of a link (saving a note never creates notes; following the link does).
+   */
+  isUnresolved?: (title: string) => boolean;
   /** When provided, code blocks get a "save as note" action. */
   onSaveCodeAsNote?: (code: string, language: string) => void;
   className?: string;
@@ -52,6 +57,7 @@ export const MarkdownPreview = memo(
   function MarkdownPreview({
     content,
     onWikilink,
+    isUnresolved,
     onSaveCodeAsNote,
     className,
   }: MarkdownPreviewProps) {
@@ -191,6 +197,20 @@ export const MarkdownPreview = memo(
             }
             if (typeof href === "string" && href.startsWith("wikilink:")) {
               const title = decodeURIComponent(href.slice("wikilink:".length));
+              if (isUnresolved?.(title)) {
+                return (
+                  <button
+                    type="button"
+                    data-wikilink-unresolved=""
+                    className="cursor-pointer font-medium text-muted-foreground underline decoration-dashed underline-offset-2 hover:text-foreground"
+                    title={`No note named “${title}” yet. Select to create it.`}
+                    aria-label={`Create note ${title}`}
+                    onClick={() => onWikilink?.(title)}
+                  >
+                    {children}
+                  </button>
+                );
+              }
               return (
                 <button
                   type="button"
@@ -215,5 +235,8 @@ export const MarkdownPreview = memo(
   );
   },
   (prev, next) =>
-    prev.content === next.content && prev.className === next.className,
+    prev.content === next.content &&
+    prev.className === next.className &&
+    // Identity changes only when the note set does (memoized by the caller).
+    prev.isUnresolved === next.isUnresolved,
 );

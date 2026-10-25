@@ -433,6 +433,8 @@ export const linkSchema = z.object({
     .enum(["wikilink", "dependency", "reference", "implements", "relates"])
     .default("reference"),
   label: z.string().default(""),
+  /** Wikilink whose title matches no note yet: `targetId` is "" until a note with this title exists. */
+  unresolvedTitle: z.string().optional(),
   createdAt: z.number(),
 });
 export type Link = z.infer<typeof linkSchema>;

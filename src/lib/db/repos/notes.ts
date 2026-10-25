@@ -1,9 +1,9 @@
 import { db } from "@/lib/db";
 import type { Note, NoteType, PropValue } from "@/lib/db/schema";
 import { uuid, now } from "@/lib/utils/ids";
-import { makeExcerpt, extractWikilinkTargets } from "@/lib/utils/markdown";
+import { makeExcerpt } from "@/lib/utils/markdown";
 import { asList } from "@/lib/vault/frontmatter";
-import { linksRepo } from "./links";
+import { createNoteFromLink, removeEntity, resolveWikilinks } from "@/lib/domain/commands";
 
 interface CreateNoteInput {
   projectId: string;
@@ -102,33 +102,24 @@ export const notesRepo = {
     }
   },
 
+  /** Moves the note to the trash; other notes' `[[links]]` to it become unresolved. */
   async remove(id: string): Promise<void> {
-    await linksRepo.removeForEntity("note", id);
-    await db.notes.delete(id);
+    await removeEntity("note", id);
   },
 
   /**
-   * Resolve a note by title, creating an empty placeholder if it does not yet
-   * exist (mirrors Obsidian's "create on link" behavior).
+   * The user followed a `[[link]]`: find the note by title or alias, or create it, and resolve
+   * every link that was waiting for that title. Saving a note never calls this.
    */
   async ensureByTitle(projectId: string, title: string): Promise<Note> {
-    const existing = await this.getByTitle(projectId, title);
-    if (existing) return existing;
-    return this.create({ projectId, title, type: "note" });
+    return normalize(await createNoteFromLink(projectId, title));
   },
 
   /**
-   * Reconcile the note's `[[wikilinks]]` with the links table: every linked
-   * title resolves to (or creates) a note, then the wikilink edge set for this
-   * note is replaced to match.
+   * Reconcile the note's `[[wikilinks]]` with the links table. Unknown titles become unresolved
+   * links; no note is created on save.
    */
   async syncWikilinks(note: Note): Promise<void> {
-    const targets = extractWikilinkTargets(note.body);
-    const targetIds: string[] = [];
-    for (const title of targets) {
-      const target = await this.ensureByTitle(note.projectId, title);
-      targetIds.push(target.id);
-    }
-    await linksRepo.replaceNoteWikilinks(note.projectId, note.id, targetIds);
+    await resolveWikilinks(note.id);
   },
 };

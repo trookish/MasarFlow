@@ -1,0 +1,83 @@
+{
+  "deletedProject": "Pulse: Realtime Team Dashboard",
+  "before": {
+    "ranAt": 1792969540262,
+    "results": [
+      {
+        "check": "orphan-project-rows",
+        "count": 0,
+        "sample": []
+      },
+      {
+        "check": "dangling-links",
+        "count": 0,
+        "sample": []
+      },
+      {
+        "check": "stale-linked-task-ids",
+        "count": 0,
+        "sample": []
+      },
+      {
+        "check": "sync-rows-without-entity",
+        "count": 12,
+        "sample": [
+          "0aed45d9-d3fe-4a9a-b84a-c5f02a3ed4a3",
+          "0e9fe424-29e5-44c4-881a-39145340d410",
+          "30f15017-851f-414d-8779-bc04d9333a25",
+          "3cfbf196-e9b5-4b08-ab30-14101ef367c8",
+          "4c5990b0-bdde-4da2-9f68-060aa54e0a6b"
+        ]
+      },
+      {
+        "check": "duplicate-sync-paths",
+        "count": 0,
+        "sample": []
+      }
+    ],
+    "total": 12
+  },
+  "after": {
+    "ranAt": 1792969540912,
+    "results": [
+      {
+        "check": "orphan-project-rows",
+        "count": 31,
+        "sample": [
+          "activity:03aa6ccf-bb83-4c9f-adad-6827f28f30a7",
+          "activity:1082ae10-2f10-42e7-ba4a-09eb8be3fcd8",
+          "activity:1eaded0b-6c43-44f1-99e4-3b0c71ad60ef",
+          "activity:40df2623-8e29-478d-98ca-93dcf5a2b3d1",
+          "activity:54609318-49b5-4c54-9e31-a5cca4925235"
+        ]
+      },
+      {
+        "check": "dangling-links",
+        "count": 0,
+        "sample": []
+      },
+      {
+        "check": "stale-linked-task-ids",
+        "count": 0,
+        "sample": []
+      },
+      {
+        "check": "sync-rows-without-entity",
+        "count": 9,
+        "sample": [
+          "0aed45d9-d3fe-4a9a-b84a-c5f02a3ed4a3",
+          "3cfbf196-e9b5-4b08-ab30-14101ef367c8",
+          "4c5990b0-bdde-4da2-9f68-060aa54e0a6b",
+          "5733ada4-8b46-4ef7-bf05-3e605bcb33ff",
+          "7a971b4a-2ea9-4c9d-8e2b-a6b5a6ec910d"
+        ]
+      },
+      {
+        "check": "duplicate-sync-paths",
+        "count": 0,
+        "sample": []
+      }
+    ],
+    "total": 40
+  }
+}

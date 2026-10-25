@@ -14,6 +14,7 @@ test("harness: data doctor", async ({ desktop }) => {
   // Delete the active demo project the way a user does: Settings → Project → Delete.
   await activateProject(page, DEMO_WEB_PROJECT);
   await navigateTo(page, "Settings");
+  await page.getByRole("button", { name: "Active Project", exact: true }).first().click();
   await page.getByRole("button", { name: "Delete project", exact: true }).first().click();
   const dialog = page.getByRole("dialog", { name: "Delete project" });
   await expect(dialog).toBeVisible();

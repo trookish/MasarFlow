@@ -98,11 +98,18 @@ export function runDoctorOnSnapshot(snap: DbSnapshot): DoctorReport {
     }
   }
 
-  // 2. Links whose source or target entity is missing.
-  const dangling = rowsOf<{ id: string; sourceType: string; sourceId: string; targetType: string; targetId: string }>(
-    "links",
-  )
-    .filter((l) => !exists(l.sourceType, l.sourceId) || !exists(l.targetType, l.targetId))
+  // 2. Links whose source or target entity is missing (unresolved wikilinks have no target by design).
+  const dangling = rowsOf<{
+    id: string;
+    sourceType: string;
+    sourceId: string;
+    targetType: string;
+    targetId: string;
+    unresolvedTitle?: string;
+  }>("links")
+    .filter(
+      (l) => !exists(l.sourceType, l.sourceId) || (!l.unresolvedTitle && !exists(l.targetType, l.targetId)),
+    )
     .map((l) => l.id);
 
   // 3. Specs, docs and commits pointing at tasks that are gone.

@@ -37,6 +37,7 @@ const test = base.extend<object, { desktop: AppHandle }>({
 const CREATE_TITLE = "/brain: create a note and read it back";
 const WIKILINK_TITLE = "/brain: wikilinks open in preview";
 const CONNECTIONS_TITLE = "/brain: connections list";
+const UNRESOLVED_TITLE = "/brain: create note from unresolved link";
 const RELOAD_TITLE = "/brain: reload restores the open note";
 const GRAPH_TITLE = "/brain/graph: linked notes render as graph nodes";
 const TEMPLATES_TITLE = "/brain/templates: create a template";
@@ -118,6 +119,52 @@ test(WIKILINK_TITLE, async ({ desktop }) => {
   const notes = await readTable<{ id: string; title: string }>(page, "notes");
   const target = notes.find((n) => n.title === "North Star: Live by Default");
   await expect.poll(() => page.url(), { timeout: 15_000 }).toContain(`note=${target!.id}`);
+});
+
+test(UNRESOLVED_TITLE, async ({ desktop }) => {
+  const { page } = desktop;
+  await navigateTo(page, "Brain");
+  const brain = notesPanel(page);
+  await expect(brain.getByRole("button", { name: "New note" }).first()).toBeVisible({ timeout: 20_000 });
+
+  const stamp = Date.now();
+  const source = `Unresolved source ${stamp}`;
+  const missing = `Missing idea ${stamp}`;
+  await brain.getByRole("button", { name: "New note" }).first().click();
+  const titleInput = brain.getByPlaceholder("Untitled note");
+  await expect(titleInput).toHaveValue("Untitled note", { timeout: 15_000 });
+  await titleInput.fill(source);
+  await brain.locator(".cm-content").first().click();
+  await page.keyboard.insertText(`See [[${missing}]] later.`);
+  await expect(brain.locator("button", { hasText: source }).first()).toBeVisible({ timeout: 15_000 });
+
+  // Saving writes an unresolved link and creates no note (D7).
+  await expect
+    .poll(async () => (await readTable<{ title: string }>(page, "notes")).some((n) => n.title === missing), {
+      timeout: 5_000,
+    })
+    .toBe(false);
+  await expect
+    .poll(
+      async () =>
+        (await readTable<{ unresolvedTitle?: string }>(page, "links")).some((l) => l.unresolvedTitle === missing),
+      { timeout: 15_000 },
+    )
+    .toBe(true);
+
+  // The preview offers "Create note"; following it creates the note and resolves the link.
+  await brain.getByRole("tab", { name: "Read" }).click();
+  const create = brain.getByRole("button", { name: `Create note ${missing}` });
+  await expect(create).toBeVisible({ timeout: 15_000 });
+  await create.click();
+  await expect(titleInput).toHaveValue(missing, { timeout: 15_000 });
+  await expect
+    .poll(
+      async () =>
+        (await readTable<{ unresolvedTitle?: string }>(page, "links")).some((l) => l.unresolvedTitle === missing),
+      { timeout: 15_000 },
+    )
+    .toBe(false);
 });
 
 test(CONNECTIONS_TITLE, async ({ desktop }) => {

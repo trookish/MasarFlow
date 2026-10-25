@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { removeEntity } from "@/lib/domain/commands";
 import { docSchema, type Doc } from "@/lib/db/schema";
 import { uuid, now, slugify } from "@/lib/utils/ids";
 
@@ -32,7 +33,8 @@ export const docsRepo = {
         : patch;
     await db.docs.update(id, { ...next, updatedAt: now() });
   },
+  /** Moves the doc to the trash with its links. */
   async remove(id: string): Promise<void> {
-    await db.docs.delete(id);
+    await removeEntity("doc", id);
   },
 };
