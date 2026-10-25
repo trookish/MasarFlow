@@ -31,6 +31,24 @@ isolated symlink layout on Windows (spike S1, `.hermes/spikes/S1.md`).
 Browser mode (`scripts/start.mjs`, `pnpm dev` / `pnpm start`) exists for contributors and the browser e2e
 specs; the supported way to run MasarFlow is the desktop app.
 
+### Request guard in browser mode
+
+Browser mode is guarded as well (`src/proxy.ts`, `checkDevRequest`). Every request must address the server
+as `localhost:<PORT>` or `127.0.0.1:<PORT>` (DNS-rebinding defence), and every `/api/*` request must be
+same-origin: a cross-site `Sec-Fetch-Site`, a foreign `Origin`, or a state-changing request with no `Origin`
+is rejected with 403. Requests from the app itself always pass.
+
+Filesystem routes (`/api/fs/*`, `/api/watch`) fail closed. In browser mode, list the folders you want to
+open in `MASARFLOW_DEV_ROOTS`, separated by `;`:
+
+```bash
+MASARFLOW_DEV_ROOTS="C:/Users/me/Dev/my-project;D:/notes" pnpm dev
+```
+
+Without it, every filesystem request returns 403 with a message that names the variable. `pnpm dev:desktop`
+does not need it: it points the dev server at the Electron dev profile (`<appData>/MasarFlow-dev`), so folders
+chosen with the native folder picker are honoured exactly as in the packaged app.
+
 ## Tests
 
 | Command | What it runs |

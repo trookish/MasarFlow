@@ -17,13 +17,34 @@ function loadRoots(dataDir: string): string[] {
   }
 }
 
+/** Folders allowed in browser development: `MASARFLOW_DEV_ROOTS`, separated by `;`. */
+export function devRoots(env: Record<string, string | undefined>): string[] {
+  return (env.MASARFLOW_DEV_ROOTS ?? "")
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 /**
- * Throws `{status:403}` unless `root` was registered through the native folder picker.
- * Enforced only when Electron main provided MASARFLOW_DATA_DIR (packaged / desktop mode).
+ * Throws `{status:403}` unless `root` is allowed. Fails closed in every mode:
+ * - desktop app (MASARFLOW_DATA_DIR set): only folders registered through the native folder picker;
+ * - browser development: only folders listed in MASARFLOW_DEV_ROOTS.
  */
 export function assertRootAllowed(root: string, env: Record<string, string | undefined> = process.env): void {
   const dataDir = env.MASARFLOW_DATA_DIR?.trim();
-  if (!dataDir) return;
+  if (!dataDir) {
+    const roots = devRoots(env);
+    if (roots.length === 0) {
+      throw {
+        status: 403,
+        message: "No folders are linked. Set MASARFLOW_DEV_ROOTS for browser development, or use the desktop app.",
+      };
+    }
+    if (!isRootAllowed(root, roots)) {
+      throw { status: 403, message: "This folder is not listed in MASARFLOW_DEV_ROOTS." };
+    }
+    return;
+  }
   if (!isRootAllowed(root, loadRoots(dataDir))) {
     throw {
       status: 403,
