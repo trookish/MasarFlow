@@ -250,6 +250,40 @@ export class MasarFlowDB extends Dexie {
       events: "id, projectId, [projectId+at], [entityKind+entityId]",
       trash: "id, projectId, kind, deletedAt",
     });
+    // v0.3 P3: the index is keyed per adapter and upserted, never replaced. Older rows had no
+    // adapter and could be duplicated by repeated replace-all runs; keep the newest per entity.
+    this.version(14)
+      .stores({ syncFiles: "id, projectId, path, status, entityId, [projectId+adapter]" })
+      .upgrade(async (tx) => {
+        const table = tx.table("syncFiles");
+        const rows = (await table.toArray()) as Array<{
+          id: string;
+          projectId: string;
+          adapter?: string;
+          path: string;
+          entityType: string | null;
+          entityId: string | null;
+          lastSyncedAt: number | null;
+        }>;
+        const keep = new Map<string, (typeof rows)[number]>();
+        const drop: string[] = [];
+        for (const r of rows) {
+          const adapter = r.adapter ?? "folder";
+          const key = r.entityId ? `${r.projectId}|${adapter}|${r.entityType}|${r.entityId}` : `${r.projectId}|${adapter}|path|${r.path}`;
+          const prev = keep.get(key);
+          if (!prev) {
+            keep.set(key, r);
+            continue;
+          }
+          const newer = (r.lastSyncedAt ?? 0) > (prev.lastSyncedAt ?? 0) ? r : prev;
+          drop.push(newer === r ? prev.id : r.id);
+          keep.set(key, newer);
+        }
+        if (drop.length) await table.bulkDelete(drop);
+        await table.toCollection().modify((r: { adapter?: string }) => {
+          if (!r.adapter) r.adapter = "folder";
+        });
+      });
   }
 }
 

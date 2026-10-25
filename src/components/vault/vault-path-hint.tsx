@@ -20,8 +20,8 @@ export function VaultPathHint({ entityId }: { entityId: string }) {
     async () => {
       if (!projectId) return undefined;
       const rows = await db.syncFiles
-        .where("projectId")
-        .equals(projectId)
+        .where("[projectId+adapter]")
+        .equals([projectId, "folder"])
         .filter((r) => r.entityId === entityId)
         .toArray();
       return rows[0];

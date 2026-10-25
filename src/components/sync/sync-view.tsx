@@ -123,7 +123,7 @@ export function SyncView() {
   );
 
   const files = useLiveQuery(
-    () => syncRepo.listByProject(projectId),
+    () => syncRepo.listByProject(projectId, "obsidian"),
     [projectId],
   );
   const rows = useMemo(() => files ?? [], [files]);
@@ -140,7 +140,7 @@ export function SyncView() {
     const [notes, docs, existing] = await Promise.all([
       notesRepo.listByProject(projectId),
       docsRepo.listByProject(projectId),
-      syncRepo.listByProject(projectId),
+      syncRepo.listByProject(projectId, "obsidian"),
     ]);
     // Pass existing sync records so imported vault paths are preserved.
     const desired = buildDesiredFiles(notes, docs, existing);
@@ -152,7 +152,7 @@ export function SyncView() {
     setBusy(true);
     try {
       const states = await desiredStates();
-      await syncRepo.replaceAll(projectId, states);
+      await syncRepo.reconcile(projectId, states, "obsidian");
     } finally {
       setBusy(false);
     }
@@ -165,13 +165,14 @@ export function SyncView() {
     try {
       const states = await desiredStates();
       const ts = Date.now();
-      await syncRepo.replaceAll(
+      await syncRepo.reconcile(
         projectId,
         states.map((s) =>
           s.status === "conflict" && conflictResolution === "ask"
             ? s
             : { ...s, status: "synced", lastSyncedAt: ts },
         ),
+        "obsidian",
       );
     } finally {
       setBusy(false);
@@ -188,7 +189,7 @@ export function SyncView() {
     const [notes, docs, existing] = await Promise.all([
       notesRepo.listByProject(projectId),
       docsRepo.listByProject(projectId),
-      syncRepo.listByProject(projectId),
+      syncRepo.listByProject(projectId, "obsidian"),
     ]);
     const pathByEntity = new Map(
       existing
@@ -223,7 +224,7 @@ export function SyncView() {
     setPushMsg(null);
     try {
       const { entries } = await gatherEntries();
-      const existing = await syncRepo.listByProject(projectId);
+      const existing = await syncRepo.listByProject(projectId, "obsidian");
       const byEntity = new Map(existing.map((e) => [e.entityId, e]));
       const states: SyncFileState[] = [];
       let transportError = "";
@@ -251,7 +252,7 @@ export function SyncView() {
             status === "synced" ? (ex?.lastSyncedAt ?? Date.now()) : (ex?.lastSyncedAt ?? null),
         });
       }
-      await syncRepo.replaceAll(projectId, states);
+      await syncRepo.reconcile(projectId, states, "obsidian");
       setPushMsg(
         transportError
           ? { ok: false, text: `Some files couldn't be read (${transportError}).` }
@@ -280,7 +281,7 @@ export function SyncView() {
     setPushMsg(null);
     try {
       const { entries } = await gatherEntries();
-      const existing = await syncRepo.listByProject(projectId);
+      const existing = await syncRepo.listByProject(projectId, "obsidian");
       const byEntity = new Map(existing.map((e) => [e.entityId, e]));
       const ts = Date.now();
       let pushed = 0;
@@ -326,7 +327,7 @@ export function SyncView() {
         });
       }
 
-      await syncRepo.replaceAll(projectId, states);
+      await syncRepo.reconcile(projectId, states, "obsidian");
       setPushMsg(
         failed > 0
           ? { ok: false, text: `${failed} file(s) failed (${firstError}).` }
@@ -454,7 +455,7 @@ export function SyncView() {
         return;
       }
       const { entries } = await gatherEntries();
-      const existingIdx = await syncRepo.listByProject(pid);
+      const existingIdx = await syncRepo.listByProject(pid, "obsidian");
       const idxByEntity = new Map(
         existingIdx.filter((e) => e.entityId != null).map((e) => [e.entityId, e]),
       );
@@ -612,7 +613,7 @@ export function SyncView() {
         }
       }
 
-      await syncRepo.replaceAll(pid, states);
+      await syncRepo.reconcile(pid, states, "obsidian");
 
       const parts: string[] = [];
       if (imported) parts.push(`imported ${imported}`);

@@ -31,6 +31,14 @@ export function makeFakeIO(initial: Record<string, string> = {}): {
       files.set(p, content);
       return { ok: true };
     },
+    async move(_root, from, to) {
+      const content = files.get(from);
+      if (content === undefined) return { ok: false, error: "ENOENT" };
+      if (files.has(to)) return { ok: false, error: "EEXIST" };
+      files.delete(from);
+      files.set(to, content);
+      return { ok: true };
+    },
   };
   return { io, files, lastRead };
 }

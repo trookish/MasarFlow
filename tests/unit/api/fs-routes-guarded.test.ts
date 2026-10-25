@@ -8,6 +8,7 @@ describe("filesystem-touching routes enforce the root allow-list", () => {
   it("finds the expected routes", () => {
     expect(routes.map((r) => r.path).sort()).toEqual([
       "src/app/api/fs/list/route.ts",
+      "src/app/api/fs/move/route.ts",
       "src/app/api/fs/read/route.ts",
       "src/app/api/fs/search/route.ts",
       "src/app/api/fs/shell/route.ts",

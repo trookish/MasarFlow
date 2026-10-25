@@ -18,7 +18,7 @@ export function VaultPanel() {
     project?.slug ?? "project",
   );
   const rows = useLiveQuery(
-    async () => (projectId ? db.syncFiles.where("projectId").equals(projectId).toArray() : []),
+    async () => (projectId ? db.syncFiles.where("[projectId+adapter]").equals([projectId, "folder"]).toArray() : []),
     [projectId],
   );
   const counts = countByStatus(rows ?? []);

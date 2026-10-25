@@ -1,7 +1,7 @@
 import type { Doc, Folder, Note, Spec, SyncFile, Task } from "@/lib/db/schema";
 import type { SyncFileInput } from "@/lib/db/repos/sync";
 import { classifyRemoteStatus, hashContent, normalizeMd, type SyncStatus } from "@/lib/sync";
-import { folderChain, isMirroredPath, pathFor, uniquePaths, type MirrorKind } from "./paths";
+import { claimOf, folderChain, isMirroredPath, pathFor, uniquePaths, type MirrorKind } from "./paths";
 import { serializeEntity } from "./serialize";
 
 /**
@@ -38,6 +38,14 @@ export type VaultAction =
   | { action: "missing"; path: string; kind: MirrorKind; entityId: string }
   | { action: "repath"; from: string; to: string; kind: MirrorKind; entityId: string; import: boolean }
   | { action: "external"; path: string }
+  /** A mirrored file nobody claims and that has no live owner: listed, adopted only on request. */
+  | { action: "untracked"; path: string }
+  /** The entity was deleted in the app and its file is unchanged: move the file to the replica trash. */
+  | { action: "trash-file"; path: string; kind: MirrorKind; entityId: string }
+  /** The entity was deleted in the app but its file was edited (or re-appeared): ask the user. */
+  | { action: "deleted-in-app"; path: string; kind: MirrorKind; entityId: string }
+  /** The file changed and auto-import is off: recorded as pending, the entity is not touched. */
+  | { action: "pending-import"; path: string; kind: MirrorKind; entityId: string }
   | { action: "blocked"; path: string; kind: MirrorKind | null; entityId: string | null }
   | { action: "ignore"; path: string }
   | { action: "skip"; path: string; kind: MirrorKind; entityId: string; status: SyncStatus };
@@ -97,12 +105,32 @@ export function collectLocal(input: LocalInput): LocalModel {
   return { entities, contentByKey };
 }
 
+/** An index row whose entity no longer exists in the app (deleted, or moved to the trash). */
+export interface OrphanRow {
+  path: string;
+  kind: MirrorKind;
+  entityId: string;
+  /** hash recorded at the last sync */
+  hash: string;
+}
+
+/** Folder for files of deleted entities. Dot-prefixed, so Obsidian hides it. */
+export const REPLICA_TRASH = ".masarflow-trash";
+
 /** Decide what to do. Deterministic: sorted by path. */
 export function planVaultSync(input: {
   entities: MirrorEntity[];
   files: MirrorFile[];
   autoImport: boolean;
+  /** rows whose entity is gone (see OrphanRow) */
+  orphans?: OrphanRow[];
+  /** ids of entities currently in the app trash */
+  trashedIds?: ReadonlySet<string>;
+  /** adopt unclaimed mirrored files as new entities (only the explicit import command sets this) */
+  adoptUntracked?: boolean;
 }): VaultAction[] {
+  const orphanByPath = new Map((input.orphans ?? []).map((o) => [o.path, o]));
+  const trashed = input.trashedIds ?? new Set<string>();
   const byPath = new Map(input.files.map((f) => [f.path, f]));
   const byId = new Map(input.files.filter((f) => f.msfId).map((f) => [f.msfId as string, f]));
   const actions: VaultAction[] = [];
@@ -148,7 +176,11 @@ export function planVaultSync(input: {
       continue;
     }
     if (status === "remote_modified") {
-      actions.push({ action: "import", path, kind: e.kind, entityId: e.id, auto: input.autoImport });
+      actions.push(
+        input.autoImport
+          ? { action: "import", path, kind: e.kind, entityId: e.id, auto: true }
+          : { action: "pending-import", path, kind: e.kind, entityId: e.id },
+      );
       continue;
     }
     actions.push({ action: "conflict", path, kind: e.kind, entityId: e.id, baseHash: e.baseHash });
@@ -156,7 +188,30 @@ export function planVaultSync(input: {
 
   for (const f of [...input.files].sort((a, b) => a.path.localeCompare(b.path))) {
     if (claimed.has(f.path)) continue;
-    actions.push(isMirroredPath(f.path) ? { action: "external", path: f.path } : { action: "ignore", path: f.path });
+    if (!isMirroredPath(f.path)) {
+      actions.push({ action: "ignore", path: f.path });
+      continue;
+    }
+    const orphan = orphanByPath.get(f.path);
+    if (orphan) {
+      // Deleted in the app. An untouched file follows it to the trash; an edited one is the
+      // user's work, so it is never moved or re-imported without asking.
+      const unchanged = f.hash != null && f.hash === orphan.hash;
+      actions.push(
+        unchanged
+          ? { action: "trash-file", path: f.path, kind: orphan.kind, entityId: orphan.entityId }
+          : { action: "deleted-in-app", path: f.path, kind: orphan.kind, entityId: orphan.entityId },
+      );
+      continue;
+    }
+    if (f.msfId && trashed.has(f.msfId)) {
+      const kind = claimOf(f.path);
+      if (kind) {
+        actions.push({ action: "deleted-in-app", path: f.path, kind, entityId: f.msfId });
+        continue;
+      }
+    }
+    actions.push(input.adoptUntracked ? { action: "external", path: f.path } : { action: "untracked", path: f.path });
   }
   return actions;
 }
@@ -199,8 +254,19 @@ export function indexRowFor(
         : null;
     case "missing":
       return { path: action.path, hash: "", status: "deleted", entityType: action.kind, entityId: action.entityId, lastSyncedAt: null };
+    case "pending-import":
+      return entity
+        ? {
+            path: action.path, hash: entity.baseHash ?? entity.hash, status: "remote_modified",
+            entityType: action.kind, entityId: action.entityId, lastSyncedAt: null,
+          }
+        : null;
+    case "deleted-in-app":
+      return { path: action.path, hash: fileHash ?? "", status: "conflict", entityType: action.kind, entityId: action.entityId, lastSyncedAt: null };
     case "external":
     case "ignore":
+    case "untracked":
+    case "trash-file":
       return null;
   }
 }

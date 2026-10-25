@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { db } from "@/lib/db";
 import { notesRepo } from "@/lib/db/repos/notes";
 import { syncRepo } from "@/lib/db/repos/sync";
+import { removeEntity } from "@/lib/domain/commands";
 import { makeFakeIO } from "./_helpers/fake-io";
 import { runVaultSync, resolveVaultConflict, type VaultDeps } from "@/lib/vault/engine";
 import { scratchDir, removeDir, tmpList, tmpRead } from "../../_helpers/scratch";
@@ -14,6 +15,8 @@ const FOLDER = "MasarFlow/p1";
 async function seed(projectId = "p1"): Promise<void> {
   await db.notes.clear();
   await db.syncFiles.clear();
+  await db.trash.clear();
+  await db.links.clear();
   await notesRepo.create({ id: "n1", projectId, title: "Auth design", body: "JWT everywhere", tags: ["auth"] });
   await notesRepo.create({ id: "n2", projectId, title: "Deploy", body: "docker compose", tags: [] });
 }
@@ -136,10 +139,13 @@ describe("runVaultSync", () => {
     expect((await syncRepo.listByProject("p1")).find((r) => r.entityId === "n2")?.path).toBe("notes/Deployment.md");
   });
 
-  it("imports a foreign markdown file dropped into the folder", async () => {
+  it("lists a foreign markdown file and imports it only on request", async () => {
     const { io, files } = makeFakeIO();
     files.set(keyOf(FOLDER, "notes/Ideas from Obsidian.md"), "---\ntitle: Ideas from Obsidian\ntags: [idea]\n---\n\nFresh thought\n");
-    const summary = await runVaultSync(deps(io));
+    const listed = await runVaultSync(deps(io));
+    expect(listed.untracked).toBe(1);
+    expect((await notesRepo.listByProject("p1")).some((n) => n.title === "Ideas from Obsidian")).toBe(false);
+    const summary = await runVaultSync(deps(io, { adoptUntracked: true }));
     expect(summary.external).toBe(1);
     const created = (await notesRepo.listByProject("p1")).find((n) => n.title === "Ideas from Obsidian");
     expect(created?.body).toBe("Fresh thought");
@@ -189,6 +195,14 @@ describe("runVaultSync", () => {
           fs.writeFileSync(abs, content, "utf8");
           return { ok: true };
         },
+        move: async (_root, from, to) => {
+          const src = path.join(dir, from);
+          const dest = path.join(dir, to);
+          if (!dest.startsWith(dir) || !fs.existsSync(src)) return { ok: false, error: "ENOENT" };
+          fs.mkdirSync(path.dirname(dest), { recursive: true });
+          fs.renameSync(src, dest);
+          return { ok: true };
+        },
       };
       const summary = await runVaultSync(deps(nodeIo));
       expect(tmpList(dir)).toEqual([
@@ -200,5 +214,62 @@ describe("runVaultSync", () => {
     } finally {
       removeDir(dir);
     }
+  });
+
+  it("moves the file of a note deleted in the app to the replica trash, and keeps edited files", async () => {
+    const { io, files } = makeFakeIO();
+    await runVaultSync(deps(io));
+    await removeEntity("note", "n2");
+    // n1 is edited on disk, then deleted in the app: that file must be kept and flagged.
+    files.set(keyOf(FOLDER, "notes/Auth design.md"), files.get(keyOf(FOLDER, "notes/Auth design.md"))! + "\nmy edit\n");
+    await removeEntity("note", "n1");
+    const summary = await runVaultSync(deps(io));
+    expect(summary.trashed).toBe(1);
+    expect(summary.conflicts).toBe(1);
+    expect(files.has(keyOf(FOLDER, "notes/Deploy.md"))).toBe(false);
+    expect(files.has(keyOf(FOLDER, ".masarflow-trash/notes/Deploy.md"))).toBe(true);
+    expect(files.has(keyOf(FOLDER, "notes/Auth design.md"))).toBe(true);
+    const rows = await syncRepo.listByProject("p1", "folder");
+    expect(rows.map((r) => [r.entityId, r.status])).toEqual([["n1", "conflict"]]);
+    // The user keeps the file: the note comes back from the trash with the edit.
+    expect(await resolveVaultConflict(deps(io), "n1", "file")).toBe(true);
+    expect((await db.notes.get("n1"))?.body).toContain("my edit");
+    expect(await db.trash.count()).toBe(1);
+  });
+
+  it("converges after an interrupted run without duplicate rows or new ids", async () => {
+    const { io, files } = makeFakeIO();
+    let writes = 0;
+    const flaky: VaultDeps["io"] = {
+      ...io,
+      write: async (root, p, content) => {
+        writes += 1;
+        if (writes === 2) throw new Error("app closed");
+        return io.write(root, p, content);
+      },
+    };
+    await expect(runVaultSync(deps(flaky))).rejects.toThrow("app closed");
+    const partial = await syncRepo.listByProject("p1", "folder");
+    expect(partial).toHaveLength(1);
+    await runVaultSync(deps(io));
+    const first = await syncRepo.listByProject("p1", "folder");
+    await runVaultSync(deps(io));
+    const second = await syncRepo.listByProject("p1", "folder");
+    expect(second).toHaveLength(2);
+    expect(second.map((r) => r.id)).toEqual(first.map((r) => r.id));
+    expect(first.find((r) => r.entityId === partial[0].entityId)?.id).toBe(partial[0].id);
+    expect([...files.keys()].filter((k) => k.endsWith(".md"))).toHaveLength(2);
+  });
+
+  it("keeps the folder and Obsidian indexes apart", async () => {
+    const { io } = makeFakeIO();
+    await syncRepo.reconcile(
+      "p1",
+      [{ path: "notes/x.md", hash: "h", status: "synced", entityType: "note", entityId: "n1", lastSyncedAt: 1 }],
+      "obsidian",
+    );
+    await runVaultSync(deps(io));
+    expect(await syncRepo.listByProject("p1", "obsidian")).toHaveLength(1);
+    expect(await syncRepo.listByProject("p1", "folder")).toHaveLength(2);
   });
 });

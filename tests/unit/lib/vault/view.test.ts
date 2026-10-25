@@ -3,7 +3,7 @@ import type { SyncFile } from "@/lib/db/schema";
 import { countByStatus, vaultConflicts, vaultSummaryLine, visibleRows } from "@/lib/vault/view";
 
 const row = (over: Partial<SyncFile> = {}): SyncFile => ({
-  id: "r1", projectId: "p1", path: "notes/a.md", hash: "H", mtime: 0,
+  id: "r1", projectId: "p1", adapter: "folder", path: "notes/a.md", hash: "H", mtime: 0,
   status: "synced", entityType: "note", entityId: "n1", lastSyncedAt: 1, ...over,
 });
 
@@ -29,13 +29,13 @@ describe("vault view model", () => {
   });
 
   it("summarizes a run in one line", () => {
-    expect(vaultSummaryLine({ written: 2, imported: 1, conflicts: 0, missing: 0, external: 0, blocked: 0, skipped: 3, errors: [] })).toBe(
+    expect(vaultSummaryLine({ written: 2, imported: 1, conflicts: 0, missing: 0, external: 0, blocked: 0, skipped: 3, pending: 0, untracked: 0, trashed: 0, errors: [] })).toBe(
       "2 written · 1 imported · 3 unchanged",
     );
-    expect(vaultSummaryLine({ written: 0, imported: 0, conflicts: 1, missing: 1, external: 0, blocked: 0, skipped: 0, errors: ["x"] })).toBe(
+    expect(vaultSummaryLine({ written: 0, imported: 0, conflicts: 1, missing: 1, external: 0, blocked: 0, skipped: 0, pending: 0, untracked: 0, trashed: 0, errors: ["x"] })).toBe(
       "1 conflict · 1 deleted on disk · 1 warning",
     );
-    expect(vaultSummaryLine({ written: 0, imported: 0, conflicts: 0, missing: 0, external: 0, blocked: 0, skipped: 0, errors: [] })).toBe(
+    expect(vaultSummaryLine({ written: 0, imported: 0, conflicts: 0, missing: 0, external: 0, blocked: 0, skipped: 0, pending: 0, untracked: 0, trashed: 0, errors: [] })).toBe(
       "Everything is in sync",
     );
   });

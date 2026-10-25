@@ -34,6 +34,9 @@ export function vaultSummaryLine(summary: VaultRunSummary): string {
   if (summary.external) parts.push(`${summary.external} new file${summary.external === 1 ? "" : "s"}`);
   if (summary.conflicts) parts.push(`${summary.conflicts} conflict${summary.conflicts === 1 ? "" : "s"}`);
   if (summary.missing) parts.push(`${summary.missing} deleted on disk`);
+  if (summary.pending) parts.push(`${summary.pending} waiting for import`);
+  if (summary.trashed) parts.push(`${summary.trashed} moved to the replica trash`);
+  if (summary.untracked) parts.push(`${summary.untracked} untracked`);
   if (summary.skipped) parts.push(`${summary.skipped} unchanged`);
   if (summary.errors.length) parts.push(`${summary.errors.length} warning${summary.errors.length === 1 ? "" : "s"}`);
   return parts.length ? parts.join(" · ") : "Everything is in sync";

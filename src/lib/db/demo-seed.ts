@@ -711,7 +711,7 @@ async function seedPulseWatchAndSync(projectId: string): Promise<void> {
     systemId: null,
     createdAt: ago(1 * DAY),
   });
-  await syncRepo.replaceAll(projectId, [
+  await syncRepo.reconcile(projectId, [
     {
       path: "product/north-star.md",
       hash: "w1",
@@ -2154,7 +2154,7 @@ async function seedWatchEvents(projectId: string): Promise<void> {
 /* ── Sync index ───────────────────────────────────────────────────────────── */
 
 async function seedSyncFiles(projectId: string): Promise<void> {
-  await syncRepo.replaceAll(projectId, [
+  await syncRepo.reconcile(projectId, [
     {
       path: "design/north-star.md",
       hash: "d1",
@@ -2845,7 +2845,7 @@ async function seedDraftDeckWatchAndSync(projectId: string): Promise<void> {
     systemId: byName("Sync Engine"),
     createdAt: ago(3 * DAY),
   });
-  await syncRepo.replaceAll(projectId, [
+  await syncRepo.reconcile(projectId, [
     {
       path: "product/north-star.md",
       hash: "s1",

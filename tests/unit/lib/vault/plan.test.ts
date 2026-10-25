@@ -17,7 +17,7 @@ const file = (over: Partial<MirrorFile> = {}): MirrorFile => ({
   path: "notes/a.md", hash: "H1", msfId: null, ...over,
 });
 const row = (over: Partial<SyncFile> = {}): SyncFile => ({
-  id: "r1", projectId: "p1", path: "notes/a.md", hash: "H1", mtime: 0,
+  id: "r1", projectId: "p1", adapter: "folder", path: "notes/a.md", hash: "H1", mtime: 0,
   status: "synced", entityType: "note", entityId: "n1", lastSyncedAt: 5, ...over,
 });
 
@@ -93,11 +93,14 @@ describe("planVaultSync — the policy matrix", () => {
     expect(actions).toEqual([{ action: "write", path: "notes/a.md", kind: "note", entityId: "n1", reason: "update" }]);
   });
 
-  it("imports when only the file changed (verify-before-overwrite), flagged by autoImport", () => {
-    for (const auto of [true, false]) {
-      const actions = only(planVaultSync({ entities: [ent({ hash: "H1", baseHash: "H1", status: "synced" })], files: [file({ hash: "H9" })], autoImport: auto }));
-      expect(actions).toEqual([{ action: "import", path: "notes/a.md", kind: "note", entityId: "n1", auto }]);
-    }
+  it("imports when only the file changed; with auto-import off the change is only recorded as pending", () => {
+    const synced = [ent({ hash: "H1", baseHash: "H1", status: "synced" })];
+    expect(only(planVaultSync({ entities: synced, files: [file({ hash: "H9" })], autoImport: true }))).toEqual([
+      { action: "import", path: "notes/a.md", kind: "note", entityId: "n1", auto: true },
+    ]);
+    expect(only(planVaultSync({ entities: synced, files: [file({ hash: "H9" })], autoImport: false }))).toEqual([
+      { action: "pending-import", path: "notes/a.md", kind: "note", entityId: "n1" },
+    ]);
   });
 
   it("NEVER writes when both sides changed", () => {
@@ -141,20 +144,46 @@ describe("planVaultSync — the policy matrix", () => {
     expect(actions).toEqual([{ action: "blocked", path: "notes/a.md", kind: "note", entityId: "n1" }]);
   });
 
-  it("lists unknown files as adoptable and ignores everything else", () => {
-    const actions = planVaultSync({
+  it("lists unknown files as untracked; only an explicit import adopts them", () => {
+    const input = {
       entities: [ent({ hash: "H1", baseHash: "H1", status: "synced" })], autoImport: true,
       files: [file({ hash: "H1" }), file({ path: "notes/fresh.md", hash: "X" }), file({ path: "attachments/pic.png", hash: "X", msfId: null })],
-    });
-    expect(actions.filter((a) => a.action === "external" || a.action === "ignore")).toEqual([
+    };
+    const pick = (a: ReturnType<typeof planVaultSync>) => a.filter((x) => ["external", "untracked", "ignore"].includes(x.action));
+    expect(pick(planVaultSync(input))).toEqual([
+      { action: "ignore", path: "attachments/pic.png" },
+      { action: "untracked", path: "notes/fresh.md" },
+    ]);
+    expect(pick(planVaultSync({ ...input, adoptUntracked: true }))).toEqual([
       { action: "ignore", path: "attachments/pic.png" },
       { action: "external", path: "notes/fresh.md" },
     ]);
   });
 
-  it("keeps a file that claims the id of a dead entity as adoptable (never resurrects silently)", () => {
+  it("never resurrects a dead entity from a file that claims its id", () => {
     const actions = planVaultSync({ entities: [], files: [file({ msfId: "ghost", path: "notes/ghost.md" })], autoImport: true });
-    expect(actions).toEqual([{ action: "external", path: "notes/ghost.md" }]);
+    expect(actions).toEqual([{ action: "untracked", path: "notes/ghost.md" }]);
+  });
+
+  it("moves an untouched file of an entity deleted in the app to the replica trash", () => {
+    const actions = planVaultSync({
+      entities: [], autoImport: true, files: [file({ hash: "H1", msfId: "n1" })],
+      orphans: [{ path: "notes/a.md", kind: "note", entityId: "n1", hash: "H1" }],
+    });
+    expect(actions).toEqual([{ action: "trash-file", path: "notes/a.md", kind: "note", entityId: "n1" }]);
+  });
+
+  it("asks before touching an edited file of an entity deleted in the app", () => {
+    const edited = planVaultSync({
+      entities: [], autoImport: true, files: [file({ hash: "USER", msfId: "n1" })],
+      orphans: [{ path: "notes/a.md", kind: "note", entityId: "n1", hash: "H1" }],
+    });
+    expect(edited).toEqual([{ action: "deleted-in-app", path: "notes/a.md", kind: "note", entityId: "n1" }]);
+    // No index row, but the id is in the app trash: same question, never a silent re-import.
+    const fromTrash = planVaultSync({
+      entities: [], autoImport: true, files: [file({ path: "notes/b.md", msfId: "n2" })], trashedIds: new Set(["n2"]),
+    });
+    expect(fromTrash).toEqual([{ action: "deleted-in-app", path: "notes/b.md", kind: "note", entityId: "n2" }]);
   });
 
   it("is deterministic (sorted by path) and always path-guarded", () => {

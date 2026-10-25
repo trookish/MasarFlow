@@ -484,9 +484,14 @@ export const canvasEdgeSchema = z.object({
 });
 export type CanvasEdge = z.infer<typeof canvasEdgeSchema>;
 
+/** Which replica adapter owns an index row: the folder mirror or the Obsidian REST mirror. */
+export const replicaAdapterSchema = z.enum(["folder", "obsidian"]);
+export type ReplicaAdapter = z.infer<typeof replicaAdapterSchema>;
+
 export const syncFileSchema = z.object({
   id: z.string(),
   projectId: z.string(),
+  adapter: replicaAdapterSchema.default("folder"),
   path: z.string(),
   hash: z.string().default(""),
   mtime: z.number().default(0),

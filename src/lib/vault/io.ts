@@ -16,6 +16,8 @@ export interface VaultIO {
   list(root: string, folder: string): Promise<{ ok: boolean; files: VaultListEntry[]; error?: string }>;
   read(root: string, path: string): Promise<{ ok: boolean; found: boolean; content: string; truncated: boolean; error?: string }>;
   write(root: string, path: string, content: string): Promise<{ ok: boolean; error?: string }>;
+  /** Rename a file inside the root (used to move a deleted entity's file to the replica trash). */
+  move(root: string, from: string, to: string): Promise<{ ok: boolean; error?: string }>;
 }
 
 /** Mirror files bigger than this are treated as unreadable (the read route caps at 512 KB). */
@@ -74,6 +76,17 @@ export function createVaultIO(): VaultIO {
       try {
         const json = await post("/api/fs/write", { root, path: rel, content });
         return json.ok ? { ok: true } : { ok: false, error: String(json.error ?? "write failed") };
+      } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : String(e) };
+      }
+    },
+
+    async move(root, from, to) {
+      const src = assertRelativeVaultPath(from);
+      const dest = assertRelativeVaultPath(to);
+      try {
+        const json = await post("/api/fs/move", { root, from: src, to: dest });
+        return json.ok ? { ok: true } : { ok: false, error: String(json.error ?? "move failed") };
       } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : String(e) };
       }

@@ -47,6 +47,7 @@ function existing(p: Partial<SyncFile> & Pick<SyncFile, "entityId" | "hash">): S
   return {
     id: `s-${p.entityId}`,
     projectId: "p",
+    adapter: "folder",
     path: "x.md",
     mtime: 0,
     status: "synced",
