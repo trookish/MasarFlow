@@ -17,6 +17,7 @@ import { usePageSettings } from "@/lib/stores/page-settings";
 import { reindexProject } from "@/lib/ai/embedding-sync";
 import { getEmbedClient } from "@/lib/ai/embeddings/client";
 import { semanticSearch } from "@/lib/ai/embeddings/search";
+import { searchStatus } from "@/lib/ai/embeddings/status";
 import type { EmbedderStatus } from "@/lib/ai/embeddings/embedder-core";
 import { cn } from "@/lib/utils/cn";
 import { Input } from "@/components/ui/input";
@@ -89,8 +90,16 @@ export function SearchView() {
 
   // Freshen the local semantic index for this project when the page opens —
   // it runs in the background and never blocks the UI.
+  const [indexProgress, setIndexProgress] = useState<{ done: number; total: number } | null>(null);
   useEffect(() => {
-    if (projectId) void reindexProject(projectId);
+    if (!projectId) return;
+    let on = true;
+    void reindexProject(projectId, (done, total) => {
+      if (on) setIndexProgress({ done, total });
+    });
+    return () => {
+      on = false;
+    };
   }, [projectId]);
 
   // Track the in-browser embedder — it warms up on first use, so
@@ -225,6 +234,13 @@ export function SearchView() {
     return merged.map(noMatch);
   }, [query, items, fuse, defaultMode, semanticAvailable, semanticItems, semanticQueryFor]);
 
+  const status = searchStatus({
+    embedder: semanticState,
+    mode: defaultMode,
+    progress: indexProgress,
+    semanticAnswered: semanticAvailable && semanticQueryFor === query.trim(),
+  });
+
   const results = useMemo(() => {
     const filtered = active
       ? ranked.filter((r) => active.has(r.item.kind))
@@ -315,12 +331,12 @@ export function SearchView() {
             data-testid="semantic-index-status"
             className="ml-auto pl-2 text-[11px] text-muted-foreground"
           >
-            Semantic index:{" "}
-            {semanticState === "ready"
-              ? "ready"
-              : semanticState === "error"
-                ? "unavailable"
-                : "loading"}
+            {status.index}
+            {query.trim() && (
+              <span data-testid="search-results-label" className={cn("ml-2", status.fallback && "text-warning")}>
+                · {status.results}
+              </span>
+            )}
           </span>
         </div>
       </div>

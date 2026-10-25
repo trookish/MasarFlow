@@ -32,8 +32,8 @@ import {
   type Catalog,
   type AiProvider,
 } from "@/lib/ai/catalog";
-import { runWorkspaceChat } from "@/lib/ai/chat-client";
-import { WORKSPACE_TOOLS, executeWorkspaceTool } from "@/lib/ai/tools";
+import { runAgentTurn, type TurnApproval } from "@/lib/ai/turn/run-agent-turn";
+import { ApprovalCard } from "@/components/ai/approval-card";
 import {
   assembleWorkspaceContext,
   buildAssistantSystemPrompt,
@@ -164,6 +164,11 @@ function AgentWorkspace({
   const [thinking, setThinking] = useState(false);
   const [active, setActive] = useState<{ id: string; text: string } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  /** A pending record change or file action the agent asked to make. */
+  const [approval, setApproval] = useState<{
+    request: TurnApproval;
+    resolve: (allowed: boolean) => void;
+  } | null>(null);
 
   const connection =
     connections.find((c) => c.id === connId) ?? connections[0] ?? null;
@@ -222,17 +227,26 @@ function AgentWorkspace({
       });
 
       let acc = "";
-      const result = await runWorkspaceChat({
+      const result = await runAgentTurn({
+        surface: "agent",
+        projectId,
+        threadId: record.id,
+        undoOwnerId: record.id,
         provider,
         apiKey: connection.apiKey,
         baseUrl: connection.baseUrl,
         model: effModel,
         system,
         messages: [{ role: "user", content: task }],
-        tools: withTools ? WORKSPACE_TOOLS : undefined,
-        executeTool: withTools
-          ? (call) => executeWorkspaceTool(projectId, call)
-          : undefined,
+        toolset: withTools ? "workspace" : "none",
+        requestApproval: (request) =>
+          new Promise<boolean>((resolve) => {
+            if (controller.signal.aborted) {
+              resolve(false);
+              return;
+            }
+            setApproval({ request, resolve });
+          }),
         reasoning:
           thinking && modelSupportsReasoning(provider, effModel)
             ? { enabled: true, budget: 8000 }
@@ -370,9 +384,27 @@ function AgentWorkspace({
               rows={3}
               className="text-sm"
             />
+            {approval && (
+              <ApprovalCard
+                request={approval.request}
+                allowRemember={false}
+                onSettle={(allowed) => {
+                  approval.resolve(allowed);
+                  setApproval(null);
+                }}
+              />
+            )}
             <div className="flex justify-end">
               {active ? (
-                <Button variant="outline" size="sm" onClick={() => abortRef.current?.abort()}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    abortRef.current?.abort();
+                    approval?.resolve(false);
+                    setApproval(null);
+                  }}
+                >
                   <Square className="h-3.5 w-3.5" /> Stop
                 </Button>
               ) : (

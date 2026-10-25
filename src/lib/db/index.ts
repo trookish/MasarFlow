@@ -252,6 +252,8 @@ export class MasarFlowDB extends Dexie {
     });
     // v0.3 P3: the index is keyed per adapter and upserted, never replaced. Older rows had no
     // adapter and could be duplicated by repeated replace-all runs; keep the newest per entity.
+    // v0.3 P4: retention prunes tool results by age, so agentSteps needs a createdAt index.
+    this.version(15).stores({ agentSteps: "id, runId, order, createdAt" });
     this.version(14)
       .stores({ syncFiles: "id, projectId, path, status, entityId, [projectId+adapter]" })
       .upgrade(async (tx) => {

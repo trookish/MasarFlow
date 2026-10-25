@@ -63,6 +63,11 @@ const MUTATIONS: Record<string, MutationMeta> = {
   update_commit: { kind: "commit", table: "commits" },
 };
 
+/** True when the (legacy) tool changes workspace data and is recorded in the undo ledger. */
+export function isMutatingTool(name: string): boolean {
+  return Object.prototype.hasOwnProperty.call(MUTATIONS, name);
+}
+
 async function readRow(table: string, id: string): Promise<unknown> {
   return db.table<Record<string, unknown>, string>(table).get(id);
 }

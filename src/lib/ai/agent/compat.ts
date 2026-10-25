@@ -45,7 +45,7 @@ export interface WorkspaceChatResult {
 }
 
 /** Map lifecycle events to the legacy flat event shapes. */
-function toLegacyEvent(e: AgentStreamEvent): StreamEvent | null {
+export function toLegacyEvent(e: AgentStreamEvent): StreamEvent | null {
   switch (e.type) {
     case "message_delta":
       return { type: "text", text: e.delta };

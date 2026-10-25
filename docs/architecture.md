@@ -104,5 +104,4 @@ tests/
   e2e/desktop/    packaged-app specs (pnpm e2e:desktop)
 scripts/          build, smoke, security-check, release helpers
 .github/          CI + release workflows
-python-service/   DEPRECATED — not started, not shipped; deleted in 0.3
 ```

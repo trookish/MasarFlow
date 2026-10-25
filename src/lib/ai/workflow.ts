@@ -47,14 +47,48 @@ export function stepSystemPrompt(step: WorkflowStepDef): string {
   );
 }
 
+/**
+ * Steps a closed or reloaded window left marked as running. Nothing is running them any more, so
+ * they go back to pending and the pipeline resumes from the first unfinished step.
+ */
+export function interruptedSteps<T extends { id: string; status: string }>(steps: T[], activeId: string | null): T[] {
+  return steps.filter((s) => s.status === "running" && s.id !== activeId);
+}
+
 export interface PriorOutput {
   title: string;
   output: string;
 }
 
+/** Characters for the digest of steps before the previous one (about 1,500 tokens). */
+export const EARLIER_DIGEST_CHARS = 6_000;
+/** Cap on the previous step's output, so one runaway step cannot fill the window. */
+export const PREVIOUS_STEP_CHARS = 16_000;
+
+/** Headings and the first lines under each: the shape of an output without its bulk. */
+function digest(output: string, budget: number): string {
+  const lines = output.trim().split("\n");
+  const kept: string[] = [];
+  let underHeading = 0;
+  let used = 0;
+  for (const line of lines) {
+    const heading = /^#{1,6}\s/.test(line);
+    if (heading) underHeading = 0;
+    else if (!line.trim() || ++underHeading > 2) continue;
+    if (used + line.length + 1 > budget) break;
+    kept.push(line);
+    used += line.length + 1;
+  }
+  return kept.join("\n");
+}
+
+const clip = (text: string, max: number) =>
+  text.length <= max ? text : `${text.slice(0, max).trimEnd()}\n\n[Output shortened to fit the model's context.]`;
+
 /**
- * Build the user message for a step: the idea, a digest of earlier outputs, and
- * the step's specific ask. Pure and deterministic.
+ * Build the user message for a step: the idea, a bounded digest of earlier steps, the previous
+ * step's output in full (capped), and the step's ask. The prompt stays the same size however long
+ * the run gets (v0.3 P4 T4). Pure and deterministic.
  */
 export function buildStepPrompt(
   idea: string,
@@ -63,11 +97,17 @@ export function buildStepPrompt(
 ): string {
   const parts: string[] = [`# Idea\n${idea.trim()}`];
   const done = prior.filter((p) => p.output.trim().length > 0);
-  if (done.length > 0) {
+  const previous = done.at(-1);
+  const earlier = done.slice(0, -1);
+  if (earlier.length > 0) {
+    const each = Math.max(200, Math.floor(EARLIER_DIGEST_CHARS / earlier.length));
     parts.push(
-      "# Context from earlier steps\n" +
-        done.map((p) => `## ${p.title}\n${p.output.trim()}`).join("\n\n"),
+      "# Summary of earlier steps\n" +
+        earlier.map((p) => `## ${p.title}\n${digest(p.output, each - p.title.length - 4)}`).join("\n\n"),
     );
+  }
+  if (previous) {
+    parts.push(`# Previous step: ${previous.title}\n${clip(previous.output.trim(), PREVIOUS_STEP_CHARS)}`);
   }
   parts.push(
     `# Your task: ${step.title}\n${step.instruction}${step.materialize ? `\n\n${step.materialize}` : ""}`,

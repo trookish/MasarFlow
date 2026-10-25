@@ -94,6 +94,14 @@ export const chatThreadsRepo = {
 };
 
 export const chatMessagesRepo = {
+  /** "Clear thread history": remove every message of a thread and keep the thread. User action only. */
+  async clearThread(threadId: string): Promise<number> {
+    return db.transaction("rw", [db.chatMessages, db.chatThreads], async () => {
+      const n = await db.chatMessages.where("threadId").equals(threadId).delete();
+      await db.chatThreads.update(threadId, { updatedAt: Date.now() });
+      return n;
+    });
+  },
   async listByThread(threadId?: string | null): Promise<ChatMessage[]> {
     if (!threadId) return [];
     return db.chatMessages.where("threadId").equals(threadId).sortBy("createdAt");

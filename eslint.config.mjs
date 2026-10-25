@@ -17,7 +17,6 @@ const eslintConfig = defineConfig([
     ".vs/**",
     // Python local AI service — not JS/TS, and its .venv bundles vendored
     // JS from ML packages (torch, sklearn) that ESLint should never touch.
-    "python-service/**",
     // Desktop launcher — separate Vite app with its own toolchain.
     "desktop/**",
     // Vendored ONNX runtime WASM/JS copied into public/ort by scripts/copy-ort.mjs

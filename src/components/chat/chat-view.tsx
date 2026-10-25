@@ -15,6 +15,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import {
   Plus,
   Trash2,
+  Eraser,
   Send,
   Square,
   ChevronDown,
@@ -44,8 +45,6 @@ import {
   AtSign,
   Hash,
   FolderGit2,
-  ShieldAlert,
-  Terminal,
   CheckSquare,
   FilePlus,
 } from "lucide-react";
@@ -84,18 +83,11 @@ import {
   type AiModel,
   type AiProvider,
 } from "@/lib/ai/catalog";
-import { WORKSPACE_TOOLS } from "@/lib/ai/tools";
+import type { ApprovalRequest } from "@/lib/ai/fs-tools";
+import { ApprovalCard } from "@/components/ai/approval-card";
+import { runAgentTurn, type TurnEvent } from "@/lib/ai/turn/run-agent-turn";
 import {
-  FS_TOOLS,
-  FS_TOOL_NAMES,
-  executeFsTool,
-  type ApprovalRequest,
-} from "@/lib/ai/fs-tools";
-import { executeWorkspaceToolWithUndo } from "@/lib/ai/undo";
-import {
-  runWorkspaceChat,
   ChatAbortError,
-  type StreamEvent,
   type WireMessage,
 } from "@/lib/ai/chat-client";
 import {
@@ -126,6 +118,7 @@ import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { usePageSettings } from "@/lib/stores/page-settings";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -856,48 +849,34 @@ export function ChatView() {
             },
           ];
 
-          const result = await runWorkspaceChat({
+          const result = await runAgentTurn({
+            surface: "chat",
+            projectId: projectId!,
+            threadId: t.id,
+            undoOwnerId: assistant.id,
+            requestId,
             provider: ctx.provider,
             apiKey: ctx.apiKey,
             baseUrl: ctx.baseUrl,
             model: modelId,
             system: context?.system ?? undefined,
             messages: wireMessages,
-            tools: withTools ? [...WORKSPACE_TOOLS, ...FS_TOOLS] : undefined,
-            maxRounds: 8,
-            executeTool: withTools
-              ? async (call) => {
-                  if (FS_TOOL_NAMES.has(call.name)) {
-                    return executeFsTool(
-                      {
-                        roots: linkedRoots ?? [],
-                        requestApproval: (request) =>
-                          new Promise<boolean>((resolve) => {
-                            if (controller.signal.aborted) {
-                              resolve(false);
-                              return;
-                            }
-                            setLegacyApproval({ request, resolve });
-                          }),
-                        signal: controller.signal,
-                        requestId,
-                      },
-                      call,
-                    );
-                  }
-                  return executeWorkspaceToolWithUndo(
-                    projectId!,
-                    call,
-                    assistant.id,
-                  );
+            toolset: withTools ? "workspace" : "none",
+            linkedRoots: linkedRoots ?? [],
+            requestApproval: (request) =>
+              new Promise<boolean>((resolve) => {
+                if (controller.signal.aborted) {
+                  resolve(false);
+                  return;
                 }
-              : undefined,
+                setLegacyApproval({ request, resolve });
+              }),
             reasoning: effortToReasoning(
               effort,
               modelSupportsReasoning(ctx.provider, modelId),
             ),
             signal: controller.signal,
-            onEvent: (e: StreamEvent) => {
+            onEvent: (e: TurnEvent) => {
               if (gen !== turnGenRef.current) return;
               switch (e.type) {
                 case "text":
@@ -1471,13 +1450,7 @@ export function ChatView() {
               <div className="mx-auto max-w-3xl">
                 {legacyApproval && (
                   <ApprovalCard
-                    type={legacyApproval.request.name}
-                    title={
-                      legacyApproval.request.name === "shell_run"
-                        ? String(legacyApproval.request.arguments.command ?? "")
-                        : String(legacyApproval.request.arguments.path ?? "")
-                    }
-                    pattern={legacyApproval.request.rootLabel}
+                    request={legacyApproval.request}
                     allowRemember={false}
                     onSettle={(allowed) => {
                       legacyApproval.resolve(allowed);
@@ -1739,81 +1712,6 @@ export function ChatView() {
   );
 }
 
-/* ── Approval card for fs/shell tool requests (in-browser tools) ──────── */
-
-function ApprovalCard({
-  type,
-  title,
-  pattern,
-  allowRemember = true,
-  onSettle,
-}: {
-  type: string;
-  title: string;
-  pattern?: string;
-  /** Hide the "Always allow" shortcut (no session memory, e.g. in-browser tools). */
-  allowRemember?: boolean;
-  onSettle: (allowed: boolean, remember: boolean) => void;
-}) {
-  const isShell = type === "bash" || type === "shell_run";
-  const isEdit = type === "edit" || type === "fs_write";
-  const detail = pattern || title;
-  const headline = isShell
-    ? "Run this command?"
-    : isEdit
-      ? "Edit this file?"
-      : `Allow "${type}"?`;
-
-  return (
-    <div className="mb-2 overflow-hidden rounded-md border border-warning/50 bg-card">
-      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <ShieldAlert className="h-4 w-4 shrink-0 text-warning" />
-        <div className="min-w-0 flex-1">
-          <div className="text-xs font-medium">{headline}</div>
-          <div className="truncate text-[11px] text-muted-foreground">
-            Permission request
-          </div>
-        </div>
-      </div>
-      <div className="px-3 py-2">
-        <div
-          className={cn(
-            "flex items-start gap-1.5 rounded bg-muted px-2.5 py-1.5 font-mono text-xs",
-            isShell && "items-center",
-          )}
-        >
-          {isShell && (
-            <Terminal className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          )}
-          <span className="break-all">{detail}</span>
-        </div>
-      </div>
-      <div className="flex items-center justify-end gap-2 border-t border-border px-3 py-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onSettle(false, false)}
-        >
-          Deny
-        </Button>
-        {allowRemember && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onSettle(true, true)}
-          >
-            Always allow
-            {isShell && detail ? ` "${detail.split(/\s+/)[0]}"` : ""}
-          </Button>
-        )}
-        <Button size="sm" onClick={() => onSettle(true, false)}>
-          Approve
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 /* ── Thread row with inline rename ────────────────────────────────────── */
 
 function ThreadRow({
@@ -1829,6 +1727,7 @@ function ThreadRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(thread.title);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   async function commit() {
     setEditing(false);
@@ -1889,12 +1788,29 @@ function ThreadRow({
       </button>
       <button
         type="button"
+        aria-label="Clear thread history"
+        title="Clear thread history"
+        onClick={() => setConfirmClear(true)}
+        className="shrink-0 opacity-0 hover:text-foreground group-hover:opacity-60"
+      >
+        <Eraser className="h-3 w-3" />
+      </button>
+      <button
+        type="button"
         aria-label="Delete chat"
         onClick={onDelete}
         className="shrink-0 opacity-0 hover:text-destructive group-hover:opacity-60"
       >
         <Trash2 className="h-3.5 w-3.5" />
       </button>
+      <ConfirmDialog
+        open={confirmClear}
+        onOpenChange={setConfirmClear}
+        title="Clear thread history?"
+        description={`Every message in "${thread.title}" is removed. The chat itself stays, and records the assistant created are not affected.`}
+        confirmLabel="Clear history"
+        onConfirm={() => void chatMessagesRepo.clearThread(thread.id)}
+      />
     </div>
   );
 }

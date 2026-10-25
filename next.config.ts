@@ -12,7 +12,6 @@ const nextConfig: NextConfig = {
     // Keys are route globs; `/*` is the documented global key (spike S1).
     "/*": [
       "desktop/**",
-      "python-service/**",
       ".hermes/**",
       "release/**",
       "tests/**",

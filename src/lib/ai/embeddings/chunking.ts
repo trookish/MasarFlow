@@ -2,7 +2,7 @@ export const DEFAULT_CHUNK_SIZE = 1000;
 export const DEFAULT_OVERLAP = 150;
 
 /**
- * Paragraph-aware chunking with overlap (TypeScript port of python-service/app/chunking.py).
+ * Paragraph-aware chunking with overlap (ported from the retired 0.2 Python service).
  * Paragraphs are packed greedily up to `chunkSize`; a single longer paragraph is hard-split by
  * character offset; consecutive chunks share the last `overlap` characters of their predecessor.
  */

@@ -29,6 +29,7 @@ interface Wanted {
 export async function reindexProject(
   projectId: string,
   deps: IndexDeps = { embed: (t) => getEmbedClient().embed(t) },
+  onProgress?: (done: number, total: number) => void,
 ): Promise<IndexResult> {
   if (!projectId) return { added: 0, removed: 0, unchanged: 0 };
 
@@ -47,11 +48,13 @@ export async function reindexProject(
   const toRemove = existing.filter((r) => !wanted.has(r.id)).map((r) => r.id);
   const replaced = toEmbed.filter((w) => have.has(w.id)).length;
 
+  onProgress?.(0, toEmbed.length);
   for (let i = 0; i < toEmbed.length; i += 32) {
     const batch = toEmbed.slice(i, i + 32);
     const vectors = await deps.embed(batch.map((b) => `${b.title}\n${b.text}`));
     const rows: EmbeddingRow[] = batch.map((b, k) => ({ ...b, projectId, vector: vectors[k] }));
     await db.embeddings.bulkPut(rows);
+    onProgress?.(Math.min(i + 32, toEmbed.length), toEmbed.length);
   }
   if (toRemove.length) await db.embeddings.bulkDelete(toRemove);
   if (toEmbed.length || toRemove.length) bumpIndexVersion(projectId);

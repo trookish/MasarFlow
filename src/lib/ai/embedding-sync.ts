@@ -6,10 +6,13 @@ import { reindexProject as reindex } from "@/lib/ai/embeddings/indexer";
  */
 const PERIODIC_INTERVAL_MS = 10 * 60 * 1000;
 
-/** Reindex one project. Never throws. */
-export async function reindexProject(projectId: string): Promise<void> {
+/** Reindex one project. Never throws. `onProgress` reports chunks embedded of the run's total. */
+export async function reindexProject(
+  projectId: string,
+  onProgress?: (done: number, total: number) => void,
+): Promise<void> {
   try {
-    await reindex(projectId);
+    await reindex(projectId, undefined, onProgress);
   } catch (err) {
     console.warn("[embeddings] reindex failed", err);
   }

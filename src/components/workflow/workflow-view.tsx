@@ -24,6 +24,7 @@ import type { WorkflowRun, WorkflowStep } from "@/lib/db/schema";
 import {
   WORKFLOW_STEPS,
   buildStepPrompt,
+  interruptedSteps,
   stepSystemPrompt,
   type PriorOutput,
 } from "@/lib/ai/workflow";
@@ -35,8 +36,7 @@ import {
   type Catalog,
   type AiProvider,
 } from "@/lib/ai/catalog";
-import { runWorkspaceChat } from "@/lib/ai/chat-client";
-import { WORKSPACE_TOOLS, executeWorkspaceTool } from "@/lib/ai/tools";
+import { runAgentTurn } from "@/lib/ai/turn/run-agent-turn";
 import {
   assembleWorkspaceContext,
   buildAssistantSystemPrompt,
@@ -273,6 +273,14 @@ function RunDetail({
   const steps = useLiveQuery(() => workflowRepo.listSteps(run.id), [run.id]) ?? [];
   const [active, setActive] = useState<{ id: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // A step left "running" by a closed or reloaded window has no runner any more: put it back to
+  // pending so Run all resumes from the first unfinished step instead of showing a dead spinner.
+  const interrupted = interruptedSteps(steps, active?.id ?? null).map((s) => s.id).join(",");
+  useEffect(() => {
+    if (!interrupted || busy) return;
+    for (const id of interrupted.split(",")) void workflowRepo.updateStep(id, { status: "pending", output: "" });
+  }, [interrupted, busy]);
   const abortRef = useRef<AbortController | null>(null);
 
   const connection =
@@ -307,7 +315,11 @@ function RunDetail({
       });
 
       let acc = "";
-      const result = await runWorkspaceChat({
+      const result = await runAgentTurn({
+        surface: "workflow",
+        projectId: run.projectId,
+        threadId: run.id,
+        undoOwnerId: step.id,
         provider,
         apiKey: connection.apiKey,
         baseUrl: connection.baseUrl,
@@ -324,10 +336,7 @@ function RunDetail({
             ),
           },
         ],
-        tools: withTools ? WORKSPACE_TOOLS : undefined,
-        executeTool: withTools
-          ? (call) => executeWorkspaceTool(run.projectId, call)
-          : undefined,
+        toolset: withTools ? "workspace" : "none",
         signal: controller.signal,
         onEvent: (e) => {
           if (e.type === "text") {
