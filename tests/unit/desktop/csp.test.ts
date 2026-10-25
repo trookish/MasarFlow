@@ -20,6 +20,21 @@ describe("buildCsp", () => {
     expect(dev).toContain("ws://localhost:*");
     expect(prod).not.toContain("ws://");
   });
+  const directive = (name: string) =>
+    prod
+      .split("; ")
+      .find((d) => d.startsWith(`${name} `))!
+      .split(" ")
+      .slice(1);
+  it("does not allow arbitrary https hosts for connections or frames", () => {
+    expect(directive("connect-src")).not.toContain("https:");
+    expect(directive("frame-src")).not.toContain("https:");
+    expect(directive("connect-src")).toEqual(expect.arrayContaining(["'self'", "https://models.dev", "https://api.github.com"]));
+    expect(directive("frame-src")).toEqual(expect.arrayContaining(["https://www.youtube-nocookie.com", "https://player.vimeo.com"]));
+  });
+  it("still renders remote images (favicons, thumbnails, Markdown)", () => {
+    expect(directive("img-src")).toContain("https:");
+  });
   it("permits workers from blob: for the embedding worker", () => {
     expect(prod).toContain("worker-src 'self' blob:");
   });

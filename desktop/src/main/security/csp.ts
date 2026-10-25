@@ -1,6 +1,11 @@
+import { FRAME_HOSTS, RENDERER_CONNECT_HOSTS } from "../../shared/embed-hosts";
+
 /**
  * Content-Security-Policy for the renderer.
- * TODO(P9.T6): audit browser-side fetch() calls and narrow `connect-src` from `https:` to the providers actually used.
+ * - `connect-src`: the app's own server (packaged: 127.0.0.1 behind the launch token) plus the two public
+ *   hosts the renderer reads directly. AI providers, GitHub sync and Obsidian go through `/api/*`.
+ * - `frame-src`: only the video players in FRAME_HOSTS; other pages render as link cards.
+ * - `img-src` keeps `https:` so favicons, thumbnails and Markdown images from any site display.
  */
 export function buildCsp(opts: { dev: boolean }): string {
   const directives: Record<string, string[]> = {
@@ -10,9 +15,15 @@ export function buildCsp(opts: { dev: boolean }): string {
     "img-src": ["'self'", "data:", "blob:", "https:"],
     "font-src": ["'self'", "data:"],
     "media-src": ["'self'", "data:", "blob:"],
-    "connect-src": ["'self'", "https:", "http://127.0.0.1:*", "http://localhost:*", ...(opts.dev ? ["ws://localhost:*"] : [])],
+    "connect-src": [
+      "'self'",
+      "http://127.0.0.1:*",
+      "http://localhost:*",
+      ...RENDERER_CONNECT_HOSTS,
+      ...(opts.dev ? ["ws://localhost:*"] : []),
+    ],
     "worker-src": ["'self'", "blob:"],
-    "frame-src": ["'self'", "https:"],
+    "frame-src": ["'self'", ...FRAME_HOSTS],
     "object-src": ["'none'"],
     "base-uri": ["'self'"],
     "form-action": ["'self'"],
