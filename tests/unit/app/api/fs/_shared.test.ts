@@ -1,9 +1,19 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as path from "node:path";
 import { resolveInsideRoot, isDeniedName } from "@/app/api/fs/_shared";
 
 const ROOT =
   process.platform === "win32" ? "C:\\projects\\game" : "/home/user/game";
+
+// Outside the desktop app the filesystem fails closed unless the root is listed (P1.T2).
+const previousRoots = process.env.MASARFLOW_DEV_ROOTS;
+beforeAll(() => {
+  process.env.MASARFLOW_DEV_ROOTS = ROOT;
+});
+afterAll(() => {
+  if (previousRoots === undefined) delete process.env.MASARFLOW_DEV_ROOTS;
+  else process.env.MASARFLOW_DEV_ROOTS = previousRoots;
+});
 
 describe("resolveInsideRoot", () => {
   it("resolves plain relative paths inside the root", () => {
