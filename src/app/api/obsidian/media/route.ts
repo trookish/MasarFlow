@@ -1,31 +1,47 @@
 import type { NextRequest } from "next/server";
 import * as http from "node:http";
 import * as https from "node:https";
+import { MEDIA_SESSION_TTL_MS, createMediaSession, getMediaSession } from "@/lib/server/media-sessions";
 
 export const runtime = "nodejs";
 
 const LOOPBACK = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 
+function loopbackUrl(raw: unknown): URL | null {
+  if (typeof raw !== "string") return null;
+  try {
+    const u = new URL(raw);
+    return LOOPBACK.has(u.hostname) && (u.protocol === "https:" || u.protocol === "http:") ? u : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Exchange the Obsidian connection for a media session id (the API key travels in the body only).
+ * Body: `{ baseUrl, apiKey }` → `{ session, expiresInMs }`.
+ */
+export async function POST(request: NextRequest) {
+  const body = (await request.json().catch(() => null)) as { baseUrl?: unknown; apiKey?: unknown } | null;
+  const base = loopbackUrl(body?.baseUrl);
+  if (!base) return Response.json({ error: "Only localhost / 127.0.0.1 targets are allowed." }, { status: 400 });
+  if (typeof body?.apiKey !== "string" || !body.apiKey.trim()) {
+    return Response.json({ error: "Missing apiKey" }, { status: 400 });
+  }
+  return Response.json({ session: createMediaSession(base.toString(), body.apiKey), expiresInMs: MEDIA_SESSION_TTL_MS });
+}
+
+/** Stream one vault file: `?session=<id>&path=<vault path>`. */
 export async function GET(request: NextRequest) {
   const urlParams = request.nextUrl.searchParams;
-  const baseUrl = urlParams.get("baseUrl");
-  const apiKey = urlParams.get("apiKey");
+  if (urlParams.has("apiKey")) {
+    return new Response("API keys are not accepted in URLs. Request a media session first.", { status: 400 });
+  }
   const path = urlParams.get("path");
-
-  if (!baseUrl || !apiKey || !path) {
-    return new Response("Missing baseUrl, apiKey, or path", { status: 400 });
-  }
-
-  let targetUrl: URL;
-  try {
-    targetUrl = new URL(baseUrl);
-  } catch {
-    return new Response("Invalid base URL", { status: 400 });
-  }
-
-  if (!LOOPBACK.has(targetUrl.hostname)) {
-    return new Response("Only localhost / 127.0.0.1 targets are allowed.", { status: 400 });
-  }
+  const session = getMediaSession(urlParams.get("session"));
+  if (!path) return new Response("Missing path", { status: 400 });
+  if (!session) return new Response("Media session expired or unknown", { status: 401 });
+  const { baseUrl, apiKey } = session;
 
   // Obsidian REST API file endpoint
   const obsUrl = new URL(`/vault/${path.split('/').map(encodeURIComponent).join('/')}`, baseUrl);
@@ -48,6 +64,7 @@ export async function GET(request: NextRequest) {
       {
         method: "GET",
         headers: reqHeaders,
+        // Obsidian Local REST API serves a self-signed certificate; the target is loopback-only (above).
         ...(isHttps ? { rejectUnauthorized: false } : {}),
       },
       (res) => {

@@ -20,6 +20,7 @@ import {
 import { markdownUrlTransform } from "@/lib/utils/markdown-url";
 import { parseEntityUri } from "@/lib/entities/registry";
 import { EntityChip } from "@/components/entities/entity-chip";
+import { useObsidianMediaUrl } from "@/lib/obsidian-media";
 
 /** Rewrite `[[Target]]` / `[[Target|Alias]]` into links with a wikilink scheme. */
 function preprocessWikilinks(markdown: string): string {
@@ -77,14 +78,8 @@ export const MarkdownPreview = memo(
     return "";
   }
 
-  function getMediaUrl(path: string) {
-    if (!obsidian.baseUrl || !obsidian.apiKey) return path;
-    const url = new URL("/api/obsidian/media", window.location.origin);
-    url.searchParams.set("baseUrl", obsidian.baseUrl);
-    url.searchParams.set("apiKey", obsidian.apiKey);
-    url.searchParams.set("path", path);
-    return url.toString();
-  }
+  const mediaUrl = useObsidianMediaUrl(obsidian.baseUrl, obsidian.apiKey);
+  const getMediaUrl = (path: string) => mediaUrl(path) ?? path;
 
   return (
     <div

@@ -17,6 +17,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FileIcon, ImageIcon, FileAudio, FileVideo, FileText } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { useObsidianMediaUrl } from "@/lib/obsidian-media";
 
 export function FilesView() {
   const projectId = useActiveProjectId();
@@ -29,14 +30,7 @@ export function FilesView() {
   
   const filtered = attachments.filter(f => f.path.toLowerCase().includes(search.toLowerCase()));
 
-  function getMediaUrl(path: string) {
-    if (!obsidian.baseUrl || !obsidian.apiKey) return null;
-    const url = new URL("/api/obsidian/media", window.location.origin);
-    url.searchParams.set("baseUrl", obsidian.baseUrl);
-    url.searchParams.set("apiKey", obsidian.apiKey);
-    url.searchParams.set("path", path);
-    return url.toString();
-  }
+  const getMediaUrl = useObsidianMediaUrl(obsidian.baseUrl, obsidian.apiKey);
 
   return (
     <div className="flex h-full flex-col">
