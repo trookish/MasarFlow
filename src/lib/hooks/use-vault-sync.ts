@@ -6,6 +6,7 @@ import { resolveVaultConflict, runVaultSync, type VaultDeps, type VaultRunSummar
 import { DEFAULT_BINDING, useVaultStore, vaultBindingFor, type VaultBinding } from "@/lib/stores/vault";
 import { vaultSummaryLine } from "@/lib/vault/view";
 import { getDesktop } from "@/lib/desktop/bridge"; // P1 (src/lib/desktop/bridge.ts)
+import { runExclusive } from "@/lib/vault/runner";
 
 const AUTO_SYNC_MS = 60_000;
 const FOCUS_STALE_MS = 30_000;
@@ -58,7 +59,7 @@ export function useVaultSync(projectId: string | null, projectSlug: string): Vau
       }
       setRunning(true);
       try {
-        const result = await runVaultSync(deps);
+        const result = await runExclusive(deps.projectId, () => runVaultSync(deps));
         setSummary(result);
         const line = vaultSummaryLine(result);
         // Surface the first warning verbatim: the P2 guard's 403 message (an
@@ -81,7 +82,7 @@ export function useVaultSync(projectId: string | null, projectSlug: string): Vau
       const deps = depsFor();
       if (!deps) return;
       try {
-        await resolveVaultConflict(deps, entityId, choice);
+        await runExclusive(deps.projectId, () => resolveVaultConflict(deps, entityId, choice));
         await run();
       } catch (e) {
         setMessage(e instanceof Error ? e.message : String(e));
