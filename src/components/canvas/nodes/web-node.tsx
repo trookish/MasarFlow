@@ -11,7 +11,7 @@ import {
 import { Globe, Play, GitBranch, FileText, Loader2, RefreshCw, ExternalLink } from "lucide-react";
 import { usePageSettings } from "@/lib/stores/page-settings";
 import type { WebNodeData } from "./types";
-import { nodeColorStyle, detectWebKind, youtubeId } from "./types";
+import { nodeColorStyle, detectWebKind, youtubeId, videoEmbedUrl, EMBED_FRAME_PROPS } from "./types";
 import { useIsLowDetail } from "../use-lod";
 
 export type WebNodeType = Node<WebNodeData, "webNode">;
@@ -46,6 +46,7 @@ function WebNodeComponent({
   const Icon = KIND_ICON[kind ?? "generic"] ?? Globe;
   const shadow = data.shadow !== false;
   const ytId = kind === "youtube" ? youtubeId(data.url) : null;
+  const videoSrc = kind === "video" ? videoEmbedUrl(data.url) : null;
   const lodThreshold = usePageSettings((s) => s.canvas.lodThreshold);
   const lowDetail = useIsLowDetail(lodThreshold);
 
@@ -57,7 +58,7 @@ function WebNodeComponent({
 
   // For article/github/generic: fetch metadata via the server proxy.
   const fetchMeta = useCallback(async () => {
-    if (kind === "youtube" || kind === "video") return;
+    if (ytId || videoSrc) return; // framed players need no metadata fetch
     setLoading(true);
     setError(null);
     try {
@@ -85,7 +86,7 @@ function WebNodeComponent({
     } finally {
       setLoading(false);
     }
-  }, [data, id, kind]);
+  }, [data, id, ytId, videoSrc]);
 
   // Auto-fetch metadata for article/github on first render if not cached.
   // fetchMeta's setState calls are inside an async function (after await), so
@@ -179,19 +180,14 @@ function WebNodeComponent({
         <div className="min-h-0 flex-1 overflow-hidden">
           {kind === "youtube" && ytId ? (
             <iframe
-              src={`https://www.youtube.com/embed/${ytId}`}
+              src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(ytId)}`}
               className="h-full w-full border-0"
-              allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              {...EMBED_FRAME_PROPS}
               allowFullScreen
               title={title}
             />
-          ) : kind === "video" ? (
-            <iframe
-              src={data.url}
-              className="h-full w-full border-0"
-              allowFullScreen
-              title={title}
-            />
+          ) : videoSrc ? (
+            <iframe src={videoSrc} className="h-full w-full border-0" {...EMBED_FRAME_PROPS} allowFullScreen title={title} />
           ) : thumbnail ? (
             <div className="flex h-full flex-col">
               {thumbnail && (

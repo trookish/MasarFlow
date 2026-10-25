@@ -112,6 +112,39 @@ export function detectWebKind(url: string): WebNodeData["kind"] {
   }
 }
 
+/**
+ * Player URL for a supported video page, or null when the host is not on the embed allow-list
+ * (the node then renders a link card instead of a frame).
+ */
+export function videoEmbedUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+    const host = u.hostname.replace(/^www\./, "");
+    const seg = u.pathname.split("/").filter(Boolean);
+    if (host === "player.vimeo.com" && seg[0] === "video" && /^\d+$/.test(seg[1] ?? "")) {
+      return `https://player.vimeo.com/video/${seg[1]}`;
+    }
+    if (host === "vimeo.com" && /^\d+$/.test(seg[0] ?? "")) return `https://player.vimeo.com/video/${seg[0]}`;
+    if (host === "dailymotion.com" && seg[0] === "video" && seg[1]) {
+      return `https://www.dailymotion.com/embed/video/${encodeURIComponent(seg[1])}`;
+    }
+    if (host === "loom.com" && (seg[0] === "share" || seg[0] === "embed") && seg[1]) {
+      return `https://www.loom.com/embed/${encodeURIComponent(seg[1])}`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Attributes every third-party frame on the canvas carries. */
+export const EMBED_FRAME_PROPS = {
+  sandbox: "allow-scripts allow-same-origin allow-presentation",
+  referrerPolicy: "no-referrer",
+  allow: "fullscreen; picture-in-picture; encrypted-media",
+} as const;
+
 /** Extract a YouTube video ID from any YouTube URL form. */
 export function youtubeId(url: string): string | null {
   try {
