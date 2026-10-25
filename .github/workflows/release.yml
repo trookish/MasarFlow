@@ -19,8 +19,47 @@ env:
   RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
+  # Nothing is packaged until the full gate passes on the tagged commit.
+  gate:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.21.0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck (workspace)
+        run: pnpm typecheck
+
+      - name: Typecheck (desktop main/preload)
+        run: pnpm desktop:typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build the app server
+        run: pnpm build:app
+
+      - name: Security check
+        run: pnpm security:check
+
   build:
     runs-on: windows-latest
+    needs: gate
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
@@ -81,13 +120,13 @@ jobs:
             desktop/dist/*.exe desktop/dist/latest.yml desktop/dist/*.blockmap
           gh release view "$RELEASE_TAG" --json isDraft,tagName,assets --jq '{isDraft,tagName,assets:[.assets[].name]}'
 
-  # Diagnostic only — the authoritative packaged gate is run locally on the
-  # release commit (see the release checklist). A green CI smoke is NOT release
-  # evidence; promote this job only after it proves reliable over two releases.
+  # The packaged smoke is part of the release: a failure fails the workflow (the draft release
+  # stays a draft). The release checklist in docs/release.md lists the local evidence still required.
   packaged-smoke:
     runs-on: windows-latest
     needs: build
-    continue-on-error: true
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -103,9 +142,10 @@ jobs:
 
       - run: pnpm desktop:dist:dir
 
-      - name: Packaged smoke (diagnostic)
+      - name: Packaged smoke
         shell: bash
         run: |
+          set -o pipefail
           pnpm smoke:desktop 2>&1 | tee smoke-ci.log
 
       - uses: actions/upload-artifact@v7
