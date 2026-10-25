@@ -1,5 +1,5 @@
 {
-  "startedAt": "2026-10-17T12:35:28.291Z",
+  "startedAt": "2026-10-17T15:02:01.391Z",
   "machine": {
     "os": "win32 10.0.26300 x64",
     "cpu": "12th Gen Intel(R) Core(TM) i5-12400F",
@@ -14,70 +14,70 @@
   },
   "timeline": [
     {
-      "atMs": 4403,
+      "atMs": 3124,
       "event": "launched",
       "detail": {
-        "pid": 22044
+        "pid": 26412
       }
     },
     {
-      "atMs": 4408,
+      "atMs": 3128,
       "event": "diagnostics-attached"
     },
     {
-      "atMs": 30019,
+      "atMs": 30017,
       "event": "sample",
       "detail": {
         "atMs": 30006,
-        "main": 131,
-        "renderer": 31,
+        "main": 132,
+        "renderer": 32,
         "gone": []
       }
     },
     {
-      "atMs": 60034,
+      "atMs": 60021,
       "event": "sample",
       "detail": {
-        "atMs": 60010,
-        "main": 114,
+        "atMs": 60012,
+        "main": 115,
+        "renderer": 23,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 90023,
+      "event": "sample",
+      "detail": {
+        "atMs": 90014,
+        "main": 113,
         "renderer": 24,
         "gone": []
       }
     },
     {
-      "atMs": 90013,
-      "event": "sample",
-      "detail": {
-        "atMs": 90002,
-        "main": 112,
-        "renderer": 24,
-        "gone": []
-      }
-    },
-    {
-      "atMs": 120025,
+      "atMs": 120021,
       "event": "at2",
       "detail": {
-        "main": 112,
-        "renderer": 24
+        "main": 116,
+        "renderer": 25
       }
     },
     {
-      "atMs": 120026,
+      "atMs": 120022,
       "event": "sample",
       "detail": {
-        "atMs": 120015,
-        "main": 112,
-        "renderer": 24,
+        "atMs": 120010,
+        "main": 116,
+        "renderer": 25,
         "gone": []
       }
     },
     {
-      "atMs": 150016,
+      "atMs": 150031,
       "event": "sample",
       "detail": {
-        "atMs": 150007,
-        "main": 112,
+        "atMs": 150008,
+        "main": 115,
         "renderer": 24,
         "gone": []
       }
@@ -86,58 +86,58 @@
       "atMs": 180022,
       "event": "sample",
       "detail": {
-        "atMs": 180012,
-        "main": 112,
+        "atMs": 180015,
+        "main": 114,
         "renderer": 24,
         "gone": []
       }
     },
     {
-      "atMs": 210018,
+      "atMs": 210025,
       "event": "sample",
       "detail": {
-        "atMs": 210002,
-        "main": 112,
+        "atMs": 210017,
+        "main": 114,
         "renderer": 24,
         "gone": []
       }
     },
     {
-      "atMs": 240018,
+      "atMs": 240023,
       "event": "sample",
       "detail": {
-        "atMs": 240011,
-        "main": 112,
+        "atMs": 240014,
+        "main": 115,
+        "renderer": 25,
+        "gone": []
+      }
+    },
+    {
+      "atMs": 270020,
+      "event": "sample",
+      "detail": {
+        "atMs": 270011,
+        "main": 116,
         "renderer": 24,
         "gone": []
       }
     },
     {
-      "atMs": 270018,
+      "atMs": 300021,
       "event": "sample",
       "detail": {
-        "atMs": 270007,
-        "main": 112,
+        "atMs": 300013,
+        "main": 116,
         "renderer": 24,
         "gone": []
       }
     },
     {
-      "atMs": 300016,
+      "atMs": 330014,
       "event": "sample",
       "detail": {
-        "atMs": 300008,
-        "main": 112,
-        "renderer": 24,
-        "gone": []
-      }
-    },
-    {
-      "atMs": 330019,
-      "event": "sample",
-      "detail": {
-        "atMs": 330005,
-        "main": 112,
+        "atMs": 330003,
+        "main": 116,
         "renderer": 24,
         "gone": []
       }
@@ -146,98 +146,98 @@
       "atMs": 360019,
       "event": "sample",
       "detail": {
-        "atMs": 360008,
-        "main": 112,
-        "renderer": 24,
+        "atMs": 360011,
+        "main": 116,
+        "renderer": 23,
         "gone": []
       }
     },
     {
-      "atMs": 390024,
+      "atMs": 390013,
       "event": "sample",
       "detail": {
-        "atMs": 390016,
-        "main": 112,
-        "renderer": 24,
+        "atMs": 390005,
+        "main": 116,
+        "renderer": 23,
         "gone": []
       }
     },
     {
-      "atMs": 420127,
+      "atMs": 420018,
       "event": "sample",
       "detail": {
-        "atMs": 420002,
-        "main": 112,
-        "renderer": 24,
+        "atMs": 420007,
+        "main": 116,
+        "renderer": 23,
         "gone": []
       }
     },
     {
-      "atMs": 450021,
+      "atMs": 450024,
       "event": "sample",
       "detail": {
-        "atMs": 450010,
-        "main": 112,
-        "renderer": 24,
+        "atMs": 450015,
+        "main": 116,
+        "renderer": 23,
         "gone": []
       }
     },
     {
-      "atMs": 480020,
+      "atMs": 480017,
       "event": "sample",
       "detail": {
-        "atMs": 480008,
-        "main": 112,
-        "renderer": 24,
+        "atMs": 480006,
+        "main": 116,
+        "renderer": 23,
         "gone": []
       }
     },
     {
-      "atMs": 510012,
+      "atMs": 510023,
       "event": "sample",
       "detail": {
-        "atMs": 510006,
-        "main": 112,
-        "renderer": 24,
+        "atMs": 510012,
+        "main": 116,
+        "renderer": 23,
         "gone": []
       }
     },
     {
-      "atMs": 540025,
+      "atMs": 540012,
       "event": "sample",
       "detail": {
-        "atMs": 540014,
-        "main": 112,
-        "renderer": 24,
+        "atMs": 540004,
+        "main": 116,
+        "renderer": 23,
         "gone": []
       }
     },
     {
-      "atMs": 570020,
+      "atMs": 570027,
       "event": "sample",
       "detail": {
-        "atMs": 570012,
-        "main": 112,
-        "renderer": 24,
+        "atMs": 570011,
+        "main": 116,
+        "renderer": 23,
         "gone": []
       }
     },
     {
-      "atMs": 600053,
+      "atMs": 600021,
       "event": "sample",
       "detail": {
         "atMs": 600004,
-        "main": 112,
-        "renderer": 24,
+        "main": 116,
+        "renderer": 23,
         "gone": []
       }
     },
     {
-      "atMs": 600105,
+      "atMs": 600052,
       "event": "page-close"
     },
     {
-      "atMs": 604025,
+      "atMs": 600455,
       "event": "process-exit",
       "detail": {
         "code": 0,
@@ -245,145 +245,145 @@
       }
     },
     {
-      "atMs": 604027,
+      "atMs": 600457,
       "event": "app-close"
     }
   ],
   "samples": [
     {
       "atMs": 30006,
-      "main": 131,
-      "renderer": 31,
+      "main": 132,
+      "renderer": 32,
       "gone": []
     },
     {
-      "atMs": 60010,
+      "atMs": 60012,
+      "main": 115,
+      "renderer": 23,
+      "gone": []
+    },
+    {
+      "atMs": 90014,
+      "main": 113,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 120010,
+      "main": 116,
+      "renderer": 25,
+      "gone": []
+    },
+    {
+      "atMs": 150008,
+      "main": 115,
+      "renderer": 24,
+      "gone": []
+    },
+    {
+      "atMs": 180015,
       "main": 114,
       "renderer": 24,
       "gone": []
     },
     {
-      "atMs": 90002,
-      "main": 112,
+      "atMs": 210017,
+      "main": 114,
       "renderer": 24,
       "gone": []
     },
     {
-      "atMs": 120015,
-      "main": 112,
+      "atMs": 240014,
+      "main": 115,
+      "renderer": 25,
+      "gone": []
+    },
+    {
+      "atMs": 270011,
+      "main": 116,
       "renderer": 24,
       "gone": []
     },
     {
-      "atMs": 150007,
-      "main": 112,
+      "atMs": 300013,
+      "main": 116,
       "renderer": 24,
       "gone": []
     },
     {
-      "atMs": 180012,
-      "main": 112,
+      "atMs": 330003,
+      "main": 116,
       "renderer": 24,
       "gone": []
     },
     {
-      "atMs": 210002,
-      "main": 112,
-      "renderer": 24,
+      "atMs": 360011,
+      "main": 116,
+      "renderer": 23,
       "gone": []
     },
     {
-      "atMs": 240011,
-      "main": 112,
-      "renderer": 24,
+      "atMs": 390005,
+      "main": 116,
+      "renderer": 23,
       "gone": []
     },
     {
-      "atMs": 270007,
-      "main": 112,
-      "renderer": 24,
+      "atMs": 420007,
+      "main": 116,
+      "renderer": 23,
       "gone": []
     },
     {
-      "atMs": 300008,
-      "main": 112,
-      "renderer": 24,
+      "atMs": 450015,
+      "main": 116,
+      "renderer": 23,
       "gone": []
     },
     {
-      "atMs": 330005,
-      "main": 112,
-      "renderer": 24,
+      "atMs": 480006,
+      "main": 116,
+      "renderer": 23,
       "gone": []
     },
     {
-      "atMs": 360008,
-      "main": 112,
-      "renderer": 24,
+      "atMs": 510012,
+      "main": 116,
+      "renderer": 23,
       "gone": []
     },
     {
-      "atMs": 390016,
-      "main": 112,
-      "renderer": 24,
+      "atMs": 540004,
+      "main": 116,
+      "renderer": 23,
       "gone": []
     },
     {
-      "atMs": 420002,
-      "main": 112,
-      "renderer": 24,
-      "gone": []
-    },
-    {
-      "atMs": 450010,
-      "main": 112,
-      "renderer": 24,
-      "gone": []
-    },
-    {
-      "atMs": 480008,
-      "main": 112,
-      "renderer": 24,
-      "gone": []
-    },
-    {
-      "atMs": 510006,
-      "main": 112,
-      "renderer": 24,
-      "gone": []
-    },
-    {
-      "atMs": 540014,
-      "main": 112,
-      "renderer": 24,
-      "gone": []
-    },
-    {
-      "atMs": 570012,
-      "main": 112,
-      "renderer": 24,
+      "atMs": 570011,
+      "main": 116,
+      "renderer": 23,
       "gone": []
     },
     {
       "atMs": 600004,
-      "main": 112,
-      "renderer": 24,
+      "main": 116,
+      "renderer": 23,
       "gone": []
     }
   ],
   "stdoutTail": [],
   "stderrTail": [
-    "Debugger ending on ws://127.0.0.1:65199/71067a04-668d-41a5-ae08-455fb6bd42ac\r",
+    "Debugger ending on ws://127.0.0.1:56955/d0100087-a48f-4da7-a6bc-6ccade999644\r",
     "For help, see: https://nodejs.org/learn/getting-started/debugging\r"
   ],
   "at2": {
-    "main": 112,
-    "renderer": 24
+    "main": 116,
+    "renderer": 25
   },
   "at10": {
-    "main": 112,
-    "renderer": 24
+    "main": 116,
+    "renderer": 23
   },
-  "growthPct": 0,
+  "growthPct": -8,
   "verdict": "pass"
 }

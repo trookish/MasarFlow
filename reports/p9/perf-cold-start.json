@@ -8,25 +8,25 @@
   },
   "initializedProfile": {
     "samples": [
-      1424,
-      1477,
-      1272
+      1241,
+      1223,
+      1267
     ],
     "firstPaintSamples": [
-      1378,
-      1453,
-      1251
+      1222,
+      1203,
+      1246
     ],
-    "median": 1424,
-    "p95": 1477,
+    "median": 1241,
+    "p95": 1267,
     "budget": 9000
   },
   "firstRunToWizard": {
     "samples": [
-      1336,
-      1275,
-      1319
+      1175,
+      1279,
+      1367
     ],
-    "median": 1319
+    "median": 1279
   }
 }
