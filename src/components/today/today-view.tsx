@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TodayTaskList } from "./today-task-list";
 import { TodayActivity } from "./today-activity";
+import { TodayInbox } from "./today-inbox";
 import { TodayGit } from "./today-git";
 import type { Task } from "@/lib/db/schema";
 
@@ -110,8 +111,9 @@ export function TodayView() {
           emptyText="No high-priority work waiting."
         />
 
-        <TodayGit />
+        <TodayInbox projectId={projectId} />
         <TodayActivity projectId={projectId} />
+        <TodayGit />
       </div>
 
       <footer className="mt-auto border-t border-border px-4 py-3 text-xs text-muted-foreground">

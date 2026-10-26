@@ -47,6 +47,14 @@ export function dayKey(ts: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/** Local "YYYY-MM-DD" from an `<input type="date">` to the start of that local day, or null. */
+export function parseDayKey(value: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? null : d.getTime();
+}
+
 /** Which Today list a task belongs in, or null when it is not today's business. */
 export function bucketOf(task: Task, now: number): TodayBucket | null {
   if (task.status === "done") return null;

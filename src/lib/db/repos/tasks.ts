@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import { taskSchema, type Task } from "@/lib/db/schema";
 import { uuid, now } from "@/lib/utils/ids";
-import { removeEntity } from "@/lib/domain/commands";
+import { removeEntity, runCommand, settleTask, updateTask } from "@/lib/domain/commands";
+import { deriveProgress } from "@/lib/domain/task-model";
 
 type TaskInput = Partial<Task> & Pick<Task, "projectId" | "title">;
 
@@ -37,17 +38,23 @@ export const tasksRepo = {
   },
   async create(input: TaskInput): Promise<Task> {
     const ts = now();
-    const task = taskSchema.parse({
+    const parsed = taskSchema.parse({
       ...input,
       id: input.id ?? uuid(),
       createdAt: input.createdAt ?? ts,
       updatedAt: ts,
     });
-    await db.tasks.add(task);
+    // Progress follows status (task-model.ts); a new task has no subtasks yet.
+    const task = { ...parsed, progress: deriveProgress(parsed.status) };
+    await runCommand([db.tasks, db.specs], "user", async (tx) => {
+      await db.tasks.add(task);
+      if (task.specId || task.parentTaskId) await settleTask(task.id, tx, { specId: null, parentTaskId: null });
+    });
     return task;
   },
+  /** Status drives progress; the task's specs and parent tasks update with it (one command). */
   async update(id: string, patch: Partial<Task>): Promise<void> {
-    await db.tasks.update(id, { ...patch, updatedAt: now() });
+    await updateTask(id, patch);
   },
   /** Moves the task to the trash and cleans every reference to it (links, linkedTaskIds, spec progress). */
   async remove(id: string): Promise<void> {

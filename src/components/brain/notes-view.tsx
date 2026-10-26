@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Search, PenTool } from "lucide-react";
-import { notesRepo, foldersRepo, specsRepo } from "@/lib/db/repos";
+import { notesRepo, foldersRepo } from "@/lib/db/repos";
+import { promoteNote, type PromoteTarget } from "@/lib/domain/commands";
 import type { Note } from "@/lib/db/schema";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { useUrlSelection } from "@/lib/hooks/use-url-selection";
@@ -135,22 +136,13 @@ export function NotesView() {
   }
 
   // Idea → Specification: spin a note up into an RFC linked back to the note.
-  async function promoteToSpec(note: Note) {
-    if (!projectId) return;
-    const specs = await specsRepo.listByProject(projectId);
-    const maxNum = specs.reduce((max, s) => {
-      const m = /^RFC-(\d+)$/.exec(s.number);
-      return m ? Math.max(max, parseInt(m[1], 10)) : max;
-    }, 0);
-    const number = `RFC-${String(maxNum + 1).padStart(3, "0")}`;
-    const spec = await specsRepo.create({
-      projectId,
-      number,
-      title: note.title,
-      purpose: note.excerpt,
-      linkedNoteIds: [note.id],
-    });
-    router.push(`/specs?spec=${spec.id}`);
+  /** Promote keeps a `relates` link from the note, so the note's backlinks show what it became. */
+  async function promote(note: Note, target: PromoteTarget) {
+    const made = await promoteNote(note.id, target);
+    if (!made) return;
+    router.push(
+      target === "task" ? `/tasks?task=${made.id}` : target === "spec" ? `/specs?spec=${made.id}` : `/docs?doc=${made.id}`,
+    );
   }
 
   async function deleteFolder(id: string) {
@@ -240,7 +232,7 @@ export function NotesView() {
             allNotes={allNotes}
             onNavigateToTitle={navigateToTitle}
             onDelete={() => setConfirmDeleteNote(true)}
-            onPromote={() => promoteToSpec(selectedNote)}
+            onPromote={(target) => void promote(selectedNote, target)}
           />
         ) : (
           <EmptyState

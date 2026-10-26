@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Trash2, FileUp, FileDown } from "lucide-react";
 import { notesRepo } from "@/lib/db/repos";
+import type { PromoteTarget } from "@/lib/domain/commands";
 import { NOTE_TYPES, type Note, type NoteType, type PropValue } from "@/lib/db/schema";
 import { NOTE_TYPE_DOT } from "@/lib/colors";
 import { usePageSettings } from "@/lib/stores/page-settings";
@@ -32,7 +33,7 @@ interface NoteEditorProps {
   allNotes: Note[];
   onNavigateToTitle: (title: string) => void;
   onDelete: () => void;
-  onPromote: () => void;
+  onPromote: (target: PromoteTarget) => void;
 }
 
 function arraysEqual(a: string[], b: string[]): boolean {
@@ -163,10 +164,24 @@ export function NoteEditor({
             onPick={(tpl) => applyTemplate(tpl.body, tpl.type)}
           />
 
-          <Button variant="outline" size="sm" onClick={onPromote}>
-            <FileUp className="h-3.5 w-3.5" />
-            Promote to spec
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger>
+              <Button
+                variant="outline"
+                size="sm"
+                data-testid="note-promote"
+                title="Create a task, specification or document from this note. The note stays and links to it."
+              >
+                <FileUp className="h-3.5 w-3.5" />
+                Promote
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-48">
+              <DropdownMenuItem onSelect={() => onPromote("task")}>To task</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onPromote("spec")}>To specification</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onPromote("doc")}>To document</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {pdfPlugin.active && (
             <Button

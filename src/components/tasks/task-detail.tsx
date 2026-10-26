@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Info, Trash2, X } from "lucide-react";
 import type { Spec, Sprint, Task, TaskPriority, TaskStatus } from "@/lib/db/schema";
 import type { Assignee } from "@/lib/db/schema";
 import {
   TASK_STATUSES,
   TASK_PRIORITIES,
-  ASSIGNEES,
   priorityMeta,
   taskStatusLabel,
 } from "@/lib/workflow";
+import { TASK_ASSIGNEES, assigneeLabel } from "@/lib/domain/task-model";
+import { dayKey, parseDayKey } from "@/lib/today/model";
+import { clearTaskDue, setTaskDue } from "@/lib/today/tasks";
 import {
   Dialog,
   DialogHeader,
@@ -89,6 +91,7 @@ export function TaskDetail({
 }: TaskDetailProps) {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description);
+  const [advanced, setAdvanced] = useState(false);
 
   const spec = task.specId
     ? specs.find((s) => s.id === task.specId)
@@ -176,17 +179,44 @@ export function TaskDetail({
           </Field>
 
           <Field label="Assignee">
-            <SelectMenu trigger={<span className="capitalize">{task.assignee}</span>}>
-              {ASSIGNEES.map((a) => (
+            <SelectMenu trigger={assigneeLabel(task.assignee)}>
+              {TASK_ASSIGNEES.map((a) => (
                 <DropdownMenuItem
-                  key={a}
-                  active={a === task.assignee}
-                  onSelect={() => onPatch({ assignee: a as Assignee })}
+                  key={a.value}
+                  active={a.value === "human" ? task.assignee === "human" : task.assignee !== "human"}
+                  onSelect={() => onPatch({ assignee: a.value as Assignee })}
                 >
-                  <span className="capitalize">{a}</span>
+                  {a.label}
                 </DropdownMenuItem>
               ))}
             </SelectMenu>
+          </Field>
+
+          <Field label="Due date">
+            <div className="flex items-center gap-1.5">
+              <Input
+                type="date"
+                aria-label="Due date"
+                data-testid="task-due-date"
+                value={task.dueDate !== null ? dayKey(task.dueDate) : ""}
+                onChange={(e) => {
+                  const day = parseDayKey(e.target.value);
+                  void (day === null ? clearTaskDue(task.id) : setTaskDue(task.id, day));
+                }}
+                className="h-8"
+              />
+              {task.dueDate !== null && (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Clear due date"
+                  title="Clear due date"
+                  onClick={() => void clearTaskDue(task.id)}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
           </Field>
 
           <Field label="Spec">
@@ -231,15 +261,22 @@ export function TaskDetail({
           </Field>
 
           <Field label={`Progress · ${task.progress}%`}>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={5}
-              value={task.progress}
-              onChange={(e) => onPatch({ progress: Number(e.target.value) })}
-              className="h-9 w-full accent-[var(--primary)]"
-            />
+            <div
+              className="flex h-8 items-center gap-2"
+              title="Progress follows the status. A task with subtasks shows the average of its subtasks."
+            >
+              <div
+                role="progressbar"
+                aria-label="Task progress"
+                aria-valuenow={task.progress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted"
+              >
+                <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${task.progress}%` }} />
+              </div>
+              <Info className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            </div>
           </Field>
         </div>
 
@@ -250,17 +287,42 @@ export function TaskDetail({
           />
         </Field>
 
-        <PropertiesPanel
-          props={task.props}
-          onChange={(props) => onPatch({ props })}
-          entityId={task.id}
-        />
-
         {/* Entity connections (knowledge graph) */}
         <BacklinksSection
           projectId={task.projectId}
           entity={{ kind: "task", id: task.id }}
         />
+
+        {/* Folder-sync properties and tracker references: rarely edited by hand. */}
+        <div className="rounded-md border border-border">
+          <button
+            type="button"
+            aria-expanded={advanced}
+            onClick={() => setAdvanced((v) => !v)}
+            className="flex w-full items-center gap-1.5 px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+          >
+            {advanced ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            Advanced
+            <span className="font-normal">· file properties and external reference</span>
+          </button>
+          {advanced && (
+            <div className="space-y-3 border-t border-border px-3 py-3">
+              <Field label="External reference">
+                <Input
+                  defaultValue={task.externalRef}
+                  placeholder="github:owner/repo#42"
+                  onBlur={(e) => e.target.value !== task.externalRef && onPatch({ externalRef: e.target.value })}
+                  className="h-8 font-mono text-xs"
+                />
+              </Field>
+              <PropertiesPanel
+                props={task.props}
+                onChange={(props) => onPatch({ props })}
+                entityId={task.id}
+              />
+            </div>
+          )}
+        </div>
       </DialogBody>
 
       <DialogFooter>
