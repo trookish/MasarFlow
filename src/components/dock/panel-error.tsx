@@ -2,7 +2,7 @@
 
 /**
  * Crash isolation for dock panels. The dock is a window manager: one page
- * throwing must never take the shell (tabs, other splits, floaters) with it.
+ * throwing must never take the shell (sidebar, tab strip, other tabs) with it.
  * React has no hook-based equivalent, so this is the one class component in
  * the dock.
  */

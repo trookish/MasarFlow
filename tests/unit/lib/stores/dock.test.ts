@@ -14,7 +14,7 @@ function pages() {
 }
 
 beforeEach(() => {
-  useDockStore.setState({ projects: {}, activeProjectId: null, drag: null, closedTabs: {} });
+  useDockStore.setState({ projects: {}, activeProjectId: null, closedTabs: {} });
 });
 
 describe("project tab lifecycle", () => {

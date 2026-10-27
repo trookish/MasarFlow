@@ -14,6 +14,7 @@ import type { Note } from "@/lib/db/schema";
 import { promoteNote } from "@/lib/domain/commands";
 import { formatRelativeTime } from "@/lib/utils/relative-time";
 import { Button } from "@/components/ui/button";
+import { entityHref } from "@/lib/entities/registry";
 
 const LIMIT = 8;
 
@@ -74,7 +75,7 @@ export function TodayInbox({ projectId }: { projectId: string }) {
             >
               <button
                 type="button"
-                onClick={() => router.push(`/brain?note=${note.id}`)}
+                onClick={() => router.push(entityHref({ kind: "note", id: note.id }))}
                 className="min-w-0 flex-1 truncate text-left hover:underline"
                 title="Open the note"
               >
@@ -97,7 +98,7 @@ export function TodayInbox({ projectId }: { projectId: string }) {
                 variant="ghost"
                 size="icon-sm"
                 aria-label="Open note"
-                onClick={() => router.push(`/brain?note=${note.id}`)}
+                onClick={() => router.push(entityHref({ kind: "note", id: note.id }))}
               >
                 <ArrowRight className="h-3.5 w-3.5" />
               </Button>

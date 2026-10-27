@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultProjectState } from "@/lib/dock/presets";
+import { defaultProjectState } from "../dock/legacy-presets";
 import { getPageDef, isKnownPage } from "@/lib/dock/registry";
 import type { ProjectDockState } from "@/lib/dock/types";
 import {

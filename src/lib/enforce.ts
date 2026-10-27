@@ -1,4 +1,5 @@
-import type { Note, Spec, Standard, StandardCategory, Task } from "@/lib/db/schema";
+import type { Note, Spec, Standard, StandardCategory, Task } from "@/lib/db/schema";
+import { entityHref } from "@/lib/entities/registry";
 
 /**
  * Standards enforcer — a deterministic, regex-based scan (no AI). Each enforced
@@ -68,7 +69,7 @@ function buildTargets(
       kind: "note" as const,
       id: n.id,
       label: n.title || "Untitled note",
-      href: `/brain?note=${n.id}`,
+      href: entityHref({ kind: "note", id: n.id }),
       text: `${n.title}\n${n.body}`,
     })),
     ...specs.map((s) => ({

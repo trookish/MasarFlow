@@ -44,7 +44,8 @@ import { buildSearchItems, createSearchIndex, kindLabel, type SearchItem } from 
 import { focusedPanelId } from "@/lib/dock/dock-core";
 
 import { openDailyNote } from "@/lib/vault/daily";
-import { pushToast } from "@/lib/stores/toast";
+import { pushToast } from "@/lib/stores/toast";
+import { entityHref } from "@/lib/entities/registry";
 
 const MODES: { id: CommandMode; label: string }[] = [
   { id: "all", label: "Everything" },
@@ -135,7 +136,7 @@ function PalettePanel({ onClose }: { onClose: () => void }) {
       if (!projectId) return;
       void notesRepo
         .create({ projectId, title: "Untitled note" })
-        .then((note) => go(`/library?note=${note.id}`));
+        .then((note) => go(entityHref({ kind: "note", id: note.id })));
     },
     openDailyNote: () => {
       if (!projectId) return;

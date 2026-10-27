@@ -12,7 +12,7 @@ import { pageIdOf } from "@/lib/dock/types";
 beforeEach(async () => {
   await db.delete();
   await db.open();
-  useDockStore.setState({ projects: {}, activeProjectId: null, drag: null });
+  useDockStore.setState({ projects: {}, activeProjectId: null });
   useDockStore.getState().setProject("p1");
 });
 

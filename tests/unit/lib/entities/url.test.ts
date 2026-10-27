@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readSelection, selectionFor, withSelection } from "@/lib/entities/url";
 import { applyUrlFocus } from "@/lib/dock/dock-core";
-import { defaultProjectState } from "@/lib/dock/presets";
+import { defaultProjectState } from "../dock/legacy-presets";
 
 describe("withSelection / readSelection", () => {
   it("sets the param and preserves others", () => {

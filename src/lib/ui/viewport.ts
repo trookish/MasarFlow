@@ -1,10 +1,9 @@
 /**
  * Window-width classes for layout decisions. Three modes only, so behaviour is
  * predictable and testable:
- *   compact  (< 1024)  one panel at a time; the sidebar collapses to icons; the
- *                      dock's split layout is presented as a panel switcher
- *   regular  (1024+)   normal dock behaviour (a 1366 px laptop lands here)
- *   wide     (1680+)   room for 3 columns and floating windows by default
+ *   compact  (< 1024)  the sidebar collapses to icons; one tab fills the view
+ *   regular  (1024+)   full sidebar and tab strip (a 1366 px laptop lands here)
+ *   wide     (1680+)   extra room beside the content for the inspector
  *
  * Pure TypeScript only — no React, Next, or DOM imports.
  */

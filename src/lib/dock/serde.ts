@@ -28,7 +28,7 @@ import { collectPages, findNode, normalizeTree } from "./tree";
 /** Current persisted schema version. Bump this and add a step to `migrate`. */
 export const DOCK_STATE_VERSION = 2;
 
-/** Floater repair bounds — mirrors MIN_W / MIN_H in dock-floating-window.tsx. */
+/** Repair bounds for floaters persisted by 0.2 (folded into the tab strip on load). */
 const MIN_FLOATER_WIDTH = 280;
 const MIN_FLOATER_HEIGHT = 160;
 /** Absurd geometry from hand edits is clamped to a plausible virtual desktop. */

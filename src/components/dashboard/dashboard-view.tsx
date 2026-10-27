@@ -48,7 +48,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { GithubCommitsCard } from "./commits-panel";
+import { GithubCommitsCard } from "./commits-panel";
+import { entityHref } from "@/lib/entities/registry";
 
 /* ── Small helpers ────────────────────────────────────────────────────── */
 
@@ -300,7 +301,7 @@ export function DashboardView() {
   async function newNote() {
     if (!projectId) return;
     const note = await notesRepo.create({ projectId, title: "Untitled note" });
-    router.push(`/brain?note=${note.id}`);
+    router.push(entityHref({ kind: "note", id: note.id }));
   }
 
   return (
@@ -611,7 +612,7 @@ export function DashboardView() {
                   {recentNotes.map((n) => (
                     <li key={n.id}>
                       <Link
-                        href={`/brain?note=${n.id}`}
+                        href={entityHref({ kind: "note", id: n.id })}
                         className="group flex items-center gap-2 rounded-md px-2 py-1.5 -mx-2 hover:bg-accent/50"
                       >
                         <span

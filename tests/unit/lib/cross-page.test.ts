@@ -16,7 +16,7 @@ beforeEach(async () => {
   await db.open();
   off?.();
   off = installActivityTracking(db);
-  useDockStore.setState({ projects: {}, activeProjectId: null, drag: null });
+  useDockStore.setState({ projects: {}, activeProjectId: null });
   useDockStore.getState().setProject(P);
 });
 

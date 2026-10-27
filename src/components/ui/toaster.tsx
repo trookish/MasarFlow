@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Toast stack: bottom-right, above the floating nav dock, announced politely
+ * Toast stack: bottom-right, above page content, announced politely
  * to screen readers. Renders nothing when empty.
  */
 

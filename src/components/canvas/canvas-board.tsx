@@ -67,6 +67,7 @@ import {
   type CanvasAIContext,
   type CanvasNodeSummary,
 } from "@/lib/canvas-ai";
+import { entityHref } from "@/lib/entities/registry";
 
 type AnyNodeData = Record<string, unknown> & BaseNodeData;
 
@@ -178,7 +179,7 @@ function CanvasBoardInner() {
 
   const onOpenNote = useCallback(
     (noteId: string) => {
-      router.push(`/brain?note=${noteId}`);
+      router.push(entityHref({ kind: "note", id: noteId }));
     },
     [router],
   );

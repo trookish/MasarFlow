@@ -14,6 +14,7 @@ import { usePageSettings } from "@/lib/stores/page-settings";
 import type { NoteNodeData } from "./types";
 import { nodeColorStyle } from "./types";
 import { useIsLowDetail } from "../use-lod";
+import { entityHref } from "@/lib/entities/registry";
 
 export type NoteNodeType = Node<NoteNodeData, "noteNode">;
 
@@ -55,7 +56,7 @@ function NoteNodeComponent({
   function openFullNote() {
     if (data.noteId) {
       data.onOpenNote?.(data.noteId);
-      router.push(`/brain?note=${data.noteId}`);
+      router.push(entityHref({ kind: "note", id: data.noteId }));
     }
   }
 

@@ -13,7 +13,7 @@ const run = async (name: string, args: Record<string, unknown> = {}) =>
 beforeEach(async () => {
   await db.delete();
   await db.open();
-  useDockStore.setState({ projects: {}, activeProjectId: null, drag: null });
+  useDockStore.setState({ projects: {}, activeProjectId: null });
   useDockStore.getState().setProject(P);
 });
 

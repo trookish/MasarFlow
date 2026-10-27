@@ -26,7 +26,6 @@ function resetDock(projectId: string | null = null): void {
     projects: {},
     activeProjectId: null,
     closedTabs: {},
-    drag: null,
   });
   if (projectId) useDockStore.getState().setProject(projectId);
 }

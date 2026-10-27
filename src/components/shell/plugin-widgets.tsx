@@ -8,7 +8,8 @@ import { usePlugin, settingStr, settingInt } from "@/lib/plugins-runtime";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
-import { Tooltip } from "@/components/ui/tooltip";
+import { Tooltip } from "@/components/ui/tooltip";
+import { entityHref } from "@/lib/entities/registry";
 
 /**
  * Topbar widgets contributed by plugins. Each renders nothing unless its
@@ -132,7 +133,7 @@ export function DailyNoteButton() {
         tags: template?.tags ?? ["daily"],
       });
     }
-    router.push(`/brain?note=${note.id}`);
+    router.push(entityHref({ kind: "note", id: note.id }));
   }
 
   return (

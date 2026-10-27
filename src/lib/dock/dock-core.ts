@@ -1,32 +1,19 @@
 /**
- * Core state transitions for the MasarFlow dock window manager — everything
- * above the tree level: URL sync, floating windows, collapse/maximize, and
- * workspaces. Pure functions over ProjectDockState; the zustand store is a
- * thin wrapper around these.
+ * Core state transitions for the project tab strip, above the tree level:
+ * which tab is focused, URL -> tab sync, and closing a tab. Pure functions
+ * over ProjectDockState; the zustand store is a thin wrapper around these.
  *
- * Floater ids are generated here and surfaced to the UI via the returned
- * state (s.floaters) — callers never construct ids.
+ * Persisted states from 0.2 may still carry floaters, collapsed panels, or
+ * a maximized panel. normalizeWorkspaceTabs folds them into the single tab
+ * group; the reducers here tolerate them so an un-normalized state never
+ * loses a tab.
  *
  * Pure TypeScript only — no React, Next, or DOM imports.
  */
 
-import type { DockNode, DockZone, FloatWindow, ProjectDockState } from "./types";
-import {
-  closePanel,
-  collectPages,
-  findHolder,
-  insertPanel,
-  newId,
-  normalizeTree,
-  openPanel,
-  PLACEHOLDER_NODE_ID,
-} from "./tree";
+import type { DockNode, ProjectDockState } from "./types";
+import { closePanel, collectPages, openPanel, PLACEHOLDER_NODE_ID } from "./tree";
 import { joinPanelId, pageIdOf, paramsOf } from "./types";
-import { dockNodeSchema, DOCK_STATE_VERSION } from "./serde";
-
-/** Default floater geometry when a panel is undocked. */
-const FLOATER_W = 560;
-const FLOATER_H = 420;
 
 type WsEntry = { tree: DockNode; params: Record<string, string | undefined> };
 
@@ -53,31 +40,22 @@ function withWs(
   };
 }
 
-/** Next floater z-index: above every existing floater. */
-function nextZ(s: ProjectDockState): number {
-  return s.floaters.reduce((m, f) => Math.max(m, f.z), 0) + 1;
+/** Depth-first search for a tabs/page node by id. */
+function findGroupById(tree: DockNode, id: string): DockNode | null {
+  if (tree.id === id) return tree;
+  if (tree.type === "split") {
+    for (const child of tree.children) {
+      const hit = findGroupById(child, id);
+      if (hit) return hit;
+    }
+  }
+  return null;
 }
 
-/** True when the tree contains the panel (floaters/collapsed not included). */
-function treeContains(tree: DockNode, panelId: string): boolean {
-  return collectPages(tree).includes(panelId);
-}
-
-/** Every panel known to the dock state: tree + floaters + collapsed. */
-function allKnownPanels(s: ProjectDockState): string[] {
-  const known = new Set<string>([
-    ...collectPages(ws(s).tree),
-    ...s.collapsedPanels,
-  ]);
-  for (const f of s.floaters) for (const p of f.panelIds) known.add(p);
-  return [...known];
-}
-
-// === PART 2: focus + url sync ===
 /**
- * The panel the workspace is currently "on" — the URL mirror target:
- * maximized panel > focus group's active tab > first tree panel > top
- * non-minimized floater's active panel > "/dashboard".
+ * The tab the workspace is currently "on" — the URL mirror target:
+ * legacy maximized panel > focus group's active tab > first tab >
+ * legacy floater's active panel > "/today".
  */
 export function focusedPanelId(s: ProjectDockState): string {
   const tree = ws(s).tree;
@@ -92,8 +70,7 @@ export function focusedPanelId(s: ProjectDockState): string {
   }
 
   const first = collectPages(tree)[0];
-  // A placeholder-only tree counts as empty (floaters may hold the real
-  // focus); a real "/dashboard" page does not (its node id differs).
+  // A placeholder-only tree counts as empty; a real page does not.
   const placeholderOnly =
     tree.type === "page" && tree.id === PLACEHOLDER_NODE_ID;
   if (!placeholderOnly && first) return first;
@@ -102,22 +79,10 @@ export function focusedPanelId(s: ProjectDockState): string {
     .filter((f) => !f.minimized)
     .sort((a, b) => b.z - a.z)[0];
   if (float) return float.activePanel;
-  return first ?? "/dashboard";
+  return first ?? "/today";
 }
 
-/** Depth-first search for a tabs/page node by id. */
-function findGroupById(tree: DockNode, id: string): DockNode | null {
-  if (tree.id === id) return tree;
-  if (tree.type === "split") {
-    for (const child of tree.children) {
-      const hit = findGroupById(child, id);
-      if (hit) return hit;
-    }
-  }
-  return null;
-}
-
-/** The focused panel's URL: path + its params snapshot. */
+/** The focused tab's URL: path + its params snapshot. */
 export function urlOfFocused(s: ProjectDockState): string {
   const panel = focusedPanelId(s);
   const query = ws(s).params[panel];
@@ -125,8 +90,9 @@ export function urlOfFocused(s: ProjectDockState): string {
 }
 
 /**
- * URL -> dock: focus or open the panel for `panelId` (path + optional query).
- * A query in the URL snapshots onto the panel's params (overwriting).
+ * URL -> tabs: focus or open the tab for `panelId` (path + optional query).
+ * A query in the URL snapshots onto the tab's params (overwriting).
+ * Tabs are identified by path; the query is a snapshot, not identity.
  */
 export function applyUrlFocus(
   s: ProjectDockState,
@@ -138,212 +104,19 @@ export function applyUrlFocus(
   const params = { ...ws(s).params };
   if (query) params[path] = query;
 
-  // Target by path (query is a snapshot, not identity).
-  const known = allKnownPanels(s);
-  const inTree = treeContains(ws(s).tree, path);
+  // A tab still parked in a legacy floater only records its params; the
+  // next normalize pass moves it into the strip.
+  const inFloater = s.floaters.some((f) => f.panelIds.includes(path));
+  const inTree = collectPages(ws(s).tree).includes(path);
+  if (inFloater && !inTree) return withWs(s, undefined, params);
 
-  if (!known.includes(path) && !inTree) {
-    // Brand-new panel: insert via openPanel (focus-or-insert).
-    const res = openPanel(ws(s).tree, path, s.focusGroupId);
-    return { ...withWs(s, res.tree, params), focusGroupId: res.focusGroupId };
-  }
-
-  if (inTree) {
-    // Focus it in the tree.
-    const res = openPanel(ws(s).tree, path, s.focusGroupId);
-    return { ...withWs(s, res.tree, params), focusGroupId: res.focusGroupId };
-  }
-
-  // Panel exists but lives in a floater / collapsed list: record params and
-  // re-point focusGroupId at its holder when findable.
-  const floater = s.floaters.find((f) => f.panelIds.includes(path));
-  if (floater) {
-    return {
-      ...withWs(s, undefined, params),
-      focusGroupId: s.focusGroupId,
-    };
-  }
-  return withWs(s, undefined, params);
-}
-
-// === PART 3: floaters ===
-/**
- * Undock `panelId` into a floating window at `pos`. When the panel lives in
- * a tabs group with more than one page, the WHOLE group floats (matching
- * group-drag semantics). The tree is normalized (empty splits dissolve).
- */
-export function floatPanel(
-  s: ProjectDockState,
-  panelId: string,
-  pos: { x: number; y: number },
-): ProjectDockState {
-  const tree = ws(s).tree;
-  const holder = findHolder(tree, panelId);
-  if (!holder) return s; // unknown panel — no-op
-
-  const panelIds =
-    holder.type === "tabs"
-      ? [...holder.pages]
-      : holder.type === "page"
-        ? [holder.pageId]
-        : [];
-
-  // Remove every floated panel from the tree, then normalize.
-  let without = tree;
-  for (const p of panelIds) without = closePanel(without, p);
-  without = normalizeTree(without);
-
-  const floater: FloatWindow = {
-    id: newId("float"),
-    panelIds,
-    activePanel: panelId,
-    x: pos.x,
-    y: pos.y,
-    width: FLOATER_W,
-    height: FLOATER_H,
-    z: nextZ(s),
-    minimized: false,
-    maximized: false,
-  };
-
-  const params = { ...ws(s).params };
-  // Drop snapshots for panels removed by cleanup (they no longer exist).
-  const remaining = new Set([
-    ...collectPages(without),
-    ...panelIds,
-  ]);
-  for (const key of Object.keys(params)) {
-    if (!remaining.has(key)) delete params[key];
-  }
-
-  let next = withWs(s, without, params);
-  // Clear a dangling focusGroupId (its holder may have been removed).
-  if (next.focusGroupId && !findGroupById(without, next.focusGroupId)) {
-    next = { ...next, focusGroupId: null };
-  }
-  if (next.maximizedPanelId && panelIds.includes(next.maximizedPanelId)) {
-    next = { ...next, maximizedPanelId: null };
-  }
-  next.collapsedPanels = next.collapsedPanels.filter(
-    (p) => !panelIds.includes(p),
-  );
-  return { ...next, floaters: [...s.floaters, floater] };
+  const res = openPanel(ws(s).tree, path, s.focusGroupId);
+  return { ...withWs(s, res.tree, params), focusGroupId: res.focusGroupId };
 }
 
 /**
- * Dock floater `floaterId` back into the tree at `target` ("root" or node id)
- * arriving from `zone`. All the floater's panels move (group insert).
- */
-export function dockFloater(
-  s: ProjectDockState,
-  floaterId: string,
-  target: string | "root",
-  zone: DockZone,
-): ProjectDockState {
-  const floater = s.floaters.find((f) => f.id === floaterId);
-  if (!floater) return s;
-
-  const panels = [...floater.panelIds];
-
-  // Build the payload group (tabs when multi-panel, page for a single panel)
-  // with stable ids, then insert it wholesale at the target.
-  const payload: DockNode =
-    panels.length > 1
-      ? {
-          type: "tabs",
-          id: floater.id,
-          activePage: floater.activePanel,
-          pages: panels,
-        }
-      : { type: "page", id: floater.id, pageId: panels[0] };
-
-  const tree = insertPanel(ws(s).tree, payload, target, zone);
-
-  const params = { ...ws(s).params };
-  let next = withWs(s, tree, params);
-  if (next.maximizedPanelId && panels.includes(next.maximizedPanelId)) {
-    next = { ...next, maximizedPanelId: null };
-  }
-  return {
-    ...next,
-    floaters: s.floaters.filter((f) => f.id !== floaterId),
-  };
-}
-
-/** Move a floater window (live drag). */
-export function moveFloater(
-  s: ProjectDockState,
-  floaterId: string,
-  pos: { x: number; y: number },
-): ProjectDockState {
-  return {
-    ...s,
-    floaters: s.floaters.map((f) =>
-      f.id === floaterId ? { ...f, x: pos.x, y: pos.y } : f,
-    ),
-  };
-}
-
-/** Resize a floater window. */
-export function resizeFloater(
-  s: ProjectDockState,
-  floaterId: string,
-  size: { w: number; h: number },
-): ProjectDockState {
-  return {
-    ...s,
-    floaters: s.floaters.map((f) =>
-      f.id === floaterId ? { ...f, width: size.w, height: size.h } : f,
-    ),
-  };
-}
-
-/** Raise a floater above all others (focus click). */
-export function focusFloater(
-  s: ProjectDockState,
-  floaterId: string,
-): ProjectDockState {
-  const top = nextZ(s);
-  return {
-    ...s,
-    floaters: s.floaters.map((f) =>
-      f.id === floaterId ? { ...f, z: top } : f,
-    ),
-  };
-}
-
-/** Minimize/restore a floater. Minimizing clears a maximized flag. */
-export function toggleFloaterMinimized(
-  s: ProjectDockState,
-  floaterId: string,
-): ProjectDockState {
-  return {
-    ...s,
-    floaters: s.floaters.map((f) =>
-      f.id === floaterId
-        ? { ...f, minimized: !f.minimized, maximized: false }
-        : f,
-    ),
-  };
-}
-
-/** Maximize/restore a floater (fills the workspace above the tree). */
-export function toggleFloaterMaximized(
-  s: ProjectDockState,
-  floaterId: string,
-): ProjectDockState {
-  return {
-    ...s,
-    floaters: s.floaters.map((f) =>
-      f.id === floaterId ? { ...f, maximized: !f.maximized } : f,
-    ),
-  };
-}
-
-// === PART 4: close/collapse/maximize + workspaces ===
-/**
- * Close a panel everywhere it may live: tree, floater, collapsed list.
- * Clears maximize/collapse state; discards a floater emptied by the close.
+ * Close a tab everywhere it may live (strip, legacy floater, legacy
+ * collapsed list) and drop its params snapshot.
  */
 export function closeEverywhere(
   s: ProjectDockState,
@@ -359,14 +132,14 @@ export function closeEverywhere(
             panelIds: f.panelIds.filter((p) => p !== panelId),
             activePanel:
               f.activePanel === panelId
-                ? f.panelIds.filter((p) => p !== panelId)[0] ?? ""
+                ? (f.panelIds.filter((p) => p !== panelId)[0] ?? "")
                 : f.activePanel,
           }
         : f,
     )
     .filter((f) => f.panelIds.length > 0);
 
-  const collapsed = s.collapsedPanels.filter((p) => p !== panelId);
+  const collapsedPanels = s.collapsedPanels.filter((p) => p !== panelId);
   const maximizedPanelId =
     s.maximizedPanelId === panelId ? null : s.maximizedPanelId;
 
@@ -374,190 +147,9 @@ export function closeEverywhere(
   delete params[panelId];
 
   const next = withWs(s, tree, params);
-  // Clear a dangling focusGroupId.
   const focusGroupId =
     next.focusGroupId && !findGroupById(tree, next.focusGroupId)
       ? null
       : next.focusGroupId;
-  return { ...next, floaters, collapsedPanels: collapsed, maximizedPanelId, focusGroupId };
+  return { ...next, floaters, collapsedPanels, maximizedPanelId, focusGroupId };
 }
-
-/** Collapse/restore a tiled panel to a slim bar in its split slot. */
-export function toggleCollapse(
-  s: ProjectDockState,
-  panelId: string,
-): ProjectDockState {
-  const has = s.collapsedPanels.includes(panelId);
-  return {
-    ...s,
-    collapsedPanels: has
-      ? s.collapsedPanels.filter((p) => p !== panelId)
-      : [...s.collapsedPanels, panelId],
-  };
-}
-
-/** Maximize/restore a tiled panel (fills the workspace). */
-export function toggleMaximize(
-  s: ProjectDockState,
-  panelId: string,
-): ProjectDockState {
-  return {
-    ...s,
-    maximizedPanelId: s.maximizedPanelId === panelId ? null : panelId,
-  };
-}
-
-/** Deep-clone a tree node (workspaces must not share node objects). */
-function cloneTree(node: DockNode): DockNode {
-  switch (node.type) {
-    case "split":
-      return { ...node, children: node.children.map(cloneTree) };
-    case "tabs":
-      return { ...node, pages: [...node.pages] };
-    case "page":
-      return { ...node };
-  }
-}
-
-// ── Workspaces ──────────────────────────────────────────────────────────────
-
-/**
- * Switch to a workspace by name; a missing one is created by cloning the
- * CURRENT workspace (so "New workspace" starts from what's on screen).
- */
-export function switchWorkspace(
-  s: ProjectDockState,
-  name: string,
-): ProjectDockState {
-  if (s.workspaces[name]) {
-    return { ...s, activeWorkspace: name };
-  }
-  return {
-    ...s,
-    activeWorkspace: name,
-    workspaces: {
-      ...s.workspaces,
-      [name]: { tree: normalizeTree(cloneTree(ws(s).tree)), params: { ...ws(s).params } },
-    },
-  };
-}
-
-/** Save the live workspace under a new name and switch to the copy. */
-export function saveWorkspaceAs(
-  s: ProjectDockState,
-  name: string,
-): ProjectDockState {
-  if (!name || s.workspaces[name]) return s; // no overwrite via save-as
-  return {
-    ...s,
-    activeWorkspace: name,
-    workspaces: {
-      ...s.workspaces,
-      [name]: { tree: normalizeTree(cloneTree(ws(s).tree)), params: { ...ws(s).params } },
-    },
-  };
-}
-
-/** Restore the active workspace to a preset tree (params cleared). */
-export function resetWorkspace(
-  s: ProjectDockState,
-  presetTree: DockNode,
-): ProjectDockState {
-  return withWs(s, normalizeTree(presetTree), {});
-}
-
-// ── Workspace lifecycle: delete / export / import ───────────────────────────
-
-/**
- * Delete a named workspace. The last surviving workspace is never deleted
- * (the dock must always have somewhere to live); deleting the active one
- * switches to the first survivor.
- */
-export function deleteWorkspace(
-  s: ProjectDockState,
-  name: string,
-): ProjectDockState {
-  const names = Object.keys(s.workspaces);
-  if (names.length <= 1 || !s.workspaces[name]) return s;
-  const workspaces = { ...s.workspaces };
-  delete workspaces[name];
-  const activeWorkspace =
-    s.activeWorkspace === name ? Object.keys(workspaces)[0] : s.activeWorkspace;
-  return { ...s, activeWorkspace, workspaces };
-}
-
-/** The on-disk shape of a shared/copied layout (T11 puts it on the clipboard). */
-export interface LayoutFile {
-  version: number;
-  name: string;
-  tree: DockNode;
-  params: Record<string, string | undefined>;
-}
-
-/** Serialize the ACTIVE workspace as a portable layout file. */
-export function exportLayout(s: ProjectDockState): string {
-  const entry = ws(s);
-  const file: LayoutFile = {
-    version: DOCK_STATE_VERSION,
-    name: s.activeWorkspace,
-    tree: entry.tree,
-    params: entry.params,
-  };
-  return JSON.stringify(file, null, 2);
-}
-
-/**
- * Parse a layout file produced by exportLayout (or hand-written with the same
- * shape). Returns null when the tree is not a valid dock tree — the caller
- * shows "That is not a MasarFlow layout file." instead of corrupting the dock.
- */
-export function importLayout(text: string): LayoutFile | null {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text) as unknown;
-  } catch {
-    return null;
-  }
-  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return null;
-  const record = raw as Record<string, unknown>;
-  const parsed = dockNodeSchema.safeParse(record.tree);
-  if (!parsed.success) return null;
-
-  const params: Record<string, string | undefined> = {};
-  if (record.params && typeof record.params === "object" && !Array.isArray(record.params)) {
-    for (const [key, value] of Object.entries(record.params as Record<string, unknown>)) {
-      if (typeof value !== "string") continue;
-      params[key] = value.startsWith("?") ? value.slice(1) : value;
-    }
-  }
-  const name =
-    typeof record.name === "string" && record.name.trim().length > 0
-      ? record.name.trim()
-      : "Imported";
-  return {
-    version: DOCK_STATE_VERSION,
-    name,
-    tree: normalizeTree(parsed.data),
-    params,
-  };
-}
-
-/** Install an imported layout under a free workspace name and switch to it. */
-export function applyLayout(s: ProjectDockState, layout: LayoutFile): ProjectDockState {
-  let name = layout.name;
-  let n = 2;
-  while (s.workspaces[name]) {
-    name = `${layout.name} ${n}`;
-    n += 1;
-  }
-  return {
-    ...s,
-    activeWorkspace: name,
-    workspaces: {
-      ...s.workspaces,
-      [name]: { tree: normalizeTree(layout.tree), params: { ...layout.params } },
-    },
-  };
-}
-
-// === PART 5: helpers ===
