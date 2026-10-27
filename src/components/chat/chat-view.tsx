@@ -1395,7 +1395,7 @@ export function ChatView() {
               )}
 
               <span
-                className="ml-auto hidden shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground lg:inline-flex"
+                className="ml-auto hidden shrink-0 items-center gap-1.5 text-xs text-muted-foreground lg:inline-flex"
                 title={
                   mode === "agentic"
                     ? "Every turn is grounded in your live workspace and the assistant can read, write, and run commands via tools."
@@ -1669,7 +1669,7 @@ export function ChatView() {
                     </Button>
                   )}
                 </div>
-                <p className="mt-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Type{" "}
                   <kbd className="rounded border border-border bg-muted px-1">
                     /
@@ -2157,7 +2157,7 @@ const MessageRow = memo(
           {showTimestamps && (
             <div
               className={cn(
-                "mb-0.5 text-[10px] text-muted-foreground",
+                "mb-0.5 text-xs text-muted-foreground",
                 isUser && "text-right",
               )}
             >
@@ -2186,7 +2186,7 @@ const MessageRow = memo(
             return (
               <p
                 key={i}
-                className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground"
+                className="mb-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"
               >
                 <Info className="h-3 w-3 shrink-0" /> {noticeText}
                 {keep && onKeepModel && (
@@ -2195,7 +2195,7 @@ const MessageRow = memo(
                     size="sm"
                     disabled={busy}
                     onClick={() => onKeepModel(m.threadId, keep)}
-                    className="h-5 px-1.5 text-[11px]"
+                    className="h-5 px-1.5 text-xs"
                   >
                     Keep using this model
                   </Button>
@@ -2210,7 +2210,7 @@ const MessageRow = memo(
                 <span
                   key={`${t.name}-${i}`}
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-full border border-border bg-accent/40 px-2 py-0.5 text-[11px]",
+                    "inline-flex items-center gap-1 rounded-full border border-border bg-accent/40 px-2 py-0.5 text-xs",
                     t.ok ? "text-muted-foreground" : "text-destructive",
                   )}
                   title={t.summary}
@@ -2225,7 +2225,7 @@ const MessageRow = memo(
                   {t.running ? (
                     <Loader2 className="h-3 w-3 animate-spin text-primary" />
                   ) : t.ok ? (
-                    <Check className="h-3 w-3 text-node-lore" />
+                    <Check className="h-3 w-3 text-node-lore-fg" />
                   ) : (
                     <X className="h-3 w-3" />
                   )}
@@ -2239,10 +2239,10 @@ const MessageRow = memo(
               {files.map((f, i) => (
                 <span
                   key={`${f}-${i}`}
-                  className="inline-flex items-center gap-1 rounded-full border border-border bg-accent/40 px-2 py-0.5 text-[11px] text-muted-foreground"
+                  className="inline-flex items-center gap-1 rounded-full border border-border bg-accent/40 px-2 py-0.5 text-xs text-muted-foreground"
                   title={`Edited file: ${f}`}
                 >
-                  <FileText className="h-3 w-3 text-node-lore" />
+                  <FileText className="h-3 w-3 text-node-lore-fg" />
                   <span className="max-w-52 truncate">{f}</span>
                 </span>
               ))}
@@ -2464,7 +2464,7 @@ function UndoChips({ messageId, busy }: { messageId: string; busy: boolean }) {
         {entries.map((e) => (
           <span
             key={e.id}
-            className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-[11px] text-muted-foreground"
+            className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs text-muted-foreground"
             title={`AI ${e.action} via ${e.toolName}`}
           >
             <Undo2 className="h-3 w-3 text-primary" />
@@ -2491,8 +2491,8 @@ function UndoChips({ messageId, busy }: { messageId: string; busy: boolean }) {
           </span>
         ))}
         {reverted && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-            <Check className="h-3 w-3 text-node-lore" /> {reverted}
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+            <Check className="h-3 w-3 text-node-lore-fg" /> {reverted}
           </span>
         )}
       </div>
@@ -2523,29 +2523,29 @@ function DiffPreview({ entry }: { entry: AiUndo | null }) {
 
   return (
     <div className="mt-1 max-h-64 overflow-y-auto rounded-md border border-border/60 bg-muted/30 p-2">
-      <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+      <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
         <GitCompareArrows className="h-3 w-3" />
         Changed by {entry.toolName} — click Undo above to roll back
       </div>
       {keys.map((k) => (
         <div key={k} className="mb-2 last:mb-0">
-          <div className="mb-0.5 font-mono text-[10px] text-muted-foreground">
+          <div className="mb-0.5 font-mono text-xs text-muted-foreground">
             {k}
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             <div className="overflow-hidden rounded bg-card/70">
-              <div className="px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground opacity-70">
+              <div className="px-1.5 py-0.5 text-xs font-medium text-muted-foreground opacity-70">
                 Before
               </div>
-              <pre className="max-h-24 overflow-auto px-1.5 pb-1.5 text-[10px] leading-relaxed whitespace-pre-wrap text-muted-foreground">
+              <pre className="max-h-24 overflow-auto px-1.5 pb-1.5 text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground">
                 {fmt(before[k]).slice(0, 2000)}
               </pre>
             </div>
             <div className="overflow-hidden rounded border border-node-lore/30 bg-card/70">
-              <div className="px-1.5 py-0.5 text-[9px] font-medium text-node-lore opacity-80">
+              <div className="px-1.5 py-0.5 text-xs font-medium text-node-lore-fg opacity-80">
                 After
               </div>
-              <pre className="max-h-24 overflow-auto px-1.5 pb-1.5 text-[10px] leading-relaxed whitespace-pre-wrap">
+              <pre className="max-h-24 overflow-auto px-1.5 pb-1.5 text-xs leading-relaxed whitespace-pre-wrap">
                 {fmt(after[k]).slice(0, 2000)}
               </pre>
             </div>
@@ -2591,7 +2591,7 @@ function ThinkingBlock({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+        className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
       >
         {show ? (
           <ChevronDown className="h-3 w-3" />

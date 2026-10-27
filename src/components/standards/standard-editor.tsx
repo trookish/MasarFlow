@@ -138,7 +138,7 @@ export function StandardEditor({
                   placeholder="Category name…"
                   className="h-8 text-sm"
                 />
-                <p className="mt-1 px-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 px-1 text-xs text-muted-foreground">
                   Press Enter to add and select.
                 </p>
               </div>
@@ -265,7 +265,7 @@ function ExamplesEditor({
         </Button>
       </div>
       {items.length === 0 ? (
-        <p className="text-xs text-muted-foreground/70">No examples.</p>
+        <p className="text-xs text-muted-foreground">No examples.</p>
       ) : (
         items.map((item, i) => (
           <div key={i} className="flex items-start gap-1.5">

@@ -65,7 +65,7 @@ function TextNodeComponent({
       >
         <Handle type="target" position={Position.Left} className="!h-1.5 !w-1.5" />
         <Handle type="source" position={Position.Right} className="!h-1.5 !w-1.5" />
-        <span className="truncate text-[10px] text-muted-foreground">
+        <span className="truncate text-xs text-muted-foreground">
           {stripped || "Empty"}
         </span>
       </div>

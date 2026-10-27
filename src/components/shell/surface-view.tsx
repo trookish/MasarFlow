@@ -7,6 +7,7 @@ import { PAGE_COMPONENTS } from "@/components/dock/panel-loader";
 import { TodayView } from "@/components/today/today-view";
 import { getSurface, sectionUrl, type SurfaceId } from "@/lib/navigation/surfaces";
 import { useProjectStore } from "@/lib/stores/project";
+import { usePageSettings } from "@/lib/stores/page-settings";
 import { cn } from "@/lib/utils/cn";
 
 // "/today" is both a section and the Today surface's own page: render the view itself, never the
@@ -16,7 +17,9 @@ const DIRECT: Record<string, ComponentType> = { "/today": TodayView };
 function SurfaceBody({ id }: { id: SurfaceId }) {
   const surface = getSurface(id)!;
   const view = useSearchParams().get("view");
-  const section = surface.sections.find((s) => s.id === view) ?? surface.sections[0];
+  const captureDefault = usePageSettings((s) => s.brain.defaultView);
+  const preferredView = id === "capture" && !view ? captureDefault : view;
+  const section = surface.sections.find((s) => s.id === preferredView) ?? surface.sections[0];
   const Page = DIRECT[section.href] ?? PAGE_COMPONENTS[section.href];
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
 
@@ -39,7 +42,7 @@ function SurfaceBody({ id }: { id: SurfaceId }) {
               return (
                 <Link
                   key={s.id}
-                  href={sectionUrl(surface, s.id)}
+                  href={surface.id === "capture" ? `${surface.route}?view=${s.id}` : sectionUrl(surface, s.id)}
                   role="tab"
                   aria-selected={active}
                   className={cn(

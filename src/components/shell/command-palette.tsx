@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+
 import { useTheme } from "next-themes";
 import { Clock, ListChecks, Search } from "lucide-react";
 import {
@@ -42,14 +42,14 @@ import { projectsRepo, notesRepo, tasksRepo } from "@/lib/db/repos";
 import { resetData } from "@/lib/db/data";
 import { buildSearchItems, createSearchIndex, kindLabel, type SearchItem } from "@/lib/utils/search";
 import { focusedPanelId } from "@/lib/dock/dock-core";
-import { pageIdOf } from "@/lib/dock/types";
+
 import { openDailyNote } from "@/lib/vault/daily";
 import { pushToast } from "@/lib/stores/toast";
 
 const MODES: { id: CommandMode; label: string }[] = [
   { id: "all", label: "Everything" },
   { id: "go", label: "Go to" },
-  { id: "dock", label: "Dock" },
+  { id: "tabs", label: "Tabs" },
 ];
 
 export function CommandPalette() {
@@ -75,11 +75,9 @@ export function CommandPalette() {
 }
 
 function PalettePanel({ onClose }: { onClose: () => void }) {
-  const router = useRouter();
+
   const projectId = useActiveProjectId();
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
-  const dockEnabled = useUIStore((s) => s.dockEnabled);
-  const setDockEnabled = useUIStore((s) => s.setDockEnabled);
   const desktop = useMemo(() => getDesktop(), []);
   const { theme, setTheme } = useTheme();
 
@@ -107,7 +105,7 @@ function PalettePanel({ onClose }: { onClose: () => void }) {
 
   function go(href: string): void {
     onClose();
-    router.push(href);
+    useDockStore.getState().open(href);
   }
 
   function openPanel(panelId: string): void {
@@ -116,38 +114,13 @@ function PalettePanel({ onClose }: { onClose: () => void }) {
   }
 
   const actions: CommandActions = {
-    navigate: go,
-    openPanel,
+    navigate: openPanel,
     closeFocusedPanel: () => {
       const dock = useDockStore.getState();
       const state = dock.activeProjectId ? dock.projects[dock.activeProjectId] : null;
       if (state) dock.close(focusedPanelId(state));
     },
-    floatFocusedPanel: () => {
-      const dock = useDockStore.getState();
-      const state = dock.activeProjectId ? dock.projects[dock.activeProjectId] : null;
-      if (state) dock.float(focusedPanelId(state), { x: 160, y: 120 });
-    },
-    toggleMaximizeFocused: () => {
-      const dock = useDockStore.getState();
-      const state = dock.activeProjectId ? dock.projects[dock.activeProjectId] : null;
-      if (state) dock.toggleMaximize(pageIdOf(focusedPanelId(state)));
-    },
-    resetWorkspace: () => useDockStore.getState().resetWorkspace(),
-    copyLayout: () => {
-      const json = useDockStore.getState().exportLayout();
-      if (!json) return;
-      void navigator.clipboard.writeText(json);
-      pushToast({ title: "Layout copied", tone: "success" });
-    },
-    pasteLayout: () => {
-      void navigator.clipboard.readText().then((text) => {
-        const installed = useDockStore.getState().importLayout(text);
-        if (!installed) {
-          pushToast({ title: "That is not a MasarFlow layout file", tone: "danger" });
-        }
-      });
-    },
+    reopenClosedTab: () => useDockStore.getState().reopenClosedTab(),
     toggleTheme: () => setTheme(theme === "light" ? "dark" : "light"),
     switchProject: (id) => {
       setActiveProjectId(id);
@@ -156,13 +129,13 @@ function PalettePanel({ onClose }: { onClose: () => void }) {
     },
     newTask: () => {
       if (!projectId) return;
-      void tasksRepo.create({ projectId, title: "Untitled task" }).then(() => go("/tasks"));
+      void tasksRepo.create({ projectId, title: "Untitled task" }).then(() => go("/work"));
     },
     newNote: () => {
       if (!projectId) return;
       void notesRepo
         .create({ projectId, title: "Untitled note" })
-        .then((note) => go(`/brain?note=${note.id}`));
+        .then((note) => go(`/library?note=${note.id}`));
     },
     openDailyNote: () => {
       if (!projectId) return;
@@ -172,17 +145,15 @@ function PalettePanel({ onClose }: { onClose: () => void }) {
     resetAllData: () => {
       void resetData().then(() => {
         setActiveProjectId(null);
-        go("/dashboard");
+        go("/today");
       });
     },
-    isEntityOpen: () => false,
   };
 
   const commands = useMemo(
     () =>
       buildCommands(
         {
-          dockEnabled,
           hasProject: Boolean(projectId),
           projectId,
           theme: theme === "light" ? "light" : "dark",
@@ -192,14 +163,14 @@ function PalettePanel({ onClose }: { onClose: () => void }) {
         actions,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dockEnabled, projectId, projects, theme, desktop, items.length],
+    [projectId, projects, theme, desktop, items.length],
   );
 
   const visibleCommands = useMemo(() => filterCommands(commands, query, mode), [commands, query, mode]);
 
   const fuse = useMemo(() => createSearchIndex(items), [items]);
   const entityHits = useMemo(() => {
-    if (query.trim().length < 2 || mode === "dock") return [];
+    if (query.trim().length < 2 || mode === "tabs") return [];
     return fuse
       .search(query)
       .slice(0, 12)
@@ -246,7 +217,7 @@ function PalettePanel({ onClose }: { onClose: () => void }) {
               {entry.label}
             </button>
           ))}
-          <span className="ml-auto pr-1 text-[11px] text-muted-foreground">
+          <span className="ml-auto pr-1 text-xs text-muted-foreground">
             {projectId ? "Searches this project" : "No project open"}
           </span>
         </div>
@@ -268,7 +239,7 @@ function PalettePanel({ onClose }: { onClose: () => void }) {
                 >
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <span className="min-w-0 flex-1 truncate">{recent.label}</span>
-                  <span className="text-[11px] text-muted-foreground">Recent</span>
+                  <span className="text-xs text-muted-foreground">Recent</span>
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -301,7 +272,7 @@ function PalettePanel({ onClose }: { onClose: () => void }) {
                 >
                   <ListChecks className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <span className="min-w-0 flex-1 truncate">{command.label}</span>
-                  {command.hint ? <span className="text-[11px] text-muted-foreground">{command.hint}</span> : null}
+                  {command.hint ? <span className="text-xs text-muted-foreground">{command.hint}</span> : null}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -309,19 +280,11 @@ function PalettePanel({ onClose }: { onClose: () => void }) {
         </CommandList>
       </Command>
 
-      {/* Dock toggle + a first-run hint live outside the list so they are always reachable. */}
-      <div className="flex items-center justify-between border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
+      <div className="flex items-center justify-between border-t border-border px-3 py-2 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <Search className="h-3 w-3" /> Type to filter · chips narrow it down · Esc closes
         </span>
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() => setDockEnabled(!dockEnabled)}
-          className="rounded px-1.5 py-0.5 hover:bg-accent hover:text-foreground"
-        >
-          {dockEnabled ? "Studio layout: select to use the standard layout" : "Standard layout: select to use the Studio layout"}
-        </button>
+        <span>Ctrl+K</span>
       </div>
 
       <ConfirmDialog

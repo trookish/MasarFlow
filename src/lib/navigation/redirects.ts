@@ -6,10 +6,9 @@ export interface LegacyRedirect {
 }
 
 /**
- * Every v0.2 route and where it lives in the standard layout. Built from SURFACES, so a section
- * added there is redirected automatically. `/today` is both a legacy route and a surface, so it
- * has no entry. Applied client-side by the standard layout (the Studio layout still opens the
- * original pages in its panels, so a server redirect would break it).
+ * Every v0.2 route and its canonical surface destination. Built from SURFACES so a new section is
+ * redirected automatically. `/today` is already canonical and has no entry. Redirects run in the
+ * shell so packaged deep links keep working without server-specific rewrite rules.
  */
 export const LEGACY_REDIRECTS: LegacyRedirect[] = [
   ...SURFACES.flatMap((surface) =>

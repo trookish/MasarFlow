@@ -9,9 +9,8 @@ import {
 } from "lucide-react";
 
 /**
- * The six surfaces of the standard layout (v0.3 P5). Each section renders an existing page by its
- * route (`href`), so the surface is a labelled host, not a copy: old routes keep working in the
- * Studio layout and resolve to `<surface route>?view=<section id>` in the standard layout.
+ * The six workspace surfaces. Each section renders its existing page by route, so a surface is a
+ * labelled host rather than a duplicate view. Legacy routes redirect to the canonical surface URL.
  */
 export interface SurfaceSection {
   id: string;

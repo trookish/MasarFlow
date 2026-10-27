@@ -28,10 +28,10 @@ describe("tool registration", () => {
 describe("get_active_context", () => {
   it("reports the focused entity with its title", async () => {
     const task = await tasksRepo.create({ projectId: P, title: "Fix login" });
-    useDockStore.getState().open(`/tasks?task=${task.id}`);
+    useDockStore.getState().open(`/work?task=${task.id}`);
     const res = await run("get_active_context");
     expect(res.ok).toBe(true);
-    expect(res.focused).toMatchObject({ page: "/tasks", entity: { kind: "task", id: task.id, title: "Fix login" } });
+    expect(res.focused).toMatchObject({ page: "/work", entity: { kind: "task", id: task.id, title: "Fix login" } });
     expect(res.panels.length).toBeGreaterThan(0);
   });
 });
@@ -41,7 +41,7 @@ describe("open_entity", () => {
     const note = await notesRepo.create({ projectId: P, title: "Auth", body: "" });
     const res = await run("open_entity", { kind: "note", id: note.id });
     expect(res.ok).toBe(true);
-    expect(urlOfFocused(useDockStore.getState().getProject()!)).toBe(`/brain?note=${note.id}`);
+    expect(urlOfFocused(useDockStore.getState().getProject()!)).toBe(`/capture?note=${note.id}`);
   });
   it("refuses an unknown entity and an unknown kind", async () => {
     expect((await run("open_entity", { kind: "task", id: "nope" })).ok).toBe(false);

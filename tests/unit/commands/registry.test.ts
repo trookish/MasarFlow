@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { buildCommands, type CommandContext } from "@/lib/commands/registry";
 
 const CTX: CommandContext = {
-  dockEnabled: true,
   hasProject: true,
   projectId: "p1",
   theme: "dark",
@@ -25,16 +24,16 @@ describe("buildCommands", () => {
     }
   });
 
-  it("covers dock, tools, navigation, project, appearance and data", () => {
+  it("covers tabs, tools, navigation, project, appearance and data", () => {
     const groups = new Set(buildCommands(CTX).map((c) => c.group));
-    for (const group of ["Panels", "Dock", "Tools", "Go to", "Project", "Appearance", "Data"]) {
+    for (const group of ["Actions", "Tabs", "Tools", "Go to", "Project", "Appearance", "Data"]) {
       expect(groups, group).toContain(group);
     }
   });
 
-  it("opens every dock page and every tool panel", () => {
+  it("opens the six surfaces and every tool page", () => {
     const commands = buildCommands(CTX);
-    for (const href of ["/today", "/dashboard", "/tools/terminal", "/tools/logs", "/tools/system"]) {
+    for (const href of ["/today", "/capture", "/work", "/library", "/ask", "/system", "/tools/terminal", "/tools/logs", "/tools/system"]) {
       expect(commands.some((c) => c.id === `open:${href}`), href).toBe(true);
     }
   });
@@ -45,10 +44,12 @@ describe("buildCommands", () => {
     expect(commands[0].label).toBe("Switch to Roguelike");
   });
 
-  it("hides dock-only and desktop-only commands when they cannot run", () => {
-    const webCtx: CommandContext = { ...CTX, dockEnabled: false, desktopAvailable: false };
+  it("never exposes dock controls and hides unavailable desktop commands", () => {
+    const webCtx: CommandContext = { ...CTX, desktopAvailable: false };
     const ids = buildCommands(webCtx).map((c) => c.id);
-    expect(ids).not.toContain("dock:float");
+    expect(ids.some((id) => id.startsWith("dock:"))).toBe(false);
+    expect(ids).toContain("tab:close");
+    expect(ids).toContain("tab:reopen");
     expect(ids).not.toContain("open:/tools/terminal");
     expect(ids).not.toContain("tool:open-logs-folder");
   });

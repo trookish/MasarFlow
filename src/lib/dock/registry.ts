@@ -15,12 +15,16 @@
 
 import type { LucideIcon } from "lucide-react";
 import { ALL_NAV_ITEMS, type NavItem } from "@/lib/nav";
+import { SURFACES } from "@/lib/navigation/surfaces";
 import { pageIdOf } from "./types";
 
 /** Every page that can live in the dock: all nav routes, deduped (the Brain
  * item and its Notes child share the "/brain" href). */
 export const PAGE_PATHS: string[] = [
-  ...new Set(ALL_NAV_ITEMS.map((item) => item.href)),
+  ...new Set([
+    ...SURFACES.map((surface) => surface.route),
+    ...ALL_NAV_ITEMS.map((item) => item.href),
+  ]),
 ];
 
 /** A page definition minus its component (kept out of node-testable code). */
@@ -36,6 +40,8 @@ function findNavItem(path: string): NavItem | undefined {
 /** Display metadata for a page id (query ignored). Null when unknown. */
 export function getPageDef(pageId: string): PageDef | null {
   const path = pageIdOf(pageId);
+  const surface = SURFACES.find((item) => item.route === path);
+  if (surface) return { label: surface.label, icon: surface.icon };
   const item = findNavItem(path);
   if (!item) return null;
   return { label: item.label, icon: item.icon };

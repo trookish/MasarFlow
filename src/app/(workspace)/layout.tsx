@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, Suspense, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Sidebar } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { QuickSwitcher } from "@/components/vault/quick-switcher";
@@ -17,16 +16,13 @@ import { DbGate } from "@/components/shell/db-gate";
 import { useGlobalHotkeys } from "@/lib/hooks/use-hotkeys";
 import { useDesktopNavigation } from "@/lib/hooks/use-desktop-navigation";
 import { useProjectStore } from "@/lib/stores/project";
-import { useUIStore } from "@/lib/stores/ui";
 import { useActiveProject } from "@/lib/hooks/use-project";
-import { useMounted } from "@/lib/hooks/use-mounted";
 import { useUpdatesStore } from "@/lib/stores/updates";
-import { useDockSync } from "@/lib/hooks/use-dock-sync";
 import { useActivityTracking } from "@/lib/hooks/use-activity-tracking";
-import { DockWorkspace } from "@/components/dock/dock-workspace";
+import { WorkspaceTabs } from "@/components/shell/workspace-tabs";
 import { SurfaceSidebar } from "@/components/shell/surface-sidebar";
-import { LayoutRouter } from "@/components/shell/layout-router";
-import { LayoutNotice } from "@/components/shell/layout-notice";
+import { Inspector } from "@/components/entity/inspector";
+import { useUIStore } from "@/lib/stores/ui";
 import { getDesktop } from "@/lib/desktop/bridge";
 import { shouldShowWizard } from "@/lib/onboarding/state";
 import { projectsRepo } from "@/lib/db/repos";
@@ -35,34 +31,16 @@ import {
   stopPeriodicEmbeddingSync,
 } from "@/lib/ai/embedding-sync";
 
-/**
- * Dock mode runtime: runs the URL<->dock sync and renders the dock
- * workspace. Wrapped in Suspense by the layout because useDockSync reads
- * search params (client-side; no server rendering involved).
- */
-function DockWorkspaceLive() {
-  useDockSync();
-  return <DockWorkspace />;
-}
-
-export default function WorkspaceLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function WorkspaceLayout() {
   useGlobalHotkeys();
   // P10.T11: the tray can ask the shell to navigate (Control Center).
   useDesktopNavigation();
   // Runs in dock and classic mode alike (useDockSync only mounts with the dock).
   useActivityTracking();
-  const mounted = useMounted();
-  const taskbarDirection = useUIStore((s) => s.taskbarDirection);
-  const layoutMode = useUIStore((s) => s.layoutMode);
-  // Hydration-safe: the server and first client render use the standard layout.
-  const studio = mounted && layoutMode === "studio";
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
   const activeProject = useActiveProject();
+  const inspectorOpen = useUIStore((s) => s.inspectorOpen);
   const projectCount = useLiveQuery(() => projectsRepo.count(), []);
 
   // Banner as the workspace background (background mode).
@@ -169,21 +147,15 @@ export default function WorkspaceLayout({
   // P10.T9: follow the main-process updater's live phase (no-op in a browser).
   useEffect(() => useUpdatesStore.getState().bindUpdater(), []);
 
-  // Hydration-safe: server + first client render put the sidebar on the
-  // left; the "right" direction moves it after mount.
-  const sidebarOnLeft = !mounted || taskbarDirection !== "right";
-
   return (
     <DbGate>
       <div className="flex h-screen overflow-hidden" data-testid="app-shell">
         <SecretsBootstrap />
         <AutoBackup />
-        <LayoutRouter mode={studio ? "studio" : "standard"} />
-        {studio ? sidebarOnLeft && <Sidebar /> : <SurfaceSidebar />}
-        <div className="flex min-w-0 flex-1 flex-col" data-layout={studio ? "studio" : "standard"}>
+        <SurfaceSidebar />
+        <div className="flex min-w-0 flex-1 flex-col" data-layout="tabs">
           <Topbar />
-          {studio ? null : <LayoutNotice />}
-          <main className="relative min-h-0 flex-1 overflow-hidden">
+          <main className="relative flex min-h-0 flex-1 overflow-hidden">
             {projectBackground ? (
               <div
                 aria-hidden
@@ -194,18 +166,14 @@ export default function WorkspaceLayout({
                 }}
               />
             ) : null}
-            <div className="relative z-10 h-full">
-              {studio ? (
-                <Suspense fallback={null}>
-                  <DockWorkspaceLive />
-                </Suspense>
-              ) : (
-                children
-              )}
+            <div className="relative z-10 h-full min-w-0 flex-1">
+              <Suspense fallback={null}>
+                <WorkspaceTabs />
+              </Suspense>
             </div>
+            {inspectorOpen ? <Inspector className="relative z-20 hidden w-80 shrink-0 xl:block" /> : null}
           </main>
         </div>
-        {studio && !sidebarOnLeft && <Sidebar />}
         <CommandPalette />
         <QuickSwitcher />
         <Toaster />

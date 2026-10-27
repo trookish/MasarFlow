@@ -28,7 +28,7 @@ export function WikilinkAutocomplete({
 
   return (
     <div className="absolute bottom-3 left-3 z-20 w-72 overflow-hidden rounded-md border border-border bg-popover shadow-xl">
-      <div className="border-b border-border px-3 py-1.5 text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
+      <div className="border-b border-border px-3 py-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
         Link to note
       </div>
       <ul className="scrollbar-thin max-h-56 overflow-y-auto p-1">

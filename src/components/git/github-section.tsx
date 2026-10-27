@@ -177,7 +177,7 @@ export function GithubSection({ repo }: { repo: GitRepo }) {
                     </a>
                     <span className="flex gap-1 pt-0.5">
                       {issue.labels.map((label) => (
-                        <Badge key={label} variant="outline" className="text-[10px]">{label}</Badge>
+                        <Badge key={label} variant="outline" className="text-xs">{label}</Badge>
                       ))}
                     </span>
                   </span>
@@ -212,8 +212,8 @@ export function GithubSection({ repo }: { repo: GitRepo }) {
                   >
                     <span className="font-mono text-muted-foreground">#{pull.number}</span> {pull.title}
                   </a>
-                  {pull.draft ? <Badge variant="outline" className="text-[10px]">draft</Badge> : null}
-                  <Badge variant="outline" className={`text-[10px] ${ciTone[pull.ci]}`}>CI {pull.ci}</Badge>
+                  {pull.draft ? <Badge variant="outline" className="text-xs">draft</Badge> : null}
+                  <Badge variant="outline" className={`text-xs ${ciTone[pull.ci]}`}>CI {pull.ci}</Badge>
                 </li>
               ))}
               {!pulls.length ? <p className="py-1 text-xs text-muted-foreground">No open pull requests.</p> : null}

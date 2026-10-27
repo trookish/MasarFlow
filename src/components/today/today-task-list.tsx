@@ -18,7 +18,7 @@ const PRIORITY_CLASS: Record<string, string> = {
   urgent: "text-destructive",
   high: "text-amber-500",
   medium: "text-muted-foreground",
-  low: "text-muted-foreground/70",
+  low: "text-muted-foreground",
 };
 
 export function TodayTaskList({
@@ -39,7 +39,7 @@ export function TodayTaskList({
       <header className="flex items-baseline gap-2 border-b border-border px-3 py-2">
         <h3 className="text-sm font-medium">{title}</h3>
         <span className="text-xs text-muted-foreground">{tasks.length}</span>
-        <p className="ml-auto text-[11px] text-muted-foreground">{description}</p>
+        <p className="ml-auto text-xs text-muted-foreground">{description}</p>
       </header>
       {tasks.length === 0 ? (
         <p className="px-3 py-4 text-xs text-muted-foreground">{emptyText}</p>
@@ -56,12 +56,12 @@ export function TodayTaskList({
                 {task.title}
               </button>
               {task.dueDate !== null ? (
-                <span className={cn("shrink-0 text-[11px]", bucket === "overdue" && "text-destructive")}>
+                <span className={cn("shrink-0 text-xs", bucket === "overdue" && "text-destructive")}>
                   {bucket === "overdue" ? "Overdue since " : "Due "}
                   {dayKey(task.dueDate)}
                 </span>
               ) : null}
-              <span className={cn("shrink-0 text-[11px] uppercase", PRIORITY_CLASS[task.priority])}>
+              <span className={cn("shrink-0 text-xs uppercase", PRIORITY_CLASS[task.priority])}>
                 {task.priority}
               </span>
               {bucket === "overdue" || bucket === "dueToday" ? (
@@ -90,7 +90,7 @@ export function TodayTaskList({
         </ul>
       )}
       {bucket === "inProgress" ? (
-        <p className="flex items-center gap-1.5 px-3 pb-2 text-[11px] text-muted-foreground">
+        <p className="flex items-center gap-1.5 px-3 pb-2 text-xs text-muted-foreground">
           <Timer className="h-3 w-3" /> In review counts as in progress.
         </p>
       ) : null}

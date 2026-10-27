@@ -1,10 +1,9 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * Studio layout keeps at most four panels mounted (v0.3 P5 T6). Visible panels always stay
- * mounted; hidden tabs keep their state (drafts, scroll, streams) only while they are among the
- * four most recently shown. Past that the least recently shown one unmounts and remounts fresh
- * when its tab is chosen again.
+ * The workspace keeps at most four recent tabs mounted. The active tab always stays mounted;
+ * hidden tabs keep drafts, scroll, and streams only while among the four most recently shown.
+ * Eviction unmounts the React tree; persisted selection and tab state remain intact.
  */
 export const MAX_MOUNTED_PANELS = 4;
 

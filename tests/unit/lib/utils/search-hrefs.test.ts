@@ -19,6 +19,6 @@ describe("buildSearchItems hrefs", () => {
     const hrefOf = (kind: string, id: string) => items.find((i) => i.kind === kind && i.id === id)?.href;
     expect(hrefOf("note", note.id)).toBe(entityHref({ kind: "note", id: note.id }));
     expect(hrefOf("task", task.id)).toBe(entityHref({ kind: "task", id: task.id }));
-    expect(hrefOf("devlog", log.id)).toBe(`/devlogs?devlog=${log.id}`);
+    expect(hrefOf("devlog", log.id)).toBe(entityHref({ kind: "devlog", id: log.id }));
   });
 });

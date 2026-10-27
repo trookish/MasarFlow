@@ -225,7 +225,7 @@ export function SystemEditor({
               </DropdownMenu>
             </div>
             {form.dependencies.length === 0 ? (
-              <p className="text-xs text-muted-foreground/70">
+              <p className="text-xs text-muted-foreground">
                 No dependencies — this is a foundation system.
               </p>
             ) : (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Command as CommandIcon, Keyboard, PanelLeft, RefreshCw, AppWindow } from "lucide-react";
+import { Search, Command as CommandIcon, Keyboard, PanelLeft, PanelRight, RefreshCw, AppWindow } from "lucide-react";
 import { useUIStore } from "@/lib/stores/ui";
 import { useMounted } from "@/lib/hooks/use-mounted";
 import { getDesktop } from "@/lib/desktop/bridge";
@@ -11,7 +11,7 @@ import { PomodoroWidget, DailyNoteButton } from "./plugin-widgets";
 import { UpdateDialog } from "./update-dialog";
 import { WindowControls } from "./window-controls";
 import { useUpdatesStore } from "@/lib/stores/updates";
-import { WorkspaceMenu } from "@/components/dock/workspace-menu";
+
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -24,7 +24,9 @@ export function Topbar() {
   const setShortcutsOpen = useUIStore((s) => s.setShortcutsOpen);
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
-  const taskbarDirection = useUIStore((s) => s.taskbarDirection);
+  const inspectorOpen = useUIStore((s) => s.inspectorOpen);
+  const toggleInspector = useUIStore((s) => s.toggleInspector);
+
   const [updateOpen, setUpdateOpen] = useState(false);
   const updateInfo = useUpdatesStore((s) => s.info);
   const updateState = useUpdatesStore((s) => s.state);
@@ -47,10 +49,6 @@ export function Topbar() {
     if (updateState !== "checking") void checkUpdates();
   }
 
-  // The topbar hide/show icon hugs the taskbar's edge: left → left, right →
-  // right. When the taskbar is the bottom dock, the icon is hidden entirely —
-  // the dock's own chevron handles hide/show. Hydration-safe default: "left".
-  const direction = mounted ? taskbarDirection : "left";
 
   const toggleLabel = !mounted
     ? "Collapse sidebar (⌘B)"
@@ -73,15 +71,14 @@ export function Topbar() {
 
   return (
     <header className="app-drag relative z-40 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur">
-      {direction === "left" && toggleButton}
+      {toggleButton}
 
       <ProjectSwitcher />
-      <WorkspaceMenu />
 
       {desktop ? (
         <span
           title={`MasarFlow desktop app ${appVersion ?? ""} — commands run on this computer`}
-          className="hidden items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 text-[11px] text-muted-foreground sm:flex"
+          className="hidden items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1 text-xs text-muted-foreground sm:flex"
         >
           <AppWindow className="h-3 w-3" />
           Desktop {appVersion ?? ""}
@@ -140,8 +137,20 @@ export function Topbar() {
             <Keyboard className="h-4 w-4" />
           </Button>
         </Tooltip>
+        <Tooltip label={inspectorOpen ? "Hide inspector" : "Show inspector"} side="bottom">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={inspectorOpen ? "Hide inspector" : "Show inspector"}
+            aria-pressed={inspectorOpen}
+            onClick={toggleInspector}
+            className="hidden xl:inline-flex"
+          >
+            <PanelRight className="h-4 w-4" />
+          </Button>
+        </Tooltip>
         <ThemeToggle />
-        {direction === "right" && toggleButton}
+
       </div>
       <UpdateDialog open={updateOpen} onOpenChange={setUpdateOpen} />
       <WindowControls />

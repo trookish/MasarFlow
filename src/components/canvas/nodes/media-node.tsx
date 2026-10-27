@@ -100,7 +100,7 @@ function MediaNodeComponent({
         <Handle type="target" position={Position.Left} className="!h-1.5 !w-1.5" />
         <Handle type="source" position={Position.Right} className="!h-1.5 !w-1.5" />
         <Icon className="h-3 w-3 shrink-0 text-primary" />
-        <span className="truncate text-[10px]">{data.name}</span>
+        <span className="truncate text-xs">{data.name}</span>
       </div>
     );
   }

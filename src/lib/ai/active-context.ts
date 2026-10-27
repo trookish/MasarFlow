@@ -11,7 +11,6 @@ export interface OpenPanel {
   label: string;
   ref: EntityRef | null;
   focused: boolean;
-  floating: boolean;
 }
 
 export interface ActiveContext {
@@ -24,14 +23,12 @@ export function deriveActiveContext(state: ProjectDockState | null): ActiveConte
   if (!state || !ws) return null;
   const focusedUrl = urlOfFocused(state);
   const focusedPath = pageIdOf(focusedUrl);
-  const docked = new Set(collectPages(ws.tree).map(pageIdOf));
-  const floating = new Set(state.floaters.flatMap((f) => f.panelIds.map(pageIdOf)));
-  const panels: OpenPanel[] = [...new Set([...docked, ...floating])].map((path) => ({
+  const paths = [...new Set(collectPages(ws.tree).map(pageIdOf))];
+  const panels: OpenPanel[] = paths.map((path) => ({
     path,
     label: getPageDef(path)?.label ?? path,
     ref: refFromUrl(path, ws.params[path] ?? ""),
     focused: path === focusedPath,
-    floating: !docked.has(path),
   }));
   panels.sort((a, b) => Number(b.focused) - Number(a.focused));
   return { focusedUrl, panels };
@@ -40,11 +37,10 @@ export function deriveActiveContext(state: ProjectDockState | null): ActiveConte
 export const titleKey = (ref: EntityRef): string => `${ref.kind}:${ref.id}`;
 
 function describePanel(p: OpenPanel, titles: Map<string, string>): string {
-  const where = p.floating ? `${p.label} (floating)` : p.label;
-  if (!p.ref) return where;
+  if (!p.ref) return p.label;
   const title = titles.get(titleKey(p.ref));
   const what = title ? `${KIND_META[p.ref.kind].label} "${title}"` : KIND_META[p.ref.kind].label;
-  return `${where} — ${what} (id ${p.ref.id})`;
+  return `${p.label} — ${what} (id ${p.ref.id})`;
 }
 
 /** Markdown for the system prompt. Empty string when nothing is known. */

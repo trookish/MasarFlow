@@ -124,7 +124,7 @@ export function TerminalPanel() {
             >
               {sessionLabel(session.label, session.cwd)}
               {session.status === "exited" ? (
-                <span className="text-[10px] text-muted-foreground">(exited)</span>
+                <span className="text-xs text-muted-foreground">(exited)</span>
               ) : null}
             </button>
           ))}
@@ -139,7 +139,7 @@ export function TerminalPanel() {
 
       {/* Run-in picker: shows the allow-list decision before anything runs. */}
       <div className="shrink-0 space-y-1 border-b border-border px-3 py-2">
-        <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           Start a session in
         </p>
         {roots.length === 0 ? (
@@ -169,7 +169,7 @@ export function TerminalPanel() {
             ))}
           </ul>
         )}
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {rootStateText(rootStateVisible(allowed), true)}
         </p>
         {error ? (
@@ -308,7 +308,7 @@ function TerminalView({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-2 border-b border-border px-3 py-1.5">
-        <p className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
+        <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
           {terminalWarning(cwd)}
         </p>
         <Button variant="ghost" size="icon-sm" aria-label="End this session" onClick={onClose}>

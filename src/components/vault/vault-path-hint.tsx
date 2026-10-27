@@ -30,7 +30,7 @@ export function VaultPathHint({ entityId }: { entityId: string }) {
   );
   if (!root || !folder || !row) return null;
   return (
-    <p className="pt-1 text-[10px] text-muted-foreground">
+    <p className="pt-1 text-xs text-muted-foreground">
       File: <span className="font-mono">{root}/{folder}/{row.path}</span> · {row.status}
     </p>
   );

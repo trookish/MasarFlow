@@ -35,25 +35,27 @@ export interface KindMeta {
   label: string;
   /** The page that shows this kind (must be a dock page). */
   route: string;
+  /** Section within a multi-view surface; omitted for the surface's first section. */
+  view?: string;
   /** Query param that selects one entity on that page; null = page has none. */
   param: string | null;
 }
 
 export const KIND_META: Record<EntityKindId, KindMeta> = {
-  note: { label: "Note", route: "/brain", param: "note" },
-  spec: { label: "Spec", route: "/specs", param: "spec" },
-  task: { label: "Task", route: "/tasks", param: "task" },
-  system: { label: "System", route: "/architecture", param: "system" },
-  commit: { label: "Commit", route: "/dashboard", param: null },
-  memory: { label: "Memory", route: "/dashboard", param: null },
-  doc: { label: "Doc", route: "/docs", param: "doc" },
-  archNode: { label: "Architecture node", route: "/architecture", param: null },
-  standard: { label: "Standard", route: "/standards", param: "standard" },
-  sprint: { label: "Sprint", route: "/sprints", param: "sprint" },
-  devlog: { label: "Dev log", route: "/devlogs", param: "devlog" },
-  canvas: { label: "Canvas", route: "/brain/canvas", param: "canvas" },
-  agent: { label: "Agent", route: "/agents", param: "agent" },
-  thread: { label: "Chat", route: "/chat", param: "thread" },
+  note: { label: "Note", route: "/capture", param: "note" },
+  spec: { label: "Spec", route: "/work", view: "specs", param: "spec" },
+  task: { label: "Task", route: "/work", param: "task" },
+  system: { label: "System", route: "/library", view: "architecture", param: "system" },
+  commit: { label: "Commit", route: "/today", view: "dashboard", param: null },
+  memory: { label: "Memory", route: "/today", view: "dashboard", param: null },
+  doc: { label: "Doc", route: "/library", param: "doc" },
+  archNode: { label: "Architecture node", route: "/library", view: "architecture", param: null },
+  standard: { label: "Standard", route: "/library", view: "standards", param: "standard" },
+  sprint: { label: "Sprint", route: "/work", view: "sprints", param: "sprint" },
+  devlog: { label: "Dev log", route: "/work", view: "log", param: "devlog" },
+  canvas: { label: "Canvas", route: "/capture", view: "canvas", param: "canvas" },
+  agent: { label: "Agent", route: "/ask", view: "agents", param: "agent" },
+  thread: { label: "Chat", route: "/ask", param: "thread" },
 };
 
 export function isEntityKind(value: unknown): value is EntityKindId {
@@ -63,9 +65,10 @@ export function isEntityKind(value: unknown): value is EntityKindId {
 /** URL (path + query) that shows `ref`. */
 export function entityHref(ref: EntityRef): string {
   const meta = KIND_META[ref.kind];
-  return meta.param
-    ? `${meta.route}?${meta.param}=${encodeURIComponent(ref.id)}`
-    : meta.route;
+  const params: string[] = [];
+  if (meta.view) params.push(`view=${encodeURIComponent(meta.view)}`);
+  if (meta.param) params.push(`${meta.param}=${encodeURIComponent(ref.id)}`);
+  return params.length ? `${meta.route}?${params.join("&")}` : meta.route;
 }
 
 /**

@@ -12,18 +12,18 @@ import { PAGE_PATHS } from "@/lib/dock/registry";
 
 describe("entityHref", () => {
   it("selects the entity on the page that shows it", () => {
-    expect(entityHref({ kind: "note", id: "n1" })).toBe("/brain?note=n1");
-    expect(entityHref({ kind: "canvas", id: "c1" })).toBe("/brain/canvas?canvas=c1");
-    expect(entityHref({ kind: "system", id: "s1" })).toBe("/architecture?system=s1");
-    expect(entityHref({ kind: "thread", id: "t1" })).toBe("/chat?thread=t1");
+    expect(entityHref({ kind: "note", id: "n1" })).toBe("/capture?note=n1");
+    expect(entityHref({ kind: "canvas", id: "c1" })).toBe("/capture?view=canvas&canvas=c1");
+    expect(entityHref({ kind: "system", id: "s1" })).toBe("/library?view=architecture&system=s1");
+    expect(entityHref({ kind: "thread", id: "t1" })).toBe("/ask?thread=t1");
   });
   it("encodes ids", () => {
-    expect(entityHref({ kind: "task", id: "a b&c" })).toBe("/tasks?task=a%20b%26c");
+    expect(entityHref({ kind: "task", id: "a b&c" })).toBe("/work?task=a%20b%26c");
   });
-  it("kinds without a selection param open their page bare", () => {
-    expect(entityHref({ kind: "commit", id: "x" })).toBe("/dashboard");
-    expect(entityHref({ kind: "memory", id: "x" })).toBe("/dashboard");
-    expect(entityHref({ kind: "archNode", id: "x" })).toBe("/architecture");
+  it("kinds without a selection param open their surface section", () => {
+    expect(entityHref({ kind: "commit", id: "x" })).toBe("/today?view=dashboard");
+    expect(entityHref({ kind: "memory", id: "x" })).toBe("/today?view=dashboard");
+    expect(entityHref({ kind: "archNode", id: "x" })).toBe("/library?view=architecture");
   });
 });
 
@@ -36,9 +36,9 @@ describe("refFromUrl", () => {
     }
   });
   it("returns null when nothing is selected", () => {
-    expect(refFromUrl("/tasks", "")).toBeNull();
-    expect(refFromUrl("/tasks", "task=")).toBeNull(); // explicit-empty = cleared (see A5)
-    expect(refFromUrl("/dashboard", "task=abc")).toBeNull(); // param on the wrong page
+    expect(refFromUrl("/work", "")).toBeNull();
+    expect(refFromUrl("/work", "task=")).toBeNull(); // explicit-empty = cleared (see A5)
+    expect(refFromUrl("/today", "task=abc")).toBeNull(); // param on the wrong page
   });
 });
 

@@ -33,7 +33,7 @@ export function CodeBlock({
   return (
     <div className="group/code my-3 overflow-hidden rounded-md border border-border bg-muted">
       <div className="flex items-center justify-between border-b border-border px-3 py-1">
-        <span className="font-mono text-[10px] tracking-wide text-muted-foreground uppercase">
+        <span className="font-mono text-xs tracking-wide text-muted-foreground uppercase">
           {language}
         </span>
         <span className="flex items-center gap-0.5">

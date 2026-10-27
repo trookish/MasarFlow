@@ -138,7 +138,7 @@ export function LinkedProjectsDialog({
       </div>
 
       <div className="space-y-3 p-5">
-        <div className="flex items-start gap-2 rounded-md border border-border bg-muted/50 px-3 py-2 text-[11px] text-muted-foreground">
+        <div className="flex items-start gap-2 rounded-md border border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
           <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
           <span>
             Reads (list/read/search) run freely. Writes and shell commands
@@ -159,7 +159,7 @@ export function LinkedProjectsDialog({
                   <FolderGit2 className="h-4 w-4 shrink-0 text-primary" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">{r.name}</div>
-                    <div className="truncate font-mono text-[11px] text-muted-foreground">
+                    <div className="truncate font-mono text-xs text-muted-foreground">
                       {r.rootPath}
                     </div>
                   </div>
@@ -227,7 +227,7 @@ export function LinkedProjectsDialog({
             )}
           </div>
           {desktop && (
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Choose the project folder. MasarFlow can only read folders you select here.
             </p>
           )}
@@ -251,7 +251,7 @@ export function LinkedProjectsDialog({
         </div>
 
         {roots.length > 0 && (
-          <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <CircleCheck className="h-3 w-3 text-success" />
             Agentic chats can now use fs_list, fs_read, fs_search, fs_write and
             shell_run on {roots.length === 1 ? "this folder" : "these folders"}.

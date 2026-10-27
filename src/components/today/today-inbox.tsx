@@ -53,7 +53,7 @@ export function TodayInbox({ projectId }: { projectId: string }) {
         <Inbox className="h-3.5 w-3.5 text-muted-foreground" />
         <h3 className="text-sm font-medium">Inbox</h3>
         <p
-          className="ml-auto text-[11px] text-muted-foreground"
+          className="ml-auto text-xs text-muted-foreground"
           title="Notes saved without a folder that have not become a task yet."
         >
           {notes.length === 0 ? "Unfiled notes" : `${notes.length} unfiled`}
@@ -80,13 +80,13 @@ export function TodayInbox({ projectId }: { projectId: string }) {
               >
                 {note.title || "Untitled note"}
               </button>
-              <span className="shrink-0 text-[11px] text-muted-foreground">
+              <span className="shrink-0 text-xs text-muted-foreground">
                 {formatRelativeTime(note.updatedAt)}
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-6 px-2 text-[11px]"
+                className="h-6 px-2 text-xs"
                 title="Create a task from this note. The note stays and links to the task."
                 onClick={() => void promoteNote(note.id, "task")}
               >
@@ -106,7 +106,7 @@ export function TodayInbox({ projectId }: { projectId: string }) {
         </ul>
       )}
       {notes.length > LIMIT && (
-        <p className="border-t border-border px-3 py-1.5 text-[11px] text-muted-foreground">
+        <p className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground">
           {notes.length - LIMIT} more in Capture, under Unfiled.
         </p>
       )}

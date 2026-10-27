@@ -172,13 +172,6 @@ export interface AllowEntry {
  */
 export const ALLOW_LIST: AllowEntry[] = [
   {
-    rule: "aria-required-children",
-    selector: 'aria-label="Dock panel tabs"',
-    owner: "C — src/components/dock/dock-group.tsx",
-    reason:
-      "The tab strip is role=tablist but its role=tab children sit inside a wrapper div, so axe sees no tab children. Fix: put role=tablist on the inner wrapper that directly holds the tabs.",
-  },
-  {
     rule: "color-contrast",
     selector: "bg-node-system",
     owner: "A — src/components/dashboard/** and src/components/tasks/**",

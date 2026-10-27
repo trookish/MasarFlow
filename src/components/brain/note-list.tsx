@@ -67,7 +67,7 @@ export function NoteList({
                   {note.excerpt}
                 </p>
               ) : null}
-              <div className="mt-1.5 flex items-center gap-2 text-[10px] text-muted-foreground">
+              <div className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="capitalize">{note.type}</span>
                 <span>·</span>
                 <span>{formatWhen(note.updatedAt)}</span>

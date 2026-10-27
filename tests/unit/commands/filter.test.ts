@@ -3,7 +3,6 @@ import { buildCommands, type CommandContext } from "@/lib/commands/registry";
 import { filterCommands, isCommandAvailable } from "@/lib/commands/filter";
 
 const CTX: CommandContext = {
-  dockEnabled: true,
   hasProject: true,
   projectId: "p1",
   theme: "dark",
@@ -20,7 +19,7 @@ describe("filterCommands", () => {
   it("matches label, group and keywords", () => {
     expect(filterCommands(commands, "terminal").map((c) => c.id)).toContain("open:/tools/terminal");
     expect(filterCommands(commands, "shell").map((c) => c.id)).toContain("open:/tools/terminal");
-    expect(filterCommands(commands, "float").map((c) => c.id)).toContain("dock:float");
+    expect(filterCommands(commands, "close").map((c) => c.id)).toContain("tab:close");
   });
 
   it("ranks a label prefix above a keyword hit", () => {
@@ -38,13 +37,14 @@ describe("filterCommands", () => {
   });
 
   it("filters by mode chips", () => {
-    const dockOnly = filterCommands(commands, "", "dock");
-    expect(dockOnly.every((c) => c.group === "Dock")).toBe(true);
+    const tabOnly = filterCommands(commands, "", "tabs");
+    expect(tabOnly.every((c) => c.group === "Tabs")).toBe(true);
     const gotoOnly = filterCommands(commands, "", "go");
     expect(gotoOnly.every((c) => c.group === "Go to")).toBe(true);
   });
 
-  it("availability respects the context", () => {
-    expect(isCommandAvailable({ id: "x", label: "X", group: "Dock", run: () => {}, tone: "default" }, CTX)).toBe(true);
+  it("availability respects the project context", () => {
+    expect(isCommandAvailable({ id: "x", label: "X", group: "Tabs", run: () => {}, tone: "default" }, CTX)).toBe(true);
+    expect(isCommandAvailable({ id: "x", label: "X", group: "Tabs", run: () => {}, tone: "default" }, { ...CTX, hasProject: false })).toBe(false);
   });
 });

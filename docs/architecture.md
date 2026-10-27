@@ -1,6 +1,6 @@
 # Architecture
 
-The shape of MasarFlow 0.2, for contributors. Decisions referenced as D1–D12 / Q3 live in the master plan
+The shape of MasarFlow 0.3, for contributors. Decisions referenced as D1–D12 / Q3 live in the master plan
 (`.hermes/plans/`); this page is the durable summary.
 
 ## One app (D1)
@@ -34,20 +34,73 @@ is retired.
 ┌──────────────▼────────────── Renderer ────┐
 │ Dock + pages ◄─ EntityRef/openEntity/     │
 │   ActiveContext (derived from dock)       │
-│ Dexie ── hooks ──► activity log           │
+│ commands ──► Dexie + events ──► activity │
 │ Embeddings Web Worker (transformers.js)   │
-│ Chat ── context engine ── workspace tools │
+│ runAgentTurn ── toolsets ── approvals     │
 └───────────────────────────────────────────┘
 ```
 
-## Data (D6)
+## Six surfaces
 
-IndexedDB stays the system of record in 0.2; safety comes from automatic rolling backups and a
-user-visible markdown mirror:
+The sidebar shows six surfaces; each hosts the pages it owns as sections (`src/lib/navigation/surfaces.ts`).
+Standard is the default layout; Studio (the dock) is opt-in and keeps at most four panels mounted, unmounting
+the least recently shown hidden tab (`src/lib/dock/mount-cap.ts`).
 
-- `%APPDATA%\MasarFlow\` — `logs/`, `backups/`, `secrets.json` (encrypted), `roots.json`.
-- **Vault mirror** — notes, docs, specs and tasks exist as plain files (frontmatter = properties) that
-  Obsidian, VS Code and git can open.
+| Surface | Sections |
+| --- | --- |
+| Today | Focus (overdue, due today, in progress, inbox), Dashboard |
+| Capture | Notes, Canvas, Templates, Files |
+| Work | Task boards, Specifications, Sprints, Dev logs |
+| Library | Documentation, Standards, Architecture, Knowledge graph, Semantic search |
+| Ask | Chat, AI agents, AI workflow |
+| System | Settings, Control Center, Git, Sync, Project watcher, Features, Terminal, Logs, System info |
+
+## One write path (0.3)
+
+Every user-visible change goes through a domain command (`src/lib/domain/commands/`). `runCommand` opens one
+Dexie read-write transaction over the tables the command touches plus `events`, and writes the events the
+command emitted at the end of that transaction: the feed never disagrees with the data, and a throw rolls
+back both. Nothing outside IndexedDB is awaited inside a command (secret store, network, IPC).
+
+```
+UI / AI tool / sync ──► command (tasks, notes, projects, trash, promote)
+                          │  one transaction
+                          ├─► tables (tasks, specs, notes, links, ...)
+                          └─► events  ──► activity, Today, replicas
+```
+
+- **Task model** (`src/lib/domain/task-model.ts`): status is the only input to progress; a parent averages
+  its subtasks; a spec's progress is the share of its tasks that are done. `updateTask` refreshes the old
+  and new spec and the parent chain in the same transaction.
+- **Promote**: a note becomes a task, spec or doc with a `relates` link back to the note.
+- **Trash**: deletes are soft, restorable from the trash, and replicas treat them as deletions.
+
+## Replicas: the vault mirror (0.3)
+
+One engine (`src/lib/vault/engine.ts`, planned by `plan.ts`, run through `runner.ts` under `runExclusive`)
+keeps notes, docs, specs and tasks as markdown files. It reconciles per adapter (upsert, never replace-all):
+
+- an app change writes the file; an unchanged file of a deleted entity moves to `.masarflow-trash/`;
+- a file edit imports when auto-import is on, otherwise it is recorded as `pending-import`;
+- edits on both sides, or an edited file of a deleted entity, raise a conflict the user answers;
+- untracked files are adopted only when the user asks (Import untracked).
+
+## One AI runtime (0.3)
+
+Chat, AI agents and AI workflow all call `runAgentTurn` (`src/lib/ai/turn/run-agent-turn.ts`): context
+assembly, a prompt budget, provider streaming, tool calls through coarse toolsets (`toolsets.ts`), and
+approval for writes through one `ApprovalCard`. Writes made by the AI are commands with actor `ai`, so they
+show in the feed and undo like any other change. Agent steps are pruned by retention
+(`src/lib/db/retention.ts`); chat messages are only removed by Clear thread history.
+
+## Data
+
+IndexedDB (Dexie, schema version 15) is the system of record; safety comes from automatic rolling backups
+and the user-visible markdown mirror:
+
+- `%APPDATA%\\MasarFlow\\` — `logs/`, `backups/`, `secrets.json` (encrypted), `roots.json`.
+- **Backups** — format version 1, data version 3. One invalid row refuses the whole file, so a restore never
+  half-applies. `pnpm doctor:data` checks a profile for dangling links, orphans and drift.
 - **Embeddings** — `@huggingface/transformers` (ONNX/WASM) in a Web Worker; vectors in Dexie; brute-force
   cosine search. No Python, no external service.
 
@@ -89,8 +142,10 @@ src/
   app/            App Router: (workspace) routes + /api routes
   components/     Feature components per module + ui/ primitives
   lib/
-    ai/           providers, agent loop, context engine, workspace tools
-    db/           Dexie schema, models, repos, backups, demo seed
+    ai/           providers, runAgentTurn, toolsets, context engine, undo
+    db/           Dexie schema, models, repos, backups, retention, demo seed
+    domain/       commands, events, task model (the one write path)
+    navigation/   the six surfaces and their sections
     vault/        mirror engine, frontmatter, daily notes, quick switch
     entities/     EntityRef registry + openEntity
   ...

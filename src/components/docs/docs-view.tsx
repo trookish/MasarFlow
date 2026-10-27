@@ -133,7 +133,7 @@ export function DocsView() {
           ) : (
             groups.map((group) => (
               <div key={group.category} className="mb-3">
-                <p className="px-2 pb-1 text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase">
+                <p className="px-2 pb-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                   {group.category}
                 </p>
                 {group.items.map((d) => (

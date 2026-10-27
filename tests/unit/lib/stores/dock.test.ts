@@ -3,146 +3,73 @@ import { memoryStorage, useDockStore } from "@/lib/stores/dock";
 import { collectPages } from "@/lib/dock/tree";
 
 function project() {
-  const s = useDockStore.getState();
-  const id = s.activeProjectId;
+  const state = useDockStore.getState();
+  const id = state.activeProjectId;
   if (!id) throw new Error("no active project in test");
-  return s.projects[id];
+  return state.projects[id];
+}
+
+function pages() {
+  return collectPages(project().workspaces.Workspace.tree);
 }
 
 beforeEach(() => {
-  useDockStore.setState({ projects: {}, activeProjectId: null, drag: null });
+  useDockStore.setState({ projects: {}, activeProjectId: null, drag: null, closedTabs: {} });
 });
 
-describe("project lifecycle", () => {
-  it("getProject is null with no active project", () => {
-    expect(useDockStore.getState().getProject()).toBeNull();
-  });
-
-  it("setProject lazily initializes a default dock state", () => {
+describe("project tab lifecycle", () => {
+  it("starts a new project with one Today tab", () => {
     useDockStore.getState().setProject("p1");
-    const s = project();
-    expect(s.version).toBe(2);
-    expect(s.activeWorkspace).toBe("Development");
-    expect(collectPages(s.workspaces.Development.tree)).toContain("/dashboard");
+    expect(project().version).toBe(2);
+    expect(project().activeWorkspace).toBe("Workspace");
+    expect(pages()).toEqual(["/today"]);
   });
 
-  it("setProject(null) keeps saved projects but clears the active id", () => {
+  it("keeps each project's open tabs and selection independent", () => {
+    const store = useDockStore.getState();
+    store.setProject("p1");
+    store.open("/work");
+    store.setProject("p2");
+    store.open("/ask");
+    store.setProject("p1");
+    expect(pages()).toEqual(["/today", "/work"]);
+    expect(project().focusGroupId).toBe("workspace-tabs");
+    store.setProject("p2");
+    expect(pages()).toEqual(["/today", "/ask"]);
+  });
+
+  it("canonicalizes legacy pages when opening them", () => {
     useDockStore.getState().setProject("p1");
-    useDockStore.getState().setProject(null);
-    expect(useDockStore.getState().activeProjectId).toBeNull();
-    expect(useDockStore.getState().getProject()).toBeNull();
+    useDockStore.getState().open("/dashboard");
+    expect(pages()).toEqual(["/today"]);
+    expect(project().workspaces.Workspace.params["/today"]).toBe("view=dashboard");
   });
 
-  it("reopening a project restores its saved state", () => {
+  it("closes and reopens a tab with its selection parameters", () => {
+    const store = useDockStore.getState();
+    store.setProject("p1");
+    store.open("/ask?thread=thread-1");
+    store.close("/ask?thread=thread-1");
+    expect(pages()).not.toContain("/ask");
+    expect(useDockStore.getState().closedTabs.p1).toEqual(["/ask?thread=thread-1"]);
+    store.reopenClosedTab();
+    expect(pages()).toContain("/ask");
+    expect(project().workspaces.Workspace.params["/ask"]).toBe("thread=thread-1");
+    expect(useDockStore.getState().closedTabs.p1).toEqual([]);
+  });
+
+  it("never leaves the workspace without a tab", () => {
+    const store = useDockStore.getState();
+    store.setProject("p1");
+    store.close("/today");
+    expect(pages()).toEqual(["/today"]);
+  });
+
+  it("reopen is a no-op without an active project or closed tab", () => {
+    expect(() => useDockStore.getState().reopenClosedTab()).not.toThrow();
     useDockStore.getState().setProject("p1");
-    useDockStore.getState().open("/brain");
-    const saved = project();
-    useDockStore.getState().setProject("p2");
-    useDockStore.getState().setProject("p1");
-    expect(useDockStore.getState().projects.p1).toBe(saved);
-  });
-});
-
-describe("action wrappers", () => {
-  beforeEach(() => {
-    useDockStore.getState().setProject("p1");
-  });
-
-  it("open adds a panel to the tree", () => {
-    useDockStore.getState().open("/brain");
-    const s = project();
-    expect(collectPages(s.workspaces.Development.tree)).toContain("/brain");
-    expect(s.focusGroupId).not.toBeNull();
-  });
-
-  it("close removes a panel everywhere", () => {
-    useDockStore.getState().open("/brain");
-    useDockStore.getState().close("/brain");
-    const s = project();
-    expect(collectPages(s.workspaces.Development.tree)).not.toContain("/brain");
-  });
-
-  it("resize updates the targeted split ratio", () => {
-    const s0 = project();
-    const rootId = s0.workspaces.Development.tree.id;
-    useDockStore.getState().resize(rootId, 0.7);
-    const s = project();
-    const root = s.workspaces.Development.tree;
-    if (root.type !== "split") return expect.unreachable();
-    expect(root.ratio).toBe(0.7);
-  });
-
-  it("float + dockFloater roundtrip", () => {
-    useDockStore.getState().float("/chat", { x: 10, y: 10 });
-    let s = project();
-    expect(s.floaters).toHaveLength(1);
-    const fid = s.floaters[0].id;
-    expect(collectPages(s.workspaces.Development.tree)).not.toContain("/chat");
-
-    useDockStore.getState().dockFloater(fid, "root", "tab");
-    s = project();
-    expect(s.floaters).toHaveLength(0);
-    expect(collectPages(s.workspaces.Development.tree)).toContain("/chat");
-  });
-
-  it("actions no-op without an active project", () => {
-    useDockStore.setState({ activeProjectId: null });
-    expect(() => useDockStore.getState().open("/brain")).not.toThrow();
-    expect(useDockStore.getState().projects.p1).toBeDefined(); // untouched
-  });
-
-  it("move updates the tree", () => {
-    useDockStore.getState().open("/brain");
-    const s0 = project();
-    const target = s0.workspaces.Development.tree.id;
-    useDockStore.getState().move("/brain", target, "left");
-    const s = project();
-    expect(collectPages(s.workspaces.Development.tree)).toContain("/brain");
-  });
-});
-
-describe("workspaces + drag", () => {
-  beforeEach(() => {
-    useDockStore.getState().setProject("p1");
-  });
-
-  it("setWorkspace switches the active workspace", () => {
-    useDockStore.getState().setWorkspace("Planning");
-    expect(project().activeWorkspace).toBe("Planning");
-  });
-
-  it("saveWorkspaceAs copies and switches", () => {
-    useDockStore.getState().saveWorkspaceAs("Mine");
-    expect(project().activeWorkspace).toBe("Mine");
-    expect(project().workspaces.Mine).toBeDefined();
-  });
-
-  it("resetWorkspace restores the preset tree", () => {
-    useDockStore.getState().setWorkspace("Development");
-    useDockStore.getState().open("/brain");
-    useDockStore.getState().resetWorkspace();
-    const s = project();
-    expect(collectPages(s.workspaces.Development.tree).sort()).toEqual(
-      ["/dashboard", "/chat"].sort(),
-    );
-  });
-
-  it("setDrag toggles transient drag state and is excluded from persistence", () => {
-    const drag = {
-      source: { kind: "panel", panelId: "/brain", nodeId: "n1" } as const,
-      pointer: { x: 5, y: 5 },
-      zone: null,
-      targetId: null,
-      refused: null,
-    };
-    useDockStore.getState().setDrag(drag);
-    expect(useDockStore.getState().drag).toEqual(drag);
-
-    const partial = useDockStore.persist.getOptions().partialize?.(
-      useDockStore.getState() as never,
-    ) as Record<string, unknown>;
-    expect(partial).not.toHaveProperty("drag");
-    expect(partial).toHaveProperty("projects");
+    expect(() => useDockStore.getState().reopenClosedTab()).not.toThrow();
+    expect(pages()).toEqual(["/today"]);
   });
 });
 

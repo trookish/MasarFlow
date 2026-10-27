@@ -95,7 +95,7 @@ export interface LaunchOptions {
 }
 
 /** Persists the layout and reloads the renderer (the ui store reads it on start). */
-async function applyLayout(page: Page, layout: "studio" | "standard"): Promise<void> {
+export async function applyLayout(page: Page, layout: "studio" | "standard"): Promise<void> {
   await page.evaluate((mode) => {
     const raw = localStorage.getItem("masarflow-ui");
     const parsed = raw ? (JSON.parse(raw) as { state?: Record<string, unknown>; version?: number }) : {};

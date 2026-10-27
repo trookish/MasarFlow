@@ -1268,7 +1268,7 @@ export async function executeWorkspaceTool(
             page: p.path,
             label: p.label,
             focused: p.focused,
-            floating: p.floating,
+
             entity: p.ref
               ? { kind: p.ref.kind, id: p.ref.id, title: (await titleOfEntity(p.ref)) ?? null }
               : null,

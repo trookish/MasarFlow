@@ -25,13 +25,13 @@ export const DEVLOG_TYPE_LABEL: Record<DevLogType, string> = {
 
 /** Tailwind text-color class per type (backed by themeable --node-* tokens). */
 export const DEVLOG_TYPE_COLOR: Record<DevLogType, string> = {
-  commit: "text-node-commit",
-  change: "text-node-idea",
-  system: "text-node-system",
-  agent: "text-node-research",
-  note: "text-node-note",
-  spec: "text-node-spec",
-  task: "text-node-task",
+  commit: "text-node-commit-fg",
+  change: "text-node-idea-fg",
+  system: "text-node-system-fg",
+  agent: "text-node-research-fg",
+  note: "text-node-note-fg",
+  spec: "text-node-spec-fg",
+  task: "text-node-task-fg",
 };
 
 /** Local calendar-day key (YYYY-MM-DD) for grouping. */

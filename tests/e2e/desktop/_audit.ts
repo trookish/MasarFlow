@@ -26,7 +26,8 @@ export function navRoutes(): Array<{ label: string; href: string }> {
 
 /** Full navigation to `href` inside the app origin, then wait for the workspace. */
 export async function openRoute(page: Page, href: string): Promise<void> {
-  const origin = new URL(page.url()).origin;
+  // `new URL(...).origin` is "null" for the custom masarflow:// scheme, so take scheme + host as text.
+  const origin = /^[a-z][a-z0-9+.-]*:\/\/[^/]+/i.exec(page.url())?.[0] ?? "";
   await page.goto(`${origin}${href}`);
   await waitForShellReady(page);
   await page.waitForTimeout(400);

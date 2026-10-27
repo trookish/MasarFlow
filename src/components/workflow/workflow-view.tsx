@@ -544,12 +544,12 @@ function RunDetail({
 
 function StatusIcon({ status }: { status: string }) {
   if (status === "running")
-    return <Loader2 className="h-4 w-4 shrink-0 animate-spin text-node-idea" />;
+    return <Loader2 className="h-4 w-4 shrink-0 animate-spin text-node-idea-fg" />;
   if (status === "done")
-    return <Check className="h-4 w-4 shrink-0 text-node-lore" />;
+    return <Check className="h-4 w-4 shrink-0 text-node-lore-fg" />;
   if (status === "error")
-    return <AlertCircle className="h-4 w-4 shrink-0 text-node-decision" />;
-  return <Circle className="h-4 w-4 shrink-0 text-muted-foreground/40" />;
+    return <AlertCircle className="h-4 w-4 shrink-0 text-node-decision-fg" />;
+  return <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />;
 }
 
 // ── Shared inline pickers (mirror Chat / Agents) ─────────────────────────────

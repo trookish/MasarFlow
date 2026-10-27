@@ -41,7 +41,7 @@ export function PropertiesPanel({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Properties</span>
+        <span className="text-xs uppercase tracking-wide text-muted-foreground">Properties</span>
         <button
           type="button"
           disabled={disabled}
@@ -73,7 +73,7 @@ export function PropertiesPanel({
             placeholder={row.kind === "list" ? "a, b" : "value"}
             className="h-7 flex-1 text-xs"
           />
-          <span className="w-14 text-[10px] text-muted-foreground">{row.kind}</span>
+          <span className="w-14 text-xs text-muted-foreground">{row.kind}</span>
           <button
             type="button"
             disabled={disabled}

@@ -51,7 +51,7 @@ export class PanelErrorBoundary extends Component<Props, State> {
             from the command palette. The technical detail is in the developer console.
           </p>
         </div>
-        <p className="max-w-md truncate rounded border border-border bg-card px-2 py-1 font-mono text-[11px] text-muted-foreground">
+        <p className="max-w-md truncate rounded border border-border bg-card px-2 py-1 font-mono text-xs text-muted-foreground">
           {error.message}
         </p>
         <button

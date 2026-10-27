@@ -134,7 +134,7 @@ export function ArchitectureView() {
                       <Badge variant="outline" className="capitalize">
                         {s.category}
                       </Badge>
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         {s.dependencies.length} dep
                         {s.dependencies.length === 1 ? "" : "s"}
                       </span>

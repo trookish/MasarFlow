@@ -25,7 +25,7 @@ export interface DashboardSettings {
 }
 
 export interface BrainSettings {
-  defaultView: "notes" | "canvas" | "templates" | "graph";
+  defaultView: "notes" | "canvas" | "templates";
   showWordCount: boolean;
   lineWrap: boolean;
 }

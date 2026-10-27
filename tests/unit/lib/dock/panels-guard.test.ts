@@ -25,8 +25,8 @@ describe("panel loader", () => {
   });
 
   it("wraps panels in the error boundary", () => {
-    const group = readSources().find((s) => s.path === "src/components/dock/dock-group.tsx");
-    expect(group?.text ?? "").toContain("<PanelErrorBoundary panelId={panelId}>");
+    const tabs = readSources().find((s) => s.path === "src/components/shell/workspace-tabs.tsx");
+    expect(tabs?.text ?? "").toContain("<PanelErrorBoundary panelId={panelId}>");
   });
 
   it("registers the Today view and the three tool panels", () => {

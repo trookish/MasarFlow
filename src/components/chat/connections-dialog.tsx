@@ -314,7 +314,7 @@ function AddConnection({
         />
       </Field>
       {isCustom && baseUrl.trim() && !baseUrlOk && (
-        <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+        <p className="flex items-center gap-1.5 text-xs text-destructive">
           <CircleAlert className="h-3 w-3 shrink-0" />
           Only http: and https: base URLs are accepted (e.g.
           http://127.0.0.1:1234/v1).
@@ -350,7 +350,7 @@ function AddConnection({
             {testResult && (
               <span
                 className={cn(
-                  "flex min-w-0 items-start gap-1.5 text-[11px]",
+                  "flex min-w-0 items-start gap-1.5 text-xs",
                   testResult.ok ? "text-muted-foreground" : "text-destructive",
                 )}
               >
@@ -450,7 +450,7 @@ function ModelIdField({
       {models && (
         <div className="flex flex-wrap gap-1">
           {models.length === 0 && (
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               The endpoint listed no models — type the model id directly.
             </span>
           )}
@@ -460,7 +460,7 @@ function ModelIdField({
               type="button"
               onClick={() => onChange(m)}
               className={cn(
-                "rounded border border-border px-1.5 py-0.5 font-mono text-[11px] hover:bg-accent",
+                "rounded border border-border px-1.5 py-0.5 font-mono text-xs hover:bg-accent",
                 m === value && "border-primary bg-primary/10",
               )}
             >
@@ -470,7 +470,7 @@ function ModelIdField({
         </div>
       )}
       {error && (
-        <p className="flex items-start gap-1.5 text-[11px] text-destructive">
+        <p className="flex items-start gap-1.5 text-xs text-destructive">
           <CircleAlert className="mt-0.5 h-3 w-3 shrink-0" />
           <span className="break-all">{error}</span>
         </p>
@@ -597,7 +597,7 @@ function ConnectionRow({
           {customResult && (
             <div
               className={cn(
-                "flex items-start gap-1.5 text-[11px]",
+                "flex items-start gap-1.5 text-xs",
                 customResult.ok ? "text-muted-foreground" : "text-destructive",
               )}
             >
@@ -614,7 +614,7 @@ function ConnectionRow({
       {result && (
         <div
           className={cn(
-            "mt-2 flex items-start gap-1.5 text-[11px]",
+            "mt-2 flex items-start gap-1.5 text-xs",
             result.ok && result.tools !== false
               ? "text-muted-foreground"
               : "text-destructive",

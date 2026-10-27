@@ -100,7 +100,7 @@ export function CategoryPicker({
               placeholder="Category name…"
               className="h-8 text-sm"
             />
-            <p className="mt-1 px-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 px-1 text-xs text-muted-foreground">
               Press Enter to add and select.
             </p>
           </div>

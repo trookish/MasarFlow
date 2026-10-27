@@ -19,7 +19,7 @@
   --popover: #ffffff;
   --popover-foreground: #18181b;
   --muted: #f4f4f5;
-  --muted-foreground: #6b7280;
+  --muted-foreground: #626975;
   --secondary: #f4f4f5;
   --secondary-foreground: #18181b;
   --accent: #f1f1f4;
@@ -53,6 +53,20 @@
   --node-task: #14b8a6;
   --node-commit: #fb923c;
   --node-system-module: #0ea5e9;
+
+  /* Text on entity badges (AA 4.5:1 over the 15% tint on card; tests/unit/repo-truth/contrast.test.ts). */
+  --node-idea-fg: #92400e;
+  --node-system-fg: #1d4ed8;
+  --node-mechanic-fg: #0e7490;
+  --node-research-fg: #6d28d9;
+  --node-experiment-fg: #be185d;
+  --node-note-fg: #52525b;
+  --node-lore-fg: #047857;
+  --node-decision-fg: #be123c;
+  --node-spec-fg: #4338ca;
+  --node-task-fg: #0f766e;
+  --node-commit-fg: #c2410c;
+  --node-system-module-fg: #0369a1;
 
   /* Syntax highlighting (hljs) */
   --code-keyword: #7c3aed;
@@ -99,6 +113,19 @@
   --code-built-in: #f9a8d4;
   --code-type: #c4b5fd;
   --code-literal: #fca5a5;
+  /* Text on entity badges, dark theme. */
+  --node-idea-fg: #fcd34d;
+  --node-system-fg: #93c5fd;
+  --node-mechanic-fg: #67e8f9;
+  --node-research-fg: #c4b5fd;
+  --node-experiment-fg: #f9a8d4;
+  --node-note-fg: #d4d4d8;
+  --node-lore-fg: #6ee7b7;
+  --node-decision-fg: #fda4af;
+  --node-spec-fg: #a5b4fc;
+  --node-task-fg: #5eead4;
+  --node-commit-fg: #fdba74;
+  --node-system-module-fg: #7dd3fc;
 }
 
 /* ── AMOLED surface ──────────────────────────────────────────────────────
@@ -172,6 +199,18 @@
   --color-node-task: var(--node-task);
   --color-node-commit: var(--node-commit);
   --color-node-system-module: var(--node-system-module);
+  --color-node-idea-fg: var(--node-idea-fg);
+  --color-node-system-fg: var(--node-system-fg);
+  --color-node-mechanic-fg: var(--node-mechanic-fg);
+  --color-node-research-fg: var(--node-research-fg);
+  --color-node-experiment-fg: var(--node-experiment-fg);
+  --color-node-note-fg: var(--node-note-fg);
+  --color-node-lore-fg: var(--node-lore-fg);
+  --color-node-decision-fg: var(--node-decision-fg);
+  --color-node-spec-fg: var(--node-spec-fg);
+  --color-node-task-fg: var(--node-task-fg);
+  --color-node-commit-fg: var(--node-commit-fg);
+  --color-node-system-module-fg: var(--node-system-module-fg);
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);

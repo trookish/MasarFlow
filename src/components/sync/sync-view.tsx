@@ -75,12 +75,12 @@ const AUTO_SYNC_MS: Record<string, number> = {
 
 // Status → pill colors (themeable node tokens).
 const STATUS_STYLE: Record<SyncStatus, string> = {
-  new: "bg-node-spec/15 text-node-spec",
-  local_modified: "bg-node-idea/15 text-node-idea",
-  remote_modified: "bg-node-system/15 text-node-system",
-  conflict: "bg-node-decision/15 text-node-decision",
-  synced: "bg-node-lore/15 text-node-lore",
-  deleted: "bg-node-task/15 text-node-task",
+  new: "bg-node-spec/15 text-node-spec-fg",
+  local_modified: "bg-node-idea/15 text-node-idea-fg",
+  remote_modified: "bg-node-system/15 text-node-system-fg",
+  conflict: "bg-node-decision/15 text-node-decision-fg",
+  synced: "bg-node-lore/15 text-node-lore-fg",
+  deleted: "bg-node-task/15 text-node-task-fg",
 };
 
 // Filter bar order.
@@ -861,7 +861,7 @@ function ObsidianPanel({
     <div className="shrink-0 space-y-3 border-b border-border bg-muted/20 px-4 py-3">
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-muted-foreground">
             Server URL
           </span>
           <Input
@@ -872,7 +872,7 @@ function ObsidianPanel({
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-muted-foreground">
             API key
           </span>
           <Input
@@ -892,7 +892,7 @@ function ObsidianPanel({
           Test connection
         </Button>
         <label className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-muted-foreground">
             Templates folder
           </span>
           <Input
@@ -971,7 +971,7 @@ function ObsidianGuide({ onClose }: { onClose: () => void }) {
       <ol className="space-y-1.5">
         {steps.map((s, i) => (
           <li key={i} className="flex gap-2">
-            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
               {i + 1}
             </span>
             <span className="text-muted-foreground">{s}</span>
@@ -1047,7 +1047,7 @@ function FileRow({ file }: { file: SyncFile }) {
       </span>
       <span
         className={cn(
-          "rounded-full px-2 py-0.5 text-[11px] font-medium",
+          "rounded-full px-2 py-0.5 text-xs font-medium",
           STATUS_STYLE[status],
         )}
       >

@@ -363,7 +363,7 @@ function AgentWorkspace({
               </Button>
             )}
             {provider && !modelSupportsTools(provider, effModel) && (
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 This model can’t call tools — the agent will advise instead of act.
               </span>
             )}
@@ -441,12 +441,12 @@ function AgentWorkspace({
                     <div className="flex items-center gap-2 border-b border-border px-3 py-2">
                       <span
                         className={cn(
-                          "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                          "rounded-full px-2 py-0.5 text-xs font-medium",
                           r.status === "running" || live
-                            ? "bg-node-idea/15 text-node-idea"
+                            ? "bg-node-idea/15 text-node-idea-fg"
                             : isError
-                              ? "bg-node-decision/15 text-node-decision"
-                              : "bg-node-lore/15 text-node-lore",
+                              ? "bg-node-decision/15 text-node-decision-fg"
+                              : "bg-node-lore/15 text-node-lore-fg",
                         )}
                       >
                         {live ? "running" : r.status}
@@ -517,7 +517,7 @@ function RunToolSteps({ runId }: { runId: string }) {
     return (
       <div className="border-b border-border px-3 py-2">
         {notices.map((n) => (
-          <p key={n.id} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <p key={n.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Info className="h-3 w-3 shrink-0" /> {n.content}
           </p>
         ))}
@@ -528,7 +528,7 @@ function RunToolSteps({ runId }: { runId: string }) {
   return (
     <div className="space-y-1.5 border-b border-border px-3 py-2">
       {notices.map((n) => (
-        <p key={n.id} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <p key={n.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Info className="h-3 w-3 shrink-0" /> {n.content}
         </p>
       ))}
@@ -558,7 +558,7 @@ function RunToolSteps({ runId }: { runId: string }) {
               key={s.id}
               title={summary}
               className={cn(
-                "inline-flex items-center gap-1 rounded-full border border-border bg-accent/40 px-2 py-0.5 text-[11px]",
+                "inline-flex items-center gap-1 rounded-full border border-border bg-accent/40 px-2 py-0.5 text-xs",
                 ok ? "text-muted-foreground" : "text-destructive",
               )}
             >
@@ -581,7 +581,7 @@ function AgentThinking({ text }: { text: string }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+        className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
       >
         {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
         <BrainCircuit className="h-3 w-3" /> Thinking

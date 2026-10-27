@@ -329,7 +329,7 @@ export function SearchView() {
           })}
           <span
             data-testid="semantic-index-status"
-            className="ml-auto pl-2 text-[11px] text-muted-foreground"
+            className="ml-auto pl-2 text-xs text-muted-foreground"
           >
             {status.index}
             {query.trim() && (
@@ -400,7 +400,7 @@ export function SearchView() {
                             <span className="truncate text-sm font-medium">
                               <Highlighted segments={titleSegs} />
                             </span>
-                            <span className="shrink-0 text-[10px] font-semibold tracking-wide text-muted-foreground/70 uppercase">
+                            <span className="shrink-0 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                               {kindLabel(r.item.kind)}
                             </span>
                           </div>
@@ -410,7 +410,7 @@ export function SearchView() {
                             </div>
                           )}
                           {bodySnip.text && (
-                            <div className="mt-0.5 line-clamp-1 text-xs text-muted-foreground/80">
+                            <div className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                               <Highlighted segments={bodySegs} />
                             </div>
                           )}

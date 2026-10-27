@@ -24,21 +24,15 @@ const GROUPS: { title: string; items: { keys: string[]; label: string }[] }[] =
       ],
     },
     {
-      title: "Dock (when enabled)",
+      title: "Project tabs",
       items: [
-        { keys: ["Alt", "←"], label: "Focus previous tab in this group" },
-        { keys: ["Alt", "→"], label: "Focus next tab in this group" },
-        { keys: ["Alt", "Shift", "←"], label: "Move focus to the group on the left" },
-        { keys: ["Alt", "Shift", "→"], label: "Move focus to the group on the right" },
-        { keys: ["Alt", "Shift", "↑"], label: "Move focus to the group above" },
-        { keys: ["Alt", "Shift", "↓"], label: "Move focus to the group below" },
-        { keys: ["Alt", "F"], label: "Float the focused panel" },
-        { keys: ["Alt", "M"], label: "Maximize / restore the focused panel" },
-        { keys: ["Alt", "C"], label: "Collapse / restore the focused panel" },
-        { keys: ["Alt", "W"], label: "Close the focused panel (undo available)" },
-        { keys: ["Ctrl", "Shift", "K"], label: "Close the focused panel" },
-        { keys: ["Drag"], label: "Move a tab or panel into another split" },
-        { keys: ["Double-click"], label: "Reset a split to 50 / 50" },
+        { keys: ["⌘", "Tab"], label: "Focus next tab" },
+        { keys: ["⌘", "Shift", "Tab"], label: "Focus previous tab" },
+        { keys: ["⌘", "1–9"], label: "Focus a tab by position" },
+        { keys: ["⌘", "W"], label: "Close the focused tab" },
+        { keys: ["Ctrl", "Shift", "T"], label: "Reopen the last closed tab" },
+        { keys: ["Alt", "Shift", "← / →"], label: "Reorder the focused tab" },
+        { keys: ["← / →"], label: "Move between tabs when the tab strip is focused" },
       ],
     },
     {
@@ -49,7 +43,7 @@ const GROUPS: { title: string; items: { keys: string[]; label: string }[] }[] =
       ],
     },
     {
-      title: "Brain",
+      title: "Capture",
       items: [
         { keys: ["[", "["], label: "Insert a wikilink (in editor)" },
         { keys: ["⌘", "S"], label: "Save note (auto-saves too)" },

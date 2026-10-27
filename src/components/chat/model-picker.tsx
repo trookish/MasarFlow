@@ -177,7 +177,7 @@ export function UnifiedModelPicker({
                 type="button"
                 onClick={() => setScope(null)}
                 className={cn(
-                  "rounded border border-border px-1.5 py-0.5 text-[11px]",
+                  "rounded border border-border px-1.5 py-0.5 text-xs",
                   !scope && "border-primary bg-primary/10",
                 )}
               >
@@ -189,7 +189,7 @@ export function UnifiedModelPicker({
                   type="button"
                   onClick={() => setScope(c.id)}
                   className={cn(
-                    "max-w-32 truncate rounded border border-border px-1.5 py-0.5 text-[11px]",
+                    "max-w-32 truncate rounded border border-border px-1.5 py-0.5 text-xs",
                     scope === c.id && "border-primary bg-primary/10",
                   )}
                 >
@@ -218,7 +218,7 @@ export function UnifiedModelPicker({
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block truncate">{e.model.name}</span>
-                      <span className="block truncate text-[11px] text-muted-foreground">
+                      <span className="block truncate text-xs text-muted-foreground">
                         {e.connectionLabel}
                       </span>
                     </span>
@@ -258,7 +258,7 @@ export function UnifiedModelPicker({
           <button
             type="button"
             onClick={onManageConnections}
-            className="flex w-full items-center gap-2 border-t border-border px-3 py-2 text-[11px] text-muted-foreground hover:text-foreground"
+            className="flex w-full items-center gap-2 border-t border-border px-3 py-2 text-xs text-muted-foreground hover:text-foreground"
           >
             <Settings2 className="h-3 w-3" /> Manage connections…
           </button>

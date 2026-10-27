@@ -52,7 +52,7 @@ import {
   type LogoColorMode,
   type LogoBgMode,
 } from "@/lib/stores/theme";
-import { useUIStore } from "@/lib/stores/ui";
+
 import { MasarFlowLogo } from "@/components/shell/logo";
 import { useProjectStore } from "@/lib/stores/project";
 import { useActiveProject } from "@/lib/hooks/use-project";
@@ -696,44 +696,16 @@ function RangeField({
 }
 
 function InterfaceSection() {
-  const taskbarDirection = useUIStore((s) => s.taskbarDirection);
-  const setTaskbarDirection = useUIStore((s) => s.setTaskbarDirection);
-  const layoutMode = useUIStore((s) => s.layoutMode);
-  const setLayoutMode = useUIStore((s) => s.setLayoutMode);
-
   return (
     <SectionPanel
       title="Interface"
-      description="Placement and behavior of the navigation taskbar."
-      onReset={() => setTaskbarDirection("bottom")}
+      description="Six surfaces, one project tab strip, and no window-layout management."
     >
-      <SettingRow
-        label="Layout"
-        description="Standard shows six surfaces (Today, Capture, Work, Library, Ask, System) with one page at a time. Studio turns every page into a draggable panel with splits, tab groups, floating windows and per-project workspaces."
-      >
-        <SegmentedControl<"standard" | "studio">
-          value={layoutMode}
-          options={[
-            { value: "standard", label: "Standard" },
-            { value: "studio", label: "Studio" },
-          ]}
-          onChange={setLayoutMode}
-        />
-      </SettingRow>
-      <SettingRow
-        label="Taskbar direction (Studio)"
-        description="Left docks the nav rail on the left edge, Right mirrors it to the right edge, and Bottom turns it into a floating dock — click a group to pop its pages up above it."
-      >
-        <SegmentedControl
-          value={taskbarDirection}
-          options={[
-            { value: "left", label: "Left" },
-            { value: "bottom", label: "Bottom" },
-            { value: "right", label: "Right" },
-          ]}
-          onChange={setTaskbarDirection}
-        />
-      </SettingRow>
+
+      <p className="max-w-xl text-sm leading-6 text-muted-foreground">
+        Navigate between six surfaces in the sidebar. Each project keeps its own linear tabs;
+        open, close, reorder, and reopen them without managing window layouts.
+      </p>
     </SectionPanel>
   );
 }
@@ -987,7 +959,7 @@ function BrainSection() {
     >
       <SettingRow
         label="Default view"
-        description="Which sub-view opens when you navigate to Brain."
+        description="Which section opens when you navigate to Capture."
       >
         <SegmentedControl
           value={brain.defaultView}
@@ -995,7 +967,7 @@ function BrainSection() {
             { value: "notes", label: "Notes" },
             { value: "canvas", label: "Canvas" },
             { value: "templates", label: "Templates" },
-            { value: "graph", label: "Graph" },
+
           ]}
           onChange={(v) => set("defaultView", v)}
         />
@@ -1480,7 +1452,7 @@ function ChatSection() {
               </Button>
             </div>
           ) : (
-            <p className="text-right text-[11px] text-muted-foreground">
+            <p className="text-right text-xs text-muted-foreground">
               Save an AI connection in Chat first.
             </p>
           )}
@@ -2116,7 +2088,7 @@ export function SettingsView() {
         </div>
         {NAV.map((group) => (
           <div key={group.label} className="mb-4">
-            <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+            <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {group.label}
             </p>
             {group.items.map((item) => {

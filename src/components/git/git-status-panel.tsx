@@ -269,7 +269,7 @@ function GitNotice({ notice, onAction }: { notice: GitStateCopy; onAction: (acti
       <p className="text-sm font-medium">{notice.title}</p>
       <p className="text-xs text-muted-foreground">{notice.body}</p>
       {notice.detail ? (
-        <p className="max-w-full truncate font-mono text-[11px] text-muted-foreground" title={notice.detail}>
+        <p className="max-w-full truncate font-mono text-xs text-muted-foreground" title={notice.detail}>
           {notice.detail}
         </p>
       ) : null}

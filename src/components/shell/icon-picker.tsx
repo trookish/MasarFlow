@@ -118,7 +118,7 @@ export function IconPicker({ value, onSelect }: IconPickerProps) {
               </p>
             ) : null}
           </ScrollArea>
-          <p className="mt-2 text-[11px] text-muted-foreground">
+          <p className="mt-2 text-xs text-muted-foreground">
             {iconNames.length} icons from Lucide — type to search the full
             library, or upload a custom image below.
           </p>

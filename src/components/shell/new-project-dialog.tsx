@@ -197,7 +197,7 @@ export function NewProjectDialog({
             }
           />
           <div className="mt-4 rounded-lg border border-border bg-card px-3 py-2.5">
-            <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
               Preview
             </p>
             <ProjectPreview value={fields} />

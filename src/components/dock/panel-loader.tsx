@@ -20,6 +20,11 @@ function loading() {
 }
 
 export const PAGE_COMPONENTS: Record<string, ComponentType> = {
+  "/capture": dynamic(() => import("@/app/(workspace)/capture/page"), { ssr: false, loading }),
+  "/work": dynamic(() => import("@/app/(workspace)/work/page"), { ssr: false, loading }),
+  "/library": dynamic(() => import("@/app/(workspace)/library/page"), { ssr: false, loading }),
+  "/ask": dynamic(() => import("@/app/(workspace)/ask/page"), { ssr: false, loading }),
+  "/system": dynamic(() => import("@/app/(workspace)/system/page"), { ssr: false, loading }),
   "/dashboard": dynamic(() => import("@/app/(workspace)/dashboard/page"), {
     ssr: false,
     loading,

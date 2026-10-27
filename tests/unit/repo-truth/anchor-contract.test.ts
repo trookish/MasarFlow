@@ -14,7 +14,7 @@ import { readSources, REPO_ROOT } from "../_helpers/fs-scan";
 const REQUIRED = [
   { anchor: 'data-testid="app-shell"', file: "src/app/(workspace)/layout.tsx" },
   { anchor: 'data-testid="shell-ready"', file: "" }, // any source may own it
-  { anchor: 'data-testid="dock-panel"', file: "" },
+  { anchor: "dock-panel", file: "src/components/shell/workspace-tabs.tsx" },
   { anchor: "data-dock-tab", file: "" },
   { anchor: "data-dock-url", file: "" },
 ];

@@ -162,7 +162,7 @@ export function GradientEditorDialog({
                 />
                 <span
                   className={cn(
-                    "absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] font-medium tabular-nums",
+                    "absolute -top-4 left-1/2 -translate-x-1/2 text-xs font-medium tabular-nums",
                     i === selected
                       ? "text-foreground"
                       : "text-muted-foreground",
@@ -182,7 +182,7 @@ export function GradientEditorDialog({
                 type="button"
                 onClick={() => setSelected(i)}
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] transition-colors",
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors",
                   i === selected
                     ? "border-primary bg-primary/10 text-foreground"
                     : "border-border text-muted-foreground hover:text-foreground",
@@ -199,7 +199,7 @@ export function GradientEditorDialog({
             <button
               type="button"
               onClick={() => addStop(50)}
-              className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[11px] text-muted-foreground hover:border-primary/50 hover:text-foreground"
+              className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:border-primary/50 hover:text-foreground"
             >
               <Plus className="h-3 w-3" /> Add stop
             </button>

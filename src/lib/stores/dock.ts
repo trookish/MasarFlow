@@ -12,14 +12,19 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { defaultProjectState, WORKSPACE_PRESETS } from "@/lib/dock/presets";
+import { WORKSPACE_PRESETS } from "@/lib/dock/presets";
+import {
+  defaultWorkspaceTabsState,
+  normalizeWorkspaceTabs,
+} from "@/lib/navigation/workspace-tabs";
 import { parseProjectState } from "@/lib/dock/serde";
 import type {
   DockNode,
   DockZone,
   ProjectDockState,
 } from "@/lib/dock/types";
-import { pageIdOf } from "@/lib/dock/types";
+import { joinPanelId, pageIdOf, paramsOf } from "@/lib/dock/types";
+import { resolveLegacyUrl } from "@/lib/navigation/redirects";
 import {
   applyLayout,
   applyUrlFocus,
@@ -41,6 +46,7 @@ import {
   toggleMaximize,
 } from "@/lib/dock/dock-core";
 import {
+  collectPages,
   findHolder,
   focusPanel,
   insertPanel,
@@ -90,6 +96,8 @@ interface DockStore {
   projects: Record<string, ProjectDockState>;
   /** Id of the project whose dock is live (mirrors useProjectStore). */
   activeProjectId: string | null;
+  /** Recently closed tabs per project, oldest first. */
+  closedTabs: Record<string, string[]>;
   /** Transient drag state. */
   drag: DockDragState | null;
 
@@ -99,6 +107,7 @@ interface DockStore {
   // Page lifecycle
   open: (panelId: string) => void;
   close: (panelId: string) => void;
+  reopenClosedTab: () => void;
   focus: (panelId: string) => void;
   /** Insert an external payload (floater docking). */
   insert: (payload: DockNode, target: string | "root", zone: DockZone) => void;
@@ -173,6 +182,7 @@ export const useDockStore = create<DockStore>()(
     (set, get) => ({
       projects: {},
       activeProjectId: null,
+      closedTabs: {},
       drag: null,
 
       getProject: (): ProjectDockState | null => {
@@ -186,31 +196,59 @@ export const useDockStore = create<DockStore>()(
         set((s) => {
           if (!id) return { activeProjectId: null };
           const projects = { ...s.projects };
-          if (!projects[id]) projects[id] = defaultProjectState();
+          if (projects[id]) projects[id] = normalizeWorkspaceTabs(projects[id]);
+          else projects[id] = defaultWorkspaceTabsState();
           return { activeProjectId: id, projects };
         }),
 
       open: (panelId) =>
-        set((s) =>
-          update(s, (state) => applyUrlFocus(state, panelId)),
-        ),
+        set((s) => {
+          const canonical = resolveLegacyUrl(pageIdOf(panelId), paramsOf(panelId)) ?? panelId;
+          return update(s, (state) => applyUrlFocus(state, canonical));
+        }),
 
       close: (panelId) =>
         set((s) => {
           const id = s.activeProjectId;
           const before = id ? s.projects[id] : undefined;
-          const next = update(s, (state) => closeEverywhere(state, panelId));
-          if (id && before) {
-            const label = panelLabel(panelId);
-            rememberUndo(id, `Closed ${label}`, before);
-            pushToast({
-              title: `Closed ${label}`,
-              description: "Reopen it any time from the command palette.",
-              actionLabel: "Undo",
-              onAction: () => useDockStore.getState().undo(),
-            });
-          }
-          return next;
+          if (!id || !before) return {};
+          const canonical = resolveLegacyUrl(pageIdOf(panelId), paramsOf(panelId)) ?? panelId;
+          const path = pageIdOf(canonical);
+          const openPages = collectPages(before.workspaces[before.activeWorkspace].tree);
+          if (!openPages.includes(path) || openPages.length === 1) return {};
+          const next = update(s, (state) =>
+            normalizeWorkspaceTabs(closeEverywhere(state, path)),
+          );
+          const label = panelLabel(path);
+          const closedUrl = joinPanelId(
+            path,
+            before.workspaces[before.activeWorkspace].params[path] ?? paramsOf(canonical),
+          );
+          pushToast({
+            title: `Closed ${label}`,
+            description: "Reopen it with Ctrl+Shift+T.",
+            actionLabel: "Reopen",
+            onAction: () => useDockStore.getState().reopenClosedTab(),
+          });
+          return {
+            ...next,
+            closedTabs: {
+              ...s.closedTabs,
+              [id]: [...(s.closedTabs[id] ?? []), closedUrl].slice(-20),
+            },
+          };
+        }),
+
+      reopenClosedTab: () =>
+        set((s) => {
+          const id = s.activeProjectId;
+          const history = id ? (s.closedTabs[id] ?? []) : [];
+          const panelId = history.at(-1);
+          if (!id || !panelId) return {};
+          return {
+            ...update(s, (state) => applyUrlFocus(state, panelId)),
+            closedTabs: { ...s.closedTabs, [id]: history.slice(0, -1) },
+          };
         }),
 
       focus: (panelId) =>
@@ -442,6 +480,7 @@ export const useDockStore = create<DockStore>()(
       partialize: (s) => ({
         projects: s.projects,
         activeProjectId: s.activeProjectId,
+        closedTabs: s.closedTabs,
       }),
       // Untrusted persisted JSON: validate, never trust. Invalid payloads
       // (old versions, hand-edits) fall back to fresh defaults.
@@ -452,13 +491,22 @@ export const useDockStore = create<DockStore>()(
         if (rawProjects && typeof rawProjects === "object") {
           for (const [id, value] of Object.entries(rawProjects)) {
             const parsed = parseProjectState(value);
-            if (parsed) projects[id] = parsed;
+            if (parsed) projects[id] = normalizeWorkspaceTabs(parsed);
           }
         }
         const activeProjectId =
           typeof raw.activeProjectId === "string" ? raw.activeProjectId : null;
+        const closedTabs: Record<string, string[]> = {};
+        if (raw.closedTabs && typeof raw.closedTabs === "object") {
+          for (const [id, value] of Object.entries(raw.closedTabs)) {
+            if (Array.isArray(value)) {
+              closedTabs[id] = value.filter((entry): entry is string => typeof entry === "string").slice(-20);
+            }
+          }
+        }
         return {
           ...current,
+          closedTabs,
           projects:
             Object.keys(projects).length > 0
               ? projects

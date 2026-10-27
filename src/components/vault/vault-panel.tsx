@@ -108,7 +108,7 @@ export function VaultPanel() {
         </Button>
         {binding.root ? (
           <>
-            <code className="rounded bg-muted px-2 py-0.5 text-[11px]">
+            <code className="rounded bg-muted px-2 py-0.5 text-xs">
               {binding.root}/{binding.folder}
             </code>
             <Button

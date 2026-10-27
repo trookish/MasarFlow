@@ -142,7 +142,7 @@ export function SpecsView() {
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-[11px] text-muted-foreground">
+                    <span className="font-mono text-xs text-muted-foreground">
                       {s.number}
                     </span>
                     <Badge className={cn("ml-auto shrink-0", meta.badge)}>

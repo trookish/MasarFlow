@@ -178,9 +178,9 @@ export function PluginsView() {
                         {state && (
                           <span
                             className={cn(
-                              "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                              "rounded-full px-1.5 py-0.5 text-xs font-medium",
                               state.enabled
-                                ? "bg-node-lore/15 text-node-lore"
+                                ? "bg-node-lore/15 text-node-lore-fg"
                                 : "bg-muted text-muted-foreground",
                             )}
                           >

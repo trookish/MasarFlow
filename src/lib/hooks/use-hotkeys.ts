@@ -5,14 +5,7 @@ import { useUIStore } from "@/lib/stores/ui";
 import { useDockStore } from "@/lib/stores/dock";
 import { focusedPanelId } from "@/lib/dock/dock-core";
 import { findHolder } from "@/lib/dock/tree";
-import { pageIdOf } from "@/lib/dock/types";
-import { dockActionFor, type DockKeyAction } from "@/lib/dock/keymap";
-import {
-  layoutRects,
-  neighborInDirection,
-  focusTargetOf,
-  type Direction,
-} from "@/lib/dock/nav-geo";
+import { workspaceTabIds } from "@/lib/navigation/workspace-tabs";
 
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -20,150 +13,84 @@ function isEditableTarget(target: EventTarget | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable;
 }
 
-/** Focus the previous (-1) or next (+1) tab in the focused panel's group. */
-function dockFocusNeighbor(dir: 1 | -1): void {
+function focusedTab() {
   const dock = useDockStore.getState();
-  const state = dock.activeProjectId
-    ? (dock.projects[dock.activeProjectId] ?? null)
-    : null;
-  if (!state) return;
-  const focused = focusedPanelId(state);
-  const wsEntry = state.workspaces[state.activeWorkspace];
-  const holder = findHolder(wsEntry.tree, focused);
-  if (!holder || holder.type !== "tabs" || holder.pages.length < 2) return;
-  const idx = holder.pages.indexOf(focused);
-  const next =
-    holder.pages[(idx + dir + holder.pages.length) % holder.pages.length];
-  dock.focus(next);
+  const state = dock.getProject();
+  if (!state) return null;
+  const panelId = focusedPanelId(state);
+  const workspace = state.workspaces[state.activeWorkspace];
+  const holder = findHolder(workspace.tree, panelId);
+  return { dock, panelId, tabs: workspaceTabIds(state), holder };
 }
 
-/** Close the currently focused dock panel. */
-function dockCloseFocused(): void {
-  const dock = useDockStore.getState();
-  const state = dock.activeProjectId
-    ? (dock.projects[dock.activeProjectId] ?? null)
-    : null;
-  if (!state) return;
-  dock.close(focusedPanelId(state));
-}
-
-/** The live project's dock state, or null. */
-function dockState() {
-  const dock = useDockStore.getState();
-  return dock.activeProjectId ? (dock.projects[dock.activeProjectId] ?? null) : null;
-}
-
-/** Move focus to the group left/right/above/below the focused one. */
-function dockMoveFocus(dir: Direction): void {
-  const state = dockState();
-  if (!state) return;
-  const dock = useDockStore.getState();
-  const tree = state.workspaces[state.activeWorkspace].tree;
-  const holder = findHolder(tree, focusedPanelId(state));
-  if (!holder) return;
-  const el = document.querySelector<HTMLElement>("[data-dock-workspace]");
-  if (!el) return;
-  const box = el.getBoundingClientRect();
-  const rects = layoutRects(tree, {
-    x: box.left,
-    y: box.top,
-    width: box.width,
-    height: box.height,
-  });
-  const next = neighborInDirection(rects, holder.id, dir);
-  if (!next) return;
-  const panel = focusTargetOf(tree, next);
-  if (panel) dock.focus(panel);
-}
-
-/** Run one dock keymap action against the focused panel. */
-function runDockAction(action: DockKeyAction): void {
-  const state = dockState();
-  if (!state) return;
-  const focused = focusedPanelId(state);
-  const dock = useDockStore.getState();
-  switch (action.kind) {
-    case "cycle-tab":
-      dockFocusNeighbor(action.dir);
-      return;
-    case "move-focus":
-      dockMoveFocus(action.dir);
-      return;
-    case "close-focused":
-      dock.close(focused);
-      return;
-    case "float-focused":
-      dock.float(focused, { x: 160, y: 120 });
-      return;
-    case "toggle-maximize":
-      dock.toggleMaximize(pageIdOf(focused));
-      return;
-    case "toggle-collapse":
-      dock.toggleCollapse(pageIdOf(focused));
-      return;
-  }
-}
-
-/**
- * Wires the global keyboard shortcuts:
- *   ⌘/Ctrl+K  command palette
- *   ⌘/Ctrl+O  quick switcher (P7)
- *   ⌘/Ctrl+/  global search
- *   ⌘/Ctrl+B  toggle sidebar
- *   ?         shortcuts cheatsheet (when not typing)
- *   Dock (when enabled):
- *   Alt+←/→              focus prev/next tab in the focused group
- *   Alt+Shift+←/→/↑/↓    move focus to the group on that side
- *   Alt+F/M/C/W          float / maximize / collapse / close the focused panel
- *   Ctrl+Shift+K         close the focused panel
- */
+/** Global keyboard shortcuts for surfaces, project tabs, and overlays. */
 export function useGlobalHotkeys(): void {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       const mod = e.metaKey || e.ctrlKey;
       const key = e.key.toLowerCase();
+      const ui = useUIStore.getState();
 
       if (mod && key === "k" && !e.shiftKey) {
         e.preventDefault();
-        useUIStore.setState((s) => ({ paletteOpen: !s.paletteOpen }));
+        ui.setPaletteOpen(!ui.paletteOpen);
         return;
       }
-      // Ctrl/Cmd+O — quick switcher (P7). Same call style as the palette above:
-      // mod-combos fire even while editing (plain typing never matches `mod`).
       if (mod && key === "o" && !e.shiftKey) {
         e.preventDefault();
-        useUIStore.setState({ quickSwitchOpen: !useUIStore.getState().quickSwitchOpen });
+        ui.setQuickSwitchOpen(!ui.quickSwitchOpen);
         return;
       }
       if (mod && e.key === "/") {
         e.preventDefault();
-        useUIStore.setState((s) => ({ searchOpen: !s.searchOpen }));
+        ui.setSearchOpen(!ui.searchOpen);
         return;
       }
-      if (mod && key === "b") {
+      if (mod && key === "b" && !e.shiftKey) {
         e.preventDefault();
-        useUIStore.getState().toggleSidebar();
+        ui.toggleSidebar();
         return;
       }
-      if (mod && e.shiftKey && key === "k") {
-        if (!useUIStore.getState().dockEnabled) return;
+      if (mod && e.shiftKey && key === "t") {
         e.preventDefault();
-        dockCloseFocused();
-        return;
-      }
-      // Dock grammar (Alt-based). Never steal keys from a text field, and only
-      // when the dock is the layout in use.
-      const action = dockActionFor(e);
-      if (action) {
-        if (!useUIStore.getState().dockEnabled) return;
-        if (isEditableTarget(e.target)) return;
-        e.preventDefault();
-        runDockAction(action);
+        useDockStore.getState().reopenClosedTab();
         return;
       }
       if (e.key === "?" && !isEditableTarget(e.target)) {
         e.preventDefault();
-        useUIStore.getState().setShortcutsOpen(true);
+        ui.setShortcutsOpen(true);
+        return;
+      }
+      if (isEditableTarget(e.target)) return;
+
+      const current = focusedTab();
+      if (!current) return;
+      const { dock, panelId, tabs, holder } = current;
+      const index = tabs.indexOf(panelId);
+
+      if (mod && e.key === "Tab") {
+        e.preventDefault();
+        const delta = e.shiftKey ? -1 : 1;
+        dock.focus(tabs[(index + delta + tabs.length) % tabs.length]);
+      } else if (mod && key === "w") {
+        e.preventDefault();
+        dock.close(panelId);
+      } else if (mod && e.shiftKey && (e.key === "[" || e.key === "]")) {
+        e.preventDefault();
+        const delta = e.key === "[" ? -1 : 1;
+        dock.focus(tabs[(index + delta + tabs.length) % tabs.length]);
+      } else if (mod && !e.shiftKey && /^[1-9]$/.test(e.key)) {
+        const target = tabs[Number(e.key) - 1];
+        if (target) {
+          e.preventDefault();
+          dock.focus(target);
+        }
+      } else if (e.altKey && e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+        e.preventDefault();
+        if (!holder || holder.type !== "tabs") return;
+        const nextIndex = Math.max(0, Math.min(tabs.length - 1, index + (e.key === "ArrowLeft" ? -1 : 1)));
+        dock.reorder(holder.id, panelId, nextIndex);
+        dock.focus(panelId);
       }
     }
 

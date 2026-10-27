@@ -10,9 +10,9 @@ export const WATCH_KIND_LABEL: Record<WatchKind, string> = {
 
 /** Pill colors per change kind (themeable --node-* tokens). */
 export const WATCH_KIND_STYLE: Record<WatchKind, string> = {
-  created: "bg-node-lore/15 text-node-lore",
-  modified: "bg-node-idea/15 text-node-idea",
-  deleted: "bg-node-decision/15 text-node-decision",
+  created: "bg-node-lore/15 text-node-lore-fg",
+  modified: "bg-node-idea/15 text-node-idea-fg",
+  deleted: "bg-node-decision/15 text-node-decision-fg",
 };
 
 export const WATCH_FILE_TYPES: WatchFileType[] = [

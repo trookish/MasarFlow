@@ -77,7 +77,7 @@ export function PomodoroWidget() {
       <Timer
         className={cn(
           "h-3.5 w-3.5",
-          phase === "break" ? "text-node-lore" : "text-muted-foreground",
+          phase === "break" ? "text-node-lore-fg" : "text-muted-foreground",
         )}
       />
       <span className="font-mono text-xs tabular-nums" title={`Pomodoro — ${phase}`}>

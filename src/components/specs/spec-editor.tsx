@@ -294,7 +294,7 @@ export function SpecEditor({
               </DropdownMenu>
             </div>
             {linkedNotes.length === 0 ? (
-              <p className="text-xs text-muted-foreground/70">
+              <p className="text-xs text-muted-foreground">
                 No notes linked.
               </p>
             ) : (
@@ -337,7 +337,7 @@ export function SpecEditor({
               </Button>
             </div>
             {linkedTasks.length === 0 ? (
-              <p className="text-xs text-muted-foreground/70">
+              <p className="text-xs text-muted-foreground">
                 No tasks yet. Create one to start implementation.
               </p>
             ) : (

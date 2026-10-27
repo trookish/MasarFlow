@@ -17,7 +17,7 @@ describe("buildQuickItems", () => {
     });
     expect(items[0]).toMatchObject({ kind: "note", id: "n1", title: "Auth design" });
     expect(items[0].subtitle).toContain(KIND_LABEL.note);
-    expect(items[0].href).toBe("/brain?note=n1");
+    expect(items[0].href).toBe("/capture?note=n1");
   });
 
   it("orders by most recently updated", () => {

@@ -120,7 +120,7 @@ export function GithubCommitsCard({
               className="h-8 text-sm"
             />
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             The token stays in this browser and is sent only to the local
             Octokit proxy — a fine-grained token with read-only Contents access
             is enough. Commits mentioning RFC numbers or task titles link
@@ -157,7 +157,7 @@ export function GithubCommitsCard({
               <GitCommitHorizontal className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm">{c.message.split("\n")[0]}</div>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                   <code className="rounded bg-accent/60 px-1">
                     {c.sha.slice(0, 7)}
                   </code>
@@ -166,7 +166,7 @@ export function GithubCommitsCard({
                   {c.linkedSpecIds.map((id) => {
                     const s = specById.get(id);
                     return s ? (
-                      <Badge key={id} variant="outline" className="gap-1 px-1.5 py-0 text-[10px]">
+                      <Badge key={id} variant="outline" className="gap-1 px-1.5 py-0 text-xs">
                         <FileText className="h-2.5 w-2.5" /> {s.number}
                       </Badge>
                     ) : null;

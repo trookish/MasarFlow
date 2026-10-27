@@ -144,7 +144,7 @@ export function ImagePicker({
             ) : null}
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] text-muted-foreground">or</span>
+            <span className="text-xs text-muted-foreground">or</span>
             <Input
               value={urlDraft}
               onChange={(e) => {
@@ -170,7 +170,7 @@ export function ImagePicker({
           </div>
         </div>
       </div>
-      {error ? <p className="text-[11px] text-destructive">{error}</p> : null}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
       <input
         ref={inputRef}
         type="file"
@@ -355,12 +355,12 @@ export function ProjectFields({
               onSelect={(icon) => onChange({ icon, iconImage: "" })}
             />
             {usingCustomIcon ? (
-              <span className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
+              <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
                 Custom image
               </span>
             ) : null}
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Search the full Lucide library or upload a custom image below.
           </p>
           <ImagePicker
@@ -389,7 +389,7 @@ export function ProjectFields({
               />
             ))}
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Pick a preset or enter any custom color.
           </p>
           <ColorField
@@ -418,7 +418,7 @@ export function ProjectFields({
             onChange={(category) => onChange({ category })}
             onCreate={(name) => handleAddCategory(name)}
           />
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {categories.length === 0
               ? "No categories yet — add the project's first one."
               : "Pick a saved category or add a new one."}
@@ -538,7 +538,7 @@ export function ProjectPreview({ value }: { value: ProjectFieldValues }) {
         )}
       </div>
       {value.category ? (
-        <span className="ml-auto rounded-full border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
+        <span className="ml-auto rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
           {value.category}
         </span>
       ) : null}

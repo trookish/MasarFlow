@@ -112,10 +112,13 @@ describe("workspace pages are reachable", () => {
     expect(missing).toEqual([]);
   });
 
-  it("PAGE_PATHS is exactly the nav href set", () => {
-    // Deduped: the Brain item and its Notes child intentionally share "/brain"
-    // (see nav.ts and nav-parity.test.ts), and PAGE_PATHS is a Set of hrefs.
-    const navHrefs = [...new Set(ALL_NAV_ITEMS.map((i) => i.href))].sort();
-    expect(PAGE_PATHS.slice().sort()).toEqual(navHrefs);
+  it("PAGE_PATHS covers every surface and hosted legacy page", () => {
+    const expected = [
+      ...new Set([
+        ...SURFACES.map((surface) => surface.route),
+        ...ALL_NAV_ITEMS.map((item) => item.href),
+      ]),
+    ].sort();
+    expect(PAGE_PATHS.slice().sort()).toEqual(expected);
   });
 });

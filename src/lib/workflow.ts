@@ -21,7 +21,7 @@ export const SPEC_STATUSES: {
   {
     value: "implementing",
     label: "Implementing",
-    badge: "bg-node-research/15 text-node-research",
+    badge: "bg-node-research/15 text-node-research-fg",
   },
   { value: "shipped", label: "Shipped", badge: "bg-success/15 text-success" },
 ];
@@ -51,7 +51,7 @@ export const TASK_PRIORITIES: {
   {
     value: "medium",
     label: "Medium",
-    badge: "bg-node-system/15 text-node-system",
+    badge: "bg-node-system/15 text-node-system-fg",
   },
   { value: "high", label: "High", badge: "bg-warning/15 text-warning" },
   {

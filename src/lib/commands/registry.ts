@@ -3,8 +3,8 @@
  * the palette stays a renderer and this module stays testable.
  *
  * Rules the tests enforce:
- * - ids are unique and stable ("open:/tools/terminal", "dock:float");
- * - a command is only offered when it can actually run (dock on, project open,
+ * - ids are unique and stable ("open:/work", "tab:close");
+ * - a command is only offered when it can actually run (project open,
  *   desktop app present);
  * - a destructive command carries `confirm` copy, which the palette turns into
  *   the shared ConfirmDialog — never a one-click wipe.
@@ -16,7 +16,6 @@
 export type CommandTone = "default" | "danger";
 
 export interface CommandContext {
-  dockEnabled: boolean;
   hasProject: boolean;
   projectId: string | null;
   theme: "light" | "dark";
@@ -28,7 +27,7 @@ export interface Command {
   id: string;
   /** What it does, in the user's words. */
   label: string;
-  group: "Panels" | "Dock" | "Tools" | "Go to" | "Project" | "Appearance" | "Data";
+  group: "Actions" | "Tabs" | "Tools" | "Go to" | "Project" | "Appearance" | "Data";
   /** Extra search terms (never shown). */
   keywords?: string[];
   /** Shown on the right of the row. */
@@ -39,14 +38,13 @@ export interface Command {
   run: () => void | Promise<void>;
 }
 
-export const DOCK_PAGES: { href: string; label: string }[] = [
+export const WORKSPACE_PAGES: { href: string; label: string }[] = [
   { href: "/today", label: "Today" },
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/tasks", label: "Task Boards" },
-  { href: "/chat", label: "Chat" },
-  { href: "/brain", label: "Notes" },
-  { href: "/specs", label: "Specifications" },
-  { href: "/docs", label: "Documentation" },
+  { href: "/capture", label: "Capture" },
+  { href: "/work", label: "Work" },
+  { href: "/library", label: "Library" },
+  { href: "/ask", label: "Ask" },
+  { href: "/system", label: "System" },
   { href: "/settings", label: "Settings" },
 ];
 
@@ -62,13 +60,8 @@ export const TOOL_PAGES: { href: string; label: string; keywords: string[] }[] =
  */
 export interface CommandActions {
   navigate: (href: string) => void;
-  openPanel: (panelId: string) => void;
   closeFocusedPanel: () => void;
-  floatFocusedPanel: () => void;
-  toggleMaximizeFocused: () => void;
-  resetWorkspace: () => void;
-  copyLayout: () => void;
-  pasteLayout: () => void;
+  reopenClosedTab: () => void;
   toggleTheme: () => void;
   switchProject: (projectId: string) => void;
   newTask: () => void;
@@ -76,7 +69,6 @@ export interface CommandActions {
   openDailyNote: () => void;
   openLogsFolder: () => void;
   resetAllData: () => void;
-  isEntityOpen: (href: string) => boolean;
 }
 
 /**
@@ -86,13 +78,8 @@ export interface CommandActions {
  */
 const NOOP_ACTIONS: CommandActions = {
   navigate: () => {},
-  openPanel: () => {},
   closeFocusedPanel: () => {},
-  floatFocusedPanel: () => {},
-  toggleMaximizeFocused: () => {},
-  resetWorkspace: () => {},
-  copyLayout: () => {},
-  pasteLayout: () => {},
+  reopenClosedTab: () => {},
   toggleTheme: () => {},
   switchProject: () => {},
   newTask: () => {},
@@ -100,7 +87,6 @@ const NOOP_ACTIONS: CommandActions = {
   openDailyNote: () => {},
   openLogsFolder: () => {},
   resetAllData: () => {},
-  isEntityOpen: () => false,
 };
 
 export function buildCommands(
@@ -110,13 +96,13 @@ export function buildCommands(
   const commands: Command[] = [];
 
   // Pages (always available — this is the app's navigation).
-  for (const page of DOCK_PAGES) {
+  for (const page of WORKSPACE_PAGES) {
     commands.push({
       id: `open:${page.href}`,
       label: `Open ${page.label}`,
       group: "Go to",
       keywords: [page.label.toLowerCase()],
-      hint: ctx.dockEnabled ? "Dock panel" : "Page",
+      hint: "Workspace tab",
       run: () => actions.navigate(page.href),
     });
   }
@@ -142,52 +128,23 @@ export function buildCommands(
     });
   }
 
-  if (ctx.dockEnabled && ctx.hasProject) {
+  if (ctx.hasProject) {
     commands.push(
       {
-        id: "dock:float",
-        label: "Float the focused panel",
-        group: "Dock",
-        keywords: ["window", "undock"],
-        hint: "Alt+F",
-        run: () => actions.floatFocusedPanel(),
-      },
-      {
-        id: "dock:maximize",
-        label: "Maximize / restore the focused panel",
-        group: "Dock",
-        keywords: ["full", "fill"],
-        hint: "Alt+M",
-        run: () => actions.toggleMaximizeFocused(),
-      },
-      {
-        id: "dock:close",
-        label: "Close the focused panel",
-        group: "Dock",
-        keywords: ["hide", "remove"],
-        hint: "Alt+W",
+        id: "tab:close",
+        label: "Close the active tab",
+        group: "Tabs",
+        keywords: ["close", "remove"],
+        hint: "Ctrl+W",
         run: () => actions.closeFocusedPanel(),
       },
       {
-        id: "dock:reset-workspace",
-        label: "Reset this workspace to its preset layout",
-        group: "Dock",
-        keywords: ["restore", "default", "layout"],
-        run: () => actions.resetWorkspace(),
-      },
-      {
-        id: "dock:copy-layout",
-        label: "Copy this layout to the clipboard",
-        group: "Dock",
-        keywords: ["export", "json", "share"],
-        run: () => actions.copyLayout(),
-      },
-      {
-        id: "dock:paste-layout",
-        label: "Paste a layout from the clipboard",
-        group: "Dock",
-        keywords: ["import", "json", "restore"],
-        run: () => actions.pasteLayout(),
+        id: "tab:reopen",
+        label: "Reopen the last closed tab",
+        group: "Tabs",
+        keywords: ["restore", "recent", "undo close"],
+        hint: "Ctrl+Shift+T",
+        run: () => actions.reopenClosedTab(),
       },
     );
   }
@@ -197,21 +154,21 @@ export function buildCommands(
       {
         id: "create:task",
         label: "New task",
-        group: "Panels",
+        group: "Actions",
         keywords: ["todo", "add"],
         run: () => actions.newTask(),
       },
       {
         id: "create:note",
         label: "New note",
-        group: "Panels",
+        group: "Actions",
         keywords: ["write", "brain"],
         run: () => actions.newNote(),
       },
       {
         id: "create:today-note",
         label: "Open today's note",
-        group: "Panels",
+        group: "Actions",
         keywords: ["daily", "journal"],
         run: () => actions.openDailyNote(),
       },

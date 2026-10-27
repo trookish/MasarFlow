@@ -58,7 +58,7 @@ function QuickSwitcherDialog() {
               className="justify-between"
             >
               <span className="truncate">{item.title}</span>
-              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
                 {KIND_LABEL[item.kind]}
               </span>
             </CommandItem>

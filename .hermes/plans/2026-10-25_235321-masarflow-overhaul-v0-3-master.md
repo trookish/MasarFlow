@@ -1,6 +1,8 @@
 # MasarFlow 0.3 Overhaul — Implementation Plan (master)
 
-**Goal:** rebuild MasarFlow from a 30-destination module catalogue into a coherent, safe, local-first project brain (typed entity graph + AI over it), shipped as a packaged desktop app whose release gate actually runs.
+**Goal:** rebuild MasarFlow from a 30-destination module catalogue into a coherent, safe, local-first project harness (typed entity graph + AI over it), shipped as a packaged desktop app whose release gate actually runs.
+
+> **Product amendment (2026-10-27):** D7 is superseded. The shell is tabs-only: six surfaces, one linear per-project tab strip, one active workspace, and one inspector. Studio docking, presets, split/floating windows, and their settings/commands are removed. The AI runtime, project entities, workflows, navigation, and inspector remain one harness rather than separate destinations. Existing dock state is migrated to flat tabs without losing open pages or URL selection.
 
 **Branch:** cut `overhaul/v0.3` from `release/v0.2.0` at `dfbcfda`. **Code today:** 0.2.0 (display `0.2.0.0`, `desktop/src/shared/version.ts:2`), release candidate, never closed out.
 

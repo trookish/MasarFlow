@@ -22,7 +22,7 @@ export function TodayActivity({ projectId }: { projectId: string }) {
       <header className="flex items-center gap-2 border-b border-border px-3 py-2">
         <ActivityIcon className="h-3.5 w-3.5 text-muted-foreground" />
         <h3 className="text-sm font-medium">Recent activity</h3>
-        <p className="ml-auto text-[11px] text-muted-foreground">Last 15 changes</p>
+        <p className="ml-auto text-xs text-muted-foreground">Last 15 changes</p>
       </header>
       {rows.length === 0 ? (
         <p className="px-3 py-4 text-xs text-muted-foreground">
@@ -34,7 +34,7 @@ export function TodayActivity({ projectId }: { projectId: string }) {
             <li key={row.id} className="flex items-center gap-2 px-3 py-2 text-xs">
               <span className="min-w-0 flex-1 truncate">{row.summary}</span>
               <EntityChip entity={{ kind: row.entityKind, id: row.entityId }} />
-              <span className="shrink-0 text-[11px] text-muted-foreground">
+              <span className="shrink-0 text-xs text-muted-foreground">
                 {formatRelativeTime(row.createdAt)}
               </span>
             </li>

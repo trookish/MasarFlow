@@ -144,7 +144,7 @@ export function SprintsView() {
                     </span>
                     <Badge className={meta.badge}>{meta.label}</Badge>
                   </div>
-                  <div className="mt-0.5 text-[10px] text-muted-foreground tabular-nums">
+                  <div className="mt-0.5 text-xs text-muted-foreground tabular-nums">
                     {velocity} done
                   </div>
                 </button>
@@ -282,7 +282,7 @@ function SprintDetail({
             Tasks ({assigned.length} in sprint)
           </h3>
           {tasks.length === 0 ? (
-            <p className="text-xs text-muted-foreground/70">
+            <p className="text-xs text-muted-foreground">
               No tasks in this project yet.
             </p>
           ) : (

@@ -150,12 +150,12 @@ function LinkSection({
 }) {
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+      <div className="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
         {icon}
         {title}
       </div>
       {ids.length === 0 ? (
-        <p className="text-xs text-muted-foreground/70">None</p>
+        <p className="text-xs text-muted-foreground">None</p>
       ) : (
         <ul className="space-y-0.5">
           {ids.map((id) => (

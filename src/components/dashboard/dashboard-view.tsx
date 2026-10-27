@@ -181,8 +181,8 @@ function EmptyHint({ children }: { children: ReactNode }) {
 
 const STATUS_BADGE: Record<TaskStatus, string> = {
   backlog: "bg-muted text-muted-foreground",
-  todo: "bg-node-system/15 text-node-system",
-  in_progress: "bg-node-idea/15 text-node-idea",
+  todo: "bg-node-system/15 text-node-system-fg",
+  in_progress: "bg-node-idea/15 text-node-idea-fg",
   review: "bg-warning/15 text-warning",
   done: "bg-success/15 text-success",
 };
@@ -519,7 +519,7 @@ export function DashboardView() {
                       >
                         <span
                           className={cn(
-                            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium",
+                            "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
                             STATUS_BADGE[t.status],
                           )}
                         >
@@ -531,7 +531,7 @@ export function DashboardView() {
                         {(t.priority === "urgent" || t.priority === "high") && (
                           <span
                             className={cn(
-                              "shrink-0 rounded-full px-1.5 py-0.5 text-[10px]",
+                              "shrink-0 rounded-full px-1.5 py-0.5 text-xs",
                               priorityMeta(t.priority).badge,
                             )}
                           >
@@ -570,7 +570,7 @@ export function DashboardView() {
                             </span>
                             <span
                               className={cn(
-                                "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium",
+                                "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
                                 meta.badge,
                               )}
                             >
@@ -586,7 +586,7 @@ export function DashboardView() {
                                 }}
                               />
                             </div>
-                            <span className="text-[10px] text-muted-foreground tabular-nums">
+                            <span className="text-xs text-muted-foreground tabular-nums">
                               {s.implementationProgress}%
                             </span>
                           </div>
@@ -628,7 +628,7 @@ export function DashboardView() {
                             {n.excerpt}
                           </span>
                         )}
-                        <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
+                        <span className="ml-auto shrink-0 text-xs text-muted-foreground">
                           {relTime(n.updatedAt)}
                         </span>
                       </Link>
@@ -714,7 +714,7 @@ export function DashboardView() {
                             </div>
                           ) : null}
                         </div>
-                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                        <span className="shrink-0 text-xs text-muted-foreground">
                           {relTime(log.createdAt)}
                         </span>
                       </li>

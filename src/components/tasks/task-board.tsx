@@ -95,7 +95,7 @@ export function TaskBoard({
                 {col.label}
                 {overLimit && (
                   <span
-                    className="flex items-center gap-0.5 rounded-full bg-node-decision/15 px-1.5 py-0.5 text-[10px] font-medium text-node-decision"
+                    className="flex items-center gap-0.5 rounded-full bg-node-decision/15 px-1.5 py-0.5 text-xs font-medium text-node-decision-fg"
                     title={`Over WIP limit (${colTasks.length}/${wipLimit})`}
                   >
                     <AlertTriangle className="h-3 w-3" /> WIP
@@ -104,8 +104,8 @@ export function TaskBoard({
               </span>
               <span
                 className={cn(
-                  "rounded-full bg-muted px-1.5 text-[10px] tabular-nums text-muted-foreground",
-                  overLimit && "bg-node-decision/15 text-node-decision",
+                  "rounded-full bg-muted px-1.5 text-xs tabular-nums text-muted-foreground",
+                  overLimit && "bg-node-decision/15 text-node-decision-fg",
                 )}
               >
                 {wipApplies(col.value)

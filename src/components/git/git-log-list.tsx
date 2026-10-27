@@ -53,7 +53,7 @@ export function GitLogList({ repo }: { repo: GitRepo }) {
                 <GitCommitHorizontal className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-xs">{commit.subject}</span>
-                  <span className="block text-[11px] text-muted-foreground">
+                  <span className="block text-xs text-muted-foreground">
                     <span className="font-mono">{shortSha(commit.sha)}</span> · {commit.author} ·{" "}
                     {relativeDate(commit.date)}
                   </span>
@@ -63,13 +63,13 @@ export function GitLogList({ repo }: { repo: GitRepo }) {
               {expanded === commit.sha ? (
                 <div className="mt-2 space-y-2 pl-6">
                   {commit.body ? (
-                    <pre className="whitespace-pre-wrap rounded bg-muted/40 p-2 text-[11px]">{commit.body}</pre>
+                    <pre className="whitespace-pre-wrap rounded bg-muted/40 p-2 text-xs">{commit.body}</pre>
                   ) : null}
-                  <p className="font-mono text-[11px] text-muted-foreground">{commit.sha}</p>
+                  <p className="font-mono text-xs text-muted-foreground">{commit.sha}</p>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      className="text-[11px] text-primary underline-offset-2 hover:underline"
+                      className="text-xs text-primary underline-offset-2 hover:underline"
                       onClick={() => setLinking(commit)}
                     >
                       Link to task…

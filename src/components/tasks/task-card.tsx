@@ -56,7 +56,7 @@ export function TaskCard({
             {specNumber}
           </Badge>
         ) : null}
-        <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-muted-foreground capitalize">
+        <span className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground capitalize">
           {isAi ? (
             <Bot className="h-3 w-3" />
           ) : (
@@ -69,7 +69,7 @@ export function TaskCard({
       {task.tags.length ? (
         <div className="flex flex-wrap gap-1">
           {task.tags.slice(0, 3).map((t) => (
-            <span key={t} className="text-[10px] text-muted-foreground">
+            <span key={t} className="text-xs text-muted-foreground">
               #{t}
             </span>
           ))}

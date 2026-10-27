@@ -66,7 +66,7 @@ function SystemNode({ id, data }: NodeProps<Node<SystemNodeData>>) {
         )}
       </div>
       {data.showLabel && (
-        <div className="mt-1 text-[10px] tracking-wide text-muted-foreground uppercase">
+        <div className="mt-1 text-xs tracking-wide text-muted-foreground uppercase">
           {data.category}
         </div>
       )}
@@ -77,7 +77,7 @@ function SystemNode({ id, data }: NodeProps<Node<SystemNodeData>>) {
             style={{ width: `${data.health}%` }}
           />
         </div>
-        <span className="text-[10px] text-muted-foreground">{data.health}</span>
+        <span className="text-xs text-muted-foreground">{data.health}</span>
       </div>
       <Handle type="source" position={Position.Top} />
     </div>

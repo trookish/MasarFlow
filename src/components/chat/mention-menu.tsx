@@ -192,7 +192,7 @@ export const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
           transform: "translateY(calc(-100% - 4px))",
         }}
       >
-        <div className="flex items-center gap-1.5 border-b border-border px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground">
+        <div className="flex items-center gap-1.5 border-b border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground">
           <Search className="h-3 w-3" />
           {kind === "slash"
             ? "Commands"
@@ -230,7 +230,7 @@ export const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
                   <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <span className="min-w-0 flex-1 truncate">{it.label}</span>
                   {it.subtitle && (
-                    <span className="shrink-0 truncate text-[11px] text-muted-foreground">
+                    <span className="shrink-0 truncate text-xs text-muted-foreground">
                       {it.subtitle}
                     </span>
                   )}

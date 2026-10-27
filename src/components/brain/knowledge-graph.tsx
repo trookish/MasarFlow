@@ -408,10 +408,10 @@ export function KnowledgeGraph({
                       onClick={() => toggleCat(c.id)}
                       aria-pressed={on}
                       className={cn(
-                        "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] backdrop-blur transition-colors",
+                        "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs backdrop-blur transition-colors",
                         on
                           ? "border-border bg-card/80 text-foreground"
-                          : "border-transparent bg-card/40 text-muted-foreground/60",
+                          : "border-transparent bg-card/40 text-muted-foreground",
                       )}
                     >
                       <span
@@ -515,7 +515,7 @@ export function KnowledgeGraph({
                       <text
                         y={RADIUS[n.category] + 12}
                         textAnchor="middle"
-                        className="pointer-events-none fill-muted-foreground text-[9px]"
+                        className="pointer-events-none fill-muted-foreground text-xs"
                       >
                         {n.label.length > 22
                           ? `${n.label.slice(0, 22)}…`
@@ -531,7 +531,7 @@ export function KnowledgeGraph({
               {LEGEND.map((kind) => (
                 <span
                   key={kind}
-                  className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground"
                 >
                   <span
                     className="h-2.5 w-2.5 rounded-full"

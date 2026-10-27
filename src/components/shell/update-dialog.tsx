@@ -109,7 +109,7 @@ export function UpdateDialog({
                   <span className="text-primary">{info.latestCommit.sha}</span>{" "}
                   {info.latestCommit.message}
                 </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {new Date(info.latestCommit.date).toLocaleString()}
                 </p>
               </div>

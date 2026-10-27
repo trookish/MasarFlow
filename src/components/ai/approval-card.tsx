@@ -99,7 +99,7 @@ export function ApprovalCard({
         <ShieldAlert className="h-4 w-4 shrink-0 text-warning" />
         <div className="min-w-0 flex-1">
           <div className="text-xs font-medium">{headline}</div>
-          <div className="truncate text-[11px] text-muted-foreground">
+          <div className="truncate text-xs text-muted-foreground">
             {where}
           </div>
         </div>

@@ -104,7 +104,7 @@ export function BacklinksPanel({
         )}
         <Link2 className="h-3.5 w-3.5" />
         Connections
-        <span className="rounded-full bg-muted px-1.5 text-[10px] tabular-nums">
+        <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums">
           {total}
         </span>
       </button>
@@ -119,7 +119,7 @@ export function BacklinksPanel({
           />
           {unlinkedMentions.length > 0 && (
             <div>
-              <h4 className="mb-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+              <h4 className="mb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Unlinked mentions
               </h4>
               <ul className="space-y-1">
@@ -140,7 +140,7 @@ export function BacklinksPanel({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-6 px-2 text-[11px]"
+                      className="h-6 px-2 text-xs"
                       onClick={() => void linkMention(n)}
                     >
                       <Unlink className="h-3 w-3" /> Link
@@ -178,11 +178,11 @@ function MentionGroup({
 }) {
   return (
     <div>
-      <h4 className="mb-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+      <h4 className="mb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
         {label}
       </h4>
       {notes.length === 0 ? (
-        <p className="text-xs text-muted-foreground/70">{emptyLabel}</p>
+        <p className="text-xs text-muted-foreground">{emptyLabel}</p>
       ) : (
         <ul className="space-y-1">
           {notes.map((n) => (

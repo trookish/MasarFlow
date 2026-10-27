@@ -186,7 +186,7 @@ export function WatcherView() {
         <Eye className="h-4 w-4 text-muted-foreground" />
         <span className="text-sm font-medium">Project Watcher</span>
         {watching && (
-          <span className="flex items-center gap-1.5 text-xs text-node-lore">
+          <span className="flex items-center gap-1.5 text-xs text-node-lore-fg">
             <span className="h-2 w-2 animate-pulse rounded-full bg-node-lore" />
             watching
           </span>
@@ -364,13 +364,13 @@ function EventRow({
       <span className="min-w-0 flex-1 truncate font-mono text-sm">
         {event.path}
       </span>
-      <span className="hidden text-[11px] text-muted-foreground sm:inline">
+      <span className="hidden text-xs text-muted-foreground sm:inline">
         {WATCH_FILE_TYPE_LABEL[event.fileType]}
       </span>
       {systemName && (
         <Link
           href={`/architecture?system=${event.systemId}`}
-          className="hidden items-center gap-1 rounded-full bg-node-system/15 px-2 py-0.5 text-[11px] text-node-system hover:underline md:inline-flex"
+          className="hidden items-center gap-1 rounded-full bg-node-system/15 px-2 py-0.5 text-xs text-node-system-fg hover:underline md:inline-flex"
         >
           <Boxes className="h-3 w-3" /> {systemName}
         </Link>

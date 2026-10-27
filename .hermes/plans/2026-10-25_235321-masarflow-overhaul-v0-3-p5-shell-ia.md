@@ -1,6 +1,8 @@
 # Phase 5 — Shell and information architecture
 
-**Goal:** replace the 30-destination module catalogue with six labeled surfaces (Today, Capture, Work, Library, Ask, System) in a sidebar + main + inspector shell that fits every window from 1000 px; the dock becomes the opt-in "Studio layout"; every old URL still resolves.
+> **Amendment — tabs-only project harness (2026-10-27).** The Studio/split-dock direction is superseded by the product owner's explicit instruction. MasarFlow ships one shell: six surfaces in the left navigation, one linear project tab strip, one active workspace, and the right inspector. Remove layout presets, split/floating/maximize/collapse controls, the Studio setting, and dock-specific palette commands. Preserve per-project open pages, per-tab URL selection, recent tabs, close/reopen, and bounded keep-alive using the existing dock state engine after normalizing legacy layouts to flat tabs. Keyboard acceptance: Ctrl/Cmd+Tab and Ctrl/Cmd+Shift+Tab cycle tabs, Ctrl/Cmd+W closes the active tab, arrows navigate the tablist, and no docking controls remain. Packaged acceptance: the same spec proves tab navigation, per-project isolation, selection persistence, close/reopen, and zero axe violations. This amendment supersedes T5/T6 and every Studio reference below; the surface map and legacy redirects remain unchanged.
+
+**Goal:** replace the 30-destination module catalogue with six labeled surfaces (Today, Capture, Work, Library, Ask, System) in a sidebar + tabs + main + inspector project harness that fits every window from 1000 px; every old URL still resolves.
 **Branch:** `overhaul/v0.3`. **Depends on:** P0 T6 layout harness (`reports/v0.3/layout.json`). Runs in parallel with P1/P2 (disjoint files).
 **Master:** §2 rows U1–U3; decision D7. **Single owner of** `src/lib/nav.ts`, `src/app/(workspace)/layout.tsx`, `src/lib/stores/ui.ts`.
 

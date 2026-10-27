@@ -8,7 +8,7 @@
 
 import type { Command, CommandContext } from "./registry";
 
-export type CommandMode = "all" | "go" | "dock";
+export type CommandMode = "all" | "go" | "tabs";
 
 /**
  * True when a command may run in this context. Commands from `buildCommands`
@@ -17,7 +17,7 @@ export type CommandMode = "all" | "go" | "dock";
  * desktop app, project switches without a project.
  */
 export function isCommandAvailable(command: Command, ctx: CommandContext): boolean {
-  if (command.group === "Dock" && !(ctx.dockEnabled && ctx.hasProject)) return false;
+  if (command.group === "Tabs" && !ctx.hasProject) return false;
   if (command.group === "Tools" && !ctx.desktopAvailable) return false;
   if (command.id.startsWith("project:") && !ctx.hasProject) return false;
   return true;
@@ -41,7 +41,7 @@ function score(command: Command, query: string): number | null {
 const MODE_GROUPS: Record<CommandMode, string[] | null> = {
   all: null,
   go: ["Go to"],
-  dock: ["Dock"],
+  tabs: ["Tabs"],
 };
 
 export function filterCommands(

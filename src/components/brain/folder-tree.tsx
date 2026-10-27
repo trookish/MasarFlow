@@ -139,7 +139,7 @@ export function FolderTree({
   return (
     <div className="space-y-0.5 p-2">
       <div className="flex items-center justify-between px-2 py-1">
-        <span className="text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase">
+        <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
           Folders
         </span>
         <button

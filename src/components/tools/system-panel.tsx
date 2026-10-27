@@ -96,13 +96,13 @@ export function SystemPanel() {
           <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
             {appRows.map((row) => (
               <div key={row.label}>
-                <dt className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                   {row.label}
                 </dt>
                 <dd className="truncate font-mono text-xs" title={row.value}>
                   {row.value}
                 </dd>
-                {row.hint ? <dd className="text-[11px] text-muted-foreground">{row.hint}</dd> : null}
+                {row.hint ? <dd className="text-xs text-muted-foreground">{row.hint}</dd> : null}
               </div>
             ))}
           </dl>
@@ -119,7 +119,7 @@ export function SystemPanel() {
               </li>
             ))}
           </ul>
-          <p className="mt-2 flex items-start gap-1.5 text-[11px] text-muted-foreground">
+          <p className="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground">
             <Info className="mt-0.5 h-3 w-3 shrink-0" />
             The desktop app additionally reports versions, paths, allowed folders and MasarFlow&apos;s own
             environment. Editable environment settings (API keys, providers, .env values) arrive with
@@ -166,13 +166,13 @@ export function SystemPanel() {
         <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
           {appRows.map((row) => (
             <div key={row.label}>
-              <dt className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+              <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 {row.label}
               </dt>
               <dd className="truncate font-mono text-xs" title={row.value}>
                 {row.value}
               </dd>
-              {row.hint ? <dd className="text-[11px] text-muted-foreground">{row.hint}</dd> : null}
+              {row.hint ? <dd className="text-xs text-muted-foreground">{row.hint}</dd> : null}
             </div>
           ))}
         </dl>
@@ -196,7 +196,7 @@ export function SystemPanel() {
                 <span
                   className={
                     row.redacted
-                      ? "shrink-0 text-[11px] text-muted-foreground italic"
+                      ? "shrink-0 text-xs text-muted-foreground italic"
                       : "max-w-64 shrink-0 truncate font-mono"
                   }
                   title={row.redacted ? "Hidden: this value looks like a secret" : row.value}
@@ -207,7 +207,7 @@ export function SystemPanel() {
             ))}
           </ul>
         )}
-        <p className="mt-1 text-[11px] text-muted-foreground">
+        <p className="mt-1 text-xs text-muted-foreground">
           Values that look like secrets (token, key, secret, password) are masked before they ever
           reach this window.
         </p>
@@ -259,7 +259,7 @@ export function SystemPanel() {
             </li>
           ))}
         </ul>
-        <p className="mt-2 flex items-start gap-1.5 text-[11px] text-muted-foreground">
+        <p className="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground">
           <Info className="mt-0.5 h-3 w-3 shrink-0" />
           Editable environment settings (API keys, providers, .env values) arrive with Settings → System +
           AI Providers. This panel stays read-only on purpose so there is exactly one place to change them.

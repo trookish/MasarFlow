@@ -175,7 +175,7 @@ export function ControlCenterView() {
             readOnly
             value={markdown}
             data-testid="diagnostics-report"
-            className="h-80 w-full rounded-md border border-border bg-muted/30 p-3 font-mono text-[11px]"
+            className="h-80 w-full rounded-md border border-border bg-muted/30 p-3 font-mono text-xs"
           />
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => void copyDiagnostics()}>

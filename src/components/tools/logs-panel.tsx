@@ -104,7 +104,7 @@ export function LogsPanel() {
           ))}
         </div>
 
-        <span className="ml-auto text-[11px] text-muted-foreground">
+        <span className="ml-auto text-xs text-muted-foreground">
           {visible.length} of {lines.length} lines
         </span>
         <Button variant="ghost" size="icon-sm" aria-label="Refresh" disabled={busy} onClick={() => void load()}>
@@ -120,7 +120,7 @@ export function LogsPanel() {
         </Button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto p-2 font-mono text-[11px] leading-relaxed">
+      <div className="min-h-0 flex-1 overflow-auto p-2 font-mono text-xs leading-relaxed">
         {lines.length === 0 ? (
           <p className="p-4 text-xs text-muted-foreground">
             This file is empty. Start or use the app for a while, then press Refresh.
