@@ -92,7 +92,7 @@ jobs:
         shell: bash
         run: |
           # bash: each glob match becomes ONE word, spaces included — do not quote the glob,
-          # and never paste this snippet into PowerShell (it would split "MasarFlow Setup 0.2.0.exe").
+          # and never paste this snippet into PowerShell (it would split "MasarFlow Setup 0.3.0.exe").
           ls -la desktop/dist/*.exe desktop/dist/latest.yml desktop/dist/*.blockmap
           test -s desktop/dist/latest.yml
 

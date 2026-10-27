@@ -16,7 +16,7 @@ is retired.
 - **Stable origin** — the window loads `masarflow://app/`; a privileged-scheme handler proxies each request
   to the loopback server and injects the token header. The origin never changes, so IndexedDB survives
   restarts (a random port would silently lose all data).
-- **Renderer** — the Next app itself: dock + pages, Dexie (IndexedDB) as the system of record, an
+- **Renderer** — the Next app itself: the shell and its pages, Dexie (IndexedDB) as the system of record, an
   embeddings Web Worker, the chat context engine and workspace tools. API routes (`src/app/api/*`) run in
   the embedded server.
 
@@ -32,8 +32,8 @@ is retired.
 └──────────────┬────────────────────────────┘
                │ window.masarflow (preload)
 ┌──────────────▼────────────── Renderer ────┐
-│ Dock + pages ◄─ EntityRef/openEntity/     │
-│   ActiveContext (derived from dock)       │
+│ Shell: sidebar · tabs · page · inspector  │
+│   EntityRef/openEntity/ActiveContext      │
 │ commands ──► Dexie + events ──► activity │
 │ Embeddings Web Worker (transformers.js)   │
 │ runAgentTurn ── toolsets ── approvals     │
@@ -43,8 +43,19 @@ is retired.
 ## Six surfaces
 
 The sidebar shows six surfaces; each hosts the pages it owns as sections (`src/lib/navigation/surfaces.ts`).
-Standard is the default layout; Studio (the dock) is opt-in and keeps at most four panels mounted, unmounting
-the least recently shown hidden tab (`src/lib/dock/mount-cap.ts`).
+Every 0.2 URL still resolves: `src/lib/navigation/redirects.ts` maps old routes to their surface section.
+
+There is one shell and one layout:
+
+- **Project tabs** (`src/components/shell/workspace-tabs.tsx`, state in `src/lib/stores/dock.ts`) — one linear
+  strip per project. A tab is identified by its path; its query (`?task=`, `?note=`, …) is a per-tab snapshot,
+  so switching tabs restores the selection. Closed tabs are kept for Ctrl+Shift+T. At most four tabs stay
+  mounted; the least recently shown hidden tab unmounts (`src/lib/dock/mount-cap.ts`).
+- **Inspector** (`src/components/entity/inspector.tsx`) — the right column at 1280 px and wider. It shows the
+  entity selected in the URL (properties, links in both directions, **Ask about this**) or explains the
+  current surface.
+- **Legacy layouts** — 0.2 Studio states (splits, floating windows, collapsed or maximized panels, named
+  workspaces) are folded into the single tab strip on load (`normalizeWorkspaceTabs`); no tab is lost.
 
 | Surface | Sections |
 | --- | --- |

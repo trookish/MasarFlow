@@ -17,10 +17,10 @@
 
 ## Install (Windows 10/11, x64)
 
-1. Download `MasarFlow Setup 0.2.0.exe` from the [latest release](https://github.com/trookish/MasarFlow/releases/latest) and run it.
+1. Download `MasarFlow Setup 0.3.0.exe` from the [latest release](https://github.com/trookish/MasarFlow/releases/latest) and run it.
 2. **SmartScreen:** the installer is unsigned, so Windows shows "Windows protected your PC" — choose *More info* → *Run anyway*. Download only from this repository's Releases page: an unsigned build cannot prove who produced it.
 
-A portable `MasarFlow 0.2.0.exe` is also published (no installer, no auto-update). macOS and Linux builds are not produced for this release.
+A portable `MasarFlow 0.3.0.exe` is also published (no installer, no auto-update). macOS and Linux builds are not produced for this release.
 
 ## First run
 
@@ -35,13 +35,16 @@ MasarFlow 0.1 stored data under a browser origin; 0.2 runs on `masarflow://app` 
 
 ## What's inside
 
-- **Capture** — Brain notes (wikilinks, templates, canvas, graph), Documentation, Files.
-- **Planning** — Specifications, Standards.
-- **Work** — Today, Dashboard, Task boards, Sprints, Dev logs.
-- **Structure** — Architecture, Knowledge graph.
-- **AI** — Chat on native providers (OpenAI, Anthropic, OpenRouter, Groq, … from the models.dev catalog), local Ollama, or any OpenAI-compatible endpoint. Per-provider credentials live in the OS keychain; attachments and workspace tools included.
-- **System** — Git panel (status, diff, stage, commit), GitHub (issues ⇄ tasks, PR/CI status), Sync (Obsidian), Project watcher, Semantic search (local embeddings — no Python, no extra runtime), Plugins.
-- **Dock shell** — tool panels (terminal, logs, system info), command palette, Today view.
+Six surfaces in the left sidebar. Each one groups related pages as sections.
+
+- **Today** — overdue, due today, in progress and the inbox on one page, plus the Dashboard.
+- **Capture** — notes (wikilinks, templates, daily notes), canvases and project files.
+- **Work** — task boards, specifications, sprints and dev logs. Progress comes from task status only.
+- **Library** — documentation, standards, architecture, the knowledge graph and local semantic search (no Python, no extra runtime).
+- **Ask** — chat, AI agents and AI workflows on one runtime: native providers (OpenAI, Anthropic, OpenRouter, Groq, … from the models.dev catalog), local Ollama, or any OpenAI-compatible endpoint. Every AI write needs your approval and can be undone.
+- **System** — settings, Control Center, git (status, diff, stage, commit), GitHub (issues ⇄ tasks, PR/CI status), Obsidian sync, project watcher, terminal and logs.
+
+Every project keeps its own row of tabs above the content: pages you opened, the item selected on each, and recently closed tabs (Ctrl+Shift+T reopens). The inspector on the right shows the selected task, spec, note or doc with its properties and links, and hands it to Ask in one click. The command palette (Ctrl+K) reaches every page, entity and action.
 
 The git and GitHub panels need the desktop app; in the browser build they say so and stay inert.
 

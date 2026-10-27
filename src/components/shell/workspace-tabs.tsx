@@ -111,6 +111,13 @@ export function WorkspaceTabs() {
                     if (event.button === 1) close(panelId);
                   }}
                   onKeyDown={(event) => {
+                    if (event.key === "Delete" && tabs.length > 1) {
+                      event.preventDefault();
+                      const neighbour = adjacentTabId(tabs, panelId, tabs.indexOf(panelId) === tabs.length - 1 ? -1 : 1);
+                      close(panelId);
+                      if (neighbour) focusAndScroll(neighbour);
+                      return;
+                    }
                     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight" && event.key !== "Home" && event.key !== "End") return;
                     event.preventDefault();
                     const next = event.key === "Home"
