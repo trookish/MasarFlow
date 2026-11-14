@@ -1,5 +1,5 @@
 /** The version shown in the UI and used for git tags (master D11). package.json keeps valid semver. */
-export const APP_DISPLAY_VERSION = "0.3.0.0";
+export const APP_DISPLAY_VERSION = "0.2.0.0";
 
 /**
  * "0.2.0" | "0.2.0.0" | "v0.2.0-alpha.0" | "0.2.1-3" -> "0.2.0.0" style.

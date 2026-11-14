@@ -1,6 +1,6 @@
 import { BrowserWindow, shell } from "electron";
 import { join } from "node:path";
-import { APP_ORIGIN } from "@shared/security";
+import { APP_ORIGIN, LANDING_PATH } from "@shared/security";
 import { isInternalUrl, isSafeExternalUrl } from "../security/url-policy";
 import { ptyManager } from "../pty";
 
@@ -47,6 +47,9 @@ export function createMainWindow(opts: MainWindowOptions): BrowserWindow {
   // A closed window takes its shells with it: terminal sessions only make
   // sense while the workspace is open (P8.T12).
   win.on("closed", () => ptyManager.killAll());
-  void win.loadURL(opts.devUrl ?? `${APP_ORIGIN}/`);
+  // Boot straight into the canonical landing page. Loading "/" went through two
+  // client redirects ("/" -> "/dashboard" -> "/today?view=dashboard"), and the
+  // last one could commit after the user's first sidebar click and undo it.
+  void win.loadURL(opts.devUrl ?? `${APP_ORIGIN}${LANDING_PATH}`);
   return win;
 }

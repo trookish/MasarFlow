@@ -90,7 +90,7 @@ function runSmoke(win: BrowserWindow): void {
     if (out) writeFileSync(out, JSON.stringify(payload));
     app.exit(code);
   };
-  const timer = setTimeout(() => finish({ ok: false, error: "timeout waiting for /dashboard" }, 1), 90_000);
+  const timer = setTimeout(() => finish({ ok: false, error: "timeout waiting for the landing page" }, 1), 90_000);
   win.webContents.on("did-finish-load", async () => {
     try {
       const info = await win.webContents.executeJavaScript(
@@ -110,7 +110,7 @@ function runSmoke(win: BrowserWindow): void {
           };
         })()`,
       );
-      if (String(info.path).startsWith("/dashboard")) {
+      if (String(info.path).startsWith("/today")) {
         clearTimeout(timer);
         // The POST must get past the guard (token + Host + Origin) and be refused by the ROOT allow-list.
         const guardOk = info.guard.status === 403 && /not been linked/.test(info.guard.error);
