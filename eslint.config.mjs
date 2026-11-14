@@ -15,9 +15,7 @@ const eslintConfig = defineConfig([
     // Agent worktrees carry their own build artifacts — never lint them.
     ".claude/**",
     ".vs/**",
-    // Python local AI service — not JS/TS, and its .venv bundles vendored
-    // JS from ML packages (torch, sklearn) that ESLint should never touch.
-    // Desktop launcher — separate Vite app with its own toolchain.
+    // Desktop shell (Electron main/preload) — own toolchain, checked by desktop:typecheck.
     "desktop/**",
     // Vendored ONNX runtime WASM/JS copied into public/ort by scripts/copy-ort.mjs
     // (generated, gitignored — never linted).

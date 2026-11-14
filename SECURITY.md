@@ -36,13 +36,14 @@ visit — can try to talk to a loopback port, so the app assumes it will:
    Obsidian key is sent only in request bodies. Obsidian traffic is restricted to loopback, the only place
    its self-signed certificate is accepted.
 
-## Browser development mode
+## Development mode
 
-`pnpm dev` runs the same server without a launch token, for contributors. It is still guarded: `Host` must
-be `localhost` or `127.0.0.1` on the configured port, and every `/api/*` request must be same-origin
-(`Origin` and `Sec-Fetch-Site`; state-changing requests without an `Origin` are refused). Filesystem and
-shell routes fail closed unless `MASARFLOW_DEV_ROOTS` lists the folders to expose (see
-`docs/development.md`). Development mode is not a supported way to run MasarFlow day to day.
+`pnpm dev` runs `next dev` behind an Electron window without a launch token, for contributors. It is still
+guarded: `Host` must be `localhost` or `127.0.0.1` on the configured port, and every `/api/*` request must be
+same-origin (`Origin` and `Sec-Fetch-Site`; state-changing requests without an `Origin` are refused).
+Filesystem and shell routes accept only folders linked with the native picker in the dev profile, and fail
+closed without a data folder (see `docs/development.md`). Development mode is not a supported way to run
+MasarFlow day to day; there is no browser build.
 
 ## Known limits
 

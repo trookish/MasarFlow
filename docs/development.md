@@ -24,37 +24,26 @@ isolated symlink layout on Windows (spike S1, `.hermes/spikes/S1.md`).
 
 | Command | What it does |
 | --- | --- |
-| `pnpm dev` | Next dev server on `http://localhost:3000` (browser mode) |
-| `pnpm dev:webpack` | Same, with webpack instead of Turbopack |
-| `pnpm dev:desktop` | Electron + `next dev` with HMR — the real app shell |
+| `pnpm dev` | The desktop app with HMR: `next dev` on port 3000 plus Electron pointed at it (`scripts/dev-desktop.mjs`; `pnpm dev:desktop` is the same) |
 
-Browser mode (`scripts/start.mjs`, `pnpm dev` / `pnpm start`) exists for contributors and the browser e2e
-specs; the supported way to run MasarFlow is the desktop app.
+MasarFlow is desktop-only. There is no browser build, launcher or standalone web server to run.
 
-### Request guard in browser mode
+### Request guard in development
 
-Browser mode is guarded as well (`src/proxy.ts`, `checkDevRequest`). Every request must address the server
-as `localhost:<PORT>` or `127.0.0.1:<PORT>` (DNS-rebinding defence), and every `/api/*` request must be
-same-origin: a cross-site `Sec-Fetch-Site`, a foreign `Origin`, or a state-changing request with no `Origin`
-is rejected with 403. Requests from the app itself always pass.
+The dev server has no launch token, so it uses the development guard (`src/proxy.ts`, `checkDevRequest`).
+Every request must address the server as `localhost:<PORT>` or `127.0.0.1:<PORT>` (DNS-rebinding defence),
+and every `/api/*` request must be same-origin: a cross-site `Sec-Fetch-Site`, a foreign `Origin`, or a
+state-changing request with no `Origin` is rejected with 403. Requests from the app itself always pass.
 
-Filesystem routes (`/api/fs/*`, `/api/watch`) fail closed. In browser mode, list the folders you want to
-open in `MASARFLOW_DEV_ROOTS`, separated by `;`:
-
-```bash
-MASARFLOW_DEV_ROOTS="C:/Users/me/Dev/my-project;D:/notes" pnpm dev
-```
-
-Without it, every filesystem request returns 403 with a message that names the variable. `pnpm dev:desktop`
-does not need it: it points the dev server at the Electron dev profile (`<appData>/MasarFlow-dev`), so folders
-chosen with the native folder picker are honoured exactly as in the packaged app.
+Filesystem routes (`/api/fs/*`, `/api/watch`) fail closed. `pnpm dev` points the dev server at the Electron
+dev profile (`<appData>/MasarFlow-dev`), so folders chosen with the native folder picker are honoured exactly
+as in the packaged app. A server started without `MASARFLOW_DATA_DIR` serves no folder at all.
 
 ## Tests
 
 | Command | What it runs |
 | --- | --- |
 | `pnpm test` | Vitest unit tests (`tests/unit/**`, node environment) |
-| `pnpm e2e` | Playwright browser specs (run `pnpm build` first; dev convenience only) |
 | `pnpm desktop:dist:dir && pnpm e2e:desktop` | Packaged-app specs against `desktop/dist/win-unpacked` |
 | `pnpm e2e:desktop:slow` | The `@slow` packaged specs (cold start, memory) |
 | `pnpm desktop:dist:dir && pnpm smoke:desktop` | Packaged smoke → `SMOKE_OK` |
@@ -80,7 +69,7 @@ pnpm format             # Prettier write; format:check to verify
 
 | Command | What it does |
 | --- | --- |
-| `pnpm build` | Next build (browser mode) |
+| `pnpm build` | Next build only — a compile check; `build:app` wraps it |
 | `pnpm build:app` | Embedding assets + Next standalone + assembled app-server (`desktop/app-server/`) |
 | `pnpm desktop:dist:dir` | `build:app` + electron-builder `--win --dir` → `desktop/dist/win-unpacked/` |
 | `pnpm desktop:dist` | `build:app` + electron-builder `--win` → NSIS installer, portable exe, `latest.yml` |
@@ -88,7 +77,8 @@ pnpm format             # Prettier write; format:check to verify
 ## CI and releases
 
 - `.github/workflows/ci.yml` — on PRs/pushes: install, lint, both typechecks, unit tests, `pnpm build`,
-  plus the browser e2e subset, on `windows-latest`.
+  then the packaged gate (`build:app`, `security:check`, `desktop:dist:dir`, `smoke:desktop`, `e2e:desktop`),
+  on `windows-latest`.
 - `.github/workflows/release.yml` — on a `v*` tag: asserts the version story
   (`node scripts/release-verify.mjs <tag>`), packages, extracts release notes from `CHANGELOG.md`
   (`scripts/release-notes.mjs`), and creates a **draft** GitHub Release. Publishing the draft is the

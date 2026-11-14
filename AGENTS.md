@@ -22,4 +22,4 @@ fix and must end **empty**. Adding an entry requires a written reason in the com
 
 A new feature adds its title to `tests/e2e/feature-matrix.json` **in the same commit as its spec**.
 A spec that only asserts "the page rendered" is not a test. The packaged app is the target:
-`pnpm desktop:dist:dir && pnpm e2e:desktop`. `pnpm e2e` (browser, dev server) is a development convenience only.
+`pnpm desktop:dist:dir && pnpm e2e:desktop`. MasarFlow is desktop-only: there is no browser build and no browser test suite.

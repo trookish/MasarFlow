@@ -1,7 +1,7 @@
 # Releasing MasarFlow
 
 MasarFlow ships as an unsigned Windows installer from GitHub Releases. Tags use the 4-part display version
-(`v0.3.0.0`); `package.json` carries the semver form (`0.3.0`). `scripts/release-verify.mjs` checks the two agree.
+(`v0.2.0.0`); `package.json` carries the semver form (`0.2.0`). `scripts/release-verify.mjs` checks the two agree.
 
 ## Release checklist
 
@@ -25,7 +25,7 @@ Every item needs evidence (a command's exit code or a committed report). A relea
 ## Cutting the release
 
 ```bash
-git tag v0.3.0.0 && git push origin v0.3.0.0
+git tag v0.2.0.0 && git push origin v0.2.0.0
 ```
 
 The Release workflow runs the gate, packages, writes `release-notes.md` from the CHANGELOG section (the upgrade banner

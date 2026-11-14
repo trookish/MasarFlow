@@ -1,6 +1,6 @@
 # Architecture
 
-The shape of MasarFlow 0.3, for contributors. Decisions referenced as D1–D12 / Q3 live in the master plan
+The shape of MasarFlow 0.2, for contributors. Decisions referenced as D1–D12 / Q3 live in the master plan
 (`.hermes/plans/`); this page is the durable summary.
 
 ## One app (D1)
@@ -66,7 +66,7 @@ There is one shell and one layout:
 | Ask | Chat, AI agents, AI workflow |
 | System | Settings, Control Center, Git, Sync, Project watcher, Features, Terminal, Logs, System info |
 
-## One write path (0.3)
+## One write path (0.2)
 
 Every user-visible change goes through a domain command (`src/lib/domain/commands/`). `runCommand` opens one
 Dexie read-write transaction over the tables the command touches plus `events`, and writes the events the
@@ -86,7 +86,7 @@ UI / AI tool / sync ──► command (tasks, notes, projects, trash, promote)
 - **Promote**: a note becomes a task, spec or doc with a `relates` link back to the note.
 - **Trash**: deletes are soft, restorable from the trash, and replicas treat them as deletions.
 
-## Replicas: the vault mirror (0.3)
+## Replicas: the vault mirror (0.2)
 
 One engine (`src/lib/vault/engine.ts`, planned by `plan.ts`, run through `runner.ts` under `runExclusive`)
 keeps notes, docs, specs and tasks as markdown files. It reconciles per adapter (upsert, never replace-all):
@@ -96,7 +96,7 @@ keeps notes, docs, specs and tasks as markdown files. It reconciles per adapter 
 - edits on both sides, or an edited file of a deleted entity, raise a conflict the user answers;
 - untracked files are adopted only when the user asks (Import untracked).
 
-## One AI runtime (0.3)
+## One AI runtime (0.2)
 
 Chat, AI agents and AI workflow all call `runAgentTurn` (`src/lib/ai/turn/run-agent-turn.ts`): context
 assembly, a prompt budget, provider streaming, tool calls through coarse toolsets (`toolsets.ts`), and
@@ -144,7 +144,7 @@ Verification: `pnpm security:check` (black-box guard check) and the packaged smo
 | Embeddings | @huggingface/transformers (ONNX/WASM) in a Web Worker |
 | Desktop | Electron 43 · electron-vite · electron-builder (NSIS + portable) · electron-updater |
 | Terminal | xterm.js + node-pty |
-| Tests | Vitest · Playwright (browser + packaged Electron) |
+| Tests | Vitest · Playwright (packaged Electron) |
 
 ## Repository layout
 
@@ -166,8 +166,8 @@ desktop/
   src/shared/     cross-process types (channels, settings, versions)
 tests/
   unit/           Vitest (mirrors src/)
-  e2e/            Playwright browser specs
   e2e/desktop/    packaged-app specs (pnpm e2e:desktop)
+  e2e/feature-matrix.json  every feature and its packaged spec title
 scripts/          build, smoke, security-check, release helpers
 .github/          CI + release workflows
 ```

@@ -38,13 +38,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
-!.env.local.example
-
-# generated opencode workspace tools + bridge secret (regenerated on start)
-/.opencode/tools/
-/.masarflow/
 
 # vercel
 .vercel
@@ -56,16 +51,10 @@ next-env.d.ts
 # IDE
 .vs/
 
-# python service (local AI runtime — see python-service/README.md)
-python-service/.venv/
-python-service/store/
-python-service/__pycache__/
-python-service/**/__pycache__/
-python-service/*.egg-info/
-
-# desktop launcher
+# desktop app build output
 desktop/node_modules/
 desktop/dist/
+desktop/dist-e2e/
 desktop/out/
 desktop/release/
 # assembled Next standalone server (scripts/build-app-server.mjs)
