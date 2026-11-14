@@ -106,7 +106,7 @@ child.on("exit", () => {
   const ok =
     r.ok &&
     typeof r.path === "string" &&
-    r.path.startsWith("/dashboard") &&
+    r.path.startsWith("/today") &&
     r.origin === "masarflow://app" &&
     r.hasApi === true &&
     r.hasUpdater === true &&

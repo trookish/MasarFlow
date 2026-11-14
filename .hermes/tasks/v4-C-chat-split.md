@@ -1,0 +1,19 @@
+# Stream C: P6.1 chat-view split, grouped tool calls, side chat
+
+Stream letter for builds: `c`. Read `.hermes/tasks/v4-00-shared-context.md` first. Plan: `.hermes/plans/2026-10-28_150000-masarflow-ui-overhaul.md` lines 228-238 (P6), 273 (split risk).
+
+## Context
+`src/components/chat/chat-view.tsx` is 2 612 lines. The AI surface is `/ai` (renamed from `/ask`; sections Chat, Agents, Workflow today; the plan renames them Sessions, Agents, Automations: that rename is a LATER stream, do not change labels). This stream is the behaviour-preserving split plus two chat features. A later stream builds the Sessions list, Agents and Automations on top of your modules, so cut the seams cleanly.
+
+## Ownership
+Yours: `src/components/chat/**`, `src/lib/chat/**`, and additive-only changes in `src/lib/ai/**` and `src/lib/db/**` when the side chat truly needs a persisted field (any Dexie schema bump needs a new version with an upgrade path and a unit test; prefer storing the side-thread link in an existing flexible field; report either way). Tests: `tests/unit/components/chat/**`, `tests/unit/lib/chat/**`, `tests/e2e/desktop/chat-*.spec.ts` (new), `tests/e2e/desktop/studio-chat.spec.ts` and `chat-fallback.spec.ts` only if a selector must change (explain). Do NOT edit `agents-view.tsx`, `workflow-view.tsx`, `surface-view.tsx`, `surfaces.ts`, or the page-shell allow-list (`/chat` stays on the list until the later stream).
+
+## Deliverables
+1. SPLIT FIRST, behaviour-preserving, no visual change. Target seams (adjust to what the code shows): transcript (message list, virtualisation if present), message renderers (markdown, code-block, tool-call, approval card), composer (input, mentions, attachments, slash commands, voice), controls row (model picker, connections, linked projects, context), thread/session state hooks (`use-chat-thread`, `use-send-turn`, ...), dialogs. `chat-view.tsx` becomes a thin composition, ideally under 400 lines; no new module over 600 lines. Prove behaviour preservation: run the existing chat specs (`chat-fallback.spec.ts`, `studio-chat.spec.ts`, `voice.spec.ts`, plus whatever `rg -l "/chat" tests/e2e/desktop` finds) against a build made BEFORE you change visuals, and again after. Commit nothing; just report both results.
+2. Grouped tool calls: consecutive tool calls in an assistant turn render as one collapsible group with a one-line summary ("3 tool calls: read_file, search, patch"), expand/collapse by click and keyboard, each call showing name, arguments and result when expanded, status (running, ok, failed). View modes Verbose / Normal / Summary (Verbose: all expanded; Normal: groups collapsed, failed ones expanded; Summary: assistant text only with a count chip), a segmented control in the controls row, persisted in the existing UI preferences mechanism (and consumed, per the setting-consumers guard).
+3. Side chat: from a message, "Start side chat" opens a branch thread that shares context up to that message but whose messages never appear in or change the main thread; a clear banner and a "Return to main thread" action; the main thread's message count and ordering are unchanged after the side chat ends.
+4. Packaged specs, exact titles (add to the matrix with the tool): `/chat: grouped tool calls collapse and expand`, `/chat: view modes change how tool calls render`, `/chat: side chat does not change the main thread`. Use the stub provider (`tests/e2e/desktop/_stub-provider.ts`, `addStubConnection`) to produce tool-call turns deterministically; extend the stub only inside `_stub-provider.ts` additive (it is not serialised).
+5. Unit tests for the pure parts (grouping function, view-mode filtering, side-thread linking).
+
+## Acceptance
+tsc, lint, chat unit tests, all chat-related existing specs and your new specs pass against a fresh `build-e2e.mjs c` build. Include before/after line counts of `chat-view.tsx` and the module list in your report.

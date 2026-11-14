@@ -30,7 +30,7 @@ const server = spawn(process.execPath, [entry], {
   env: { ...process.env, PORT: String(port), HOSTNAME: "127.0.0.1", MASARFLOW_TOKEN: TOKEN, MASARFLOW_DATA_DIR: data, NODE_ENV: "production" },
   stdio: ["ignore", "ignore", "pipe"],
 });
-// Browser-development mode: no token, no data dir, no MASARFLOW_DEV_ROOTS.
+// Development mode (`pnpm dev` without its data dir): no token, no data dir.
 const devEnv = { ...process.env, PORT: String(devPort), HOSTNAME: "127.0.0.1", NODE_ENV: "production" };
 for (const k of ["MASARFLOW_TOKEN", "MASARFLOW_DATA_DIR", "MASARFLOW_DEV_ROOTS"]) delete devEnv[k];
 const devServer = spawn(process.execPath, [entry], { env: devEnv, stdio: ["ignore", "ignore", "pipe"] });
@@ -96,7 +96,7 @@ const cases = [
   ["dev: cross-origin POST to /api/fs/shell → 403", () => call({ to: devPort, method: "POST", p: "/api/fs/shell", headers: { ...J, origin: "https://evil.example" }, body: JSON.stringify({ root: allowed, command: "echo hi" }) }), (r) => r.status === 403],
   ["dev: cross-site fetch metadata → 403", () => call({ to: devPort, p: "/api/health", headers: { "sec-fetch-site": "cross-site" } }), (r) => r.status === 403],
   ["dev: rebinding Host → 403", () => call({ to: devPort, p: "/api/health", headers: { host: `evil.example:${devPort}` } }), (r) => r.status === 403],
-  ["dev: filesystem fails closed without MASARFLOW_DEV_ROOTS → 403", () => call({ to: devPort, method: "POST", p: "/api/fs/list", headers: { ...J, origin: `http://127.0.0.1:${devPort}` }, body: JSON.stringify({ root: allowed, path: "" }) }), (r) => r.status === 403 && /MASARFLOW_DEV_ROOTS/.test(r.json?.error ?? r.text ?? "")],
+  ["dev: filesystem fails closed without a data dir → 403", () => call({ to: devPort, method: "POST", p: "/api/fs/list", headers: { ...J, origin: `http://127.0.0.1:${devPort}` }, body: JSON.stringify({ root: allowed, path: "" }) }), (r) => r.status === 403 && /MASARFLOW_DEV_ROOTS/.test(r.json?.error ?? r.text ?? "")],
   ["no path is exempt from the token (former bridge path)", () => call({ method: "POST", p: "/api/opencode/ws-call", headers: J, body: "{}" }), (r) => r.status === 401 && String(r.json?.error ?? "").startsWith("MasarFlow guard:")],
 ];
 

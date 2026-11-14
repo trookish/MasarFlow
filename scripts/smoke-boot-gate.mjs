@@ -105,7 +105,7 @@ try {
       const target = targets.find((t) => t.type === "page" && String(t.url).startsWith("masarflow://"));
       if (target?.webSocketDebuggerUrl) {
         last = await cdpEvaluate(target.webSocketDebuggerUrl, EXPR);
-        if (last?.hasTopbar && String(last.path).startsWith("/dashboard")) {
+        if (last?.hasTopbar && String(last.path).startsWith("/today")) {
           result = { ok: !last.hasPython && last.hasTopbar === true, path: last.path, origin: last.origin, hasTopbar: last.hasTopbar, hasPython: last.hasPython };
           break;
         }
