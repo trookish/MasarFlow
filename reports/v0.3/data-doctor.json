@@ -1,0 +1,65 @@
+{
+  "deletedProject": "Pulse: Realtime Team Dashboard",
+  "before": {
+    "ranAt": 1793175654999,
+    "results": [
+      {
+        "check": "orphan-project-rows",
+        "count": 0,
+        "sample": []
+      },
+      {
+        "check": "dangling-links",
+        "count": 0,
+        "sample": []
+      },
+      {
+        "check": "stale-linked-task-ids",
+        "count": 0,
+        "sample": []
+      },
+      {
+        "check": "sync-rows-without-entity",
+        "count": 0,
+        "sample": []
+      },
+      {
+        "check": "duplicate-sync-paths",
+        "count": 0,
+        "sample": []
+      }
+    ],
+    "total": 0
+  },
+  "after": {
+    "ranAt": 1793175655306,
+    "results": [
+      {
+        "check": "orphan-project-rows",
+        "count": 0,
+        "sample": []
+      },
+      {
+        "check": "dangling-links",
+        "count": 0,
+        "sample": []
+      },
+      {
+        "check": "stale-linked-task-ids",
+        "count": 0,
+        "sample": []
+      },
+      {
+        "check": "sync-rows-without-entity",
+        "count": 0,
+        "sample": []
+      },
+      {
+        "check": "duplicate-sync-paths",
+        "count": 0,
+        "sample": []
+      }
+    ],
+    "total": 0
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "total": 7,
+  "byImpact": {
+    "critical": 7
+  },
+  "routes": {
+    "/today": {
+      "violations": 1,
+      "byRule": {
+        "aria-required-children": 1
+      },
+      "nodes": [
+        "aria-required-children: .items-end :: <div role=\"tablist\" aria-label=\"Project tabs\" class=\"flex min-w-0 flex-1 items-end gap-1 overflow-x-auto pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidd"
+      ]
+    },
+    "/capture": {
+      "violations": 1,
+      "byRule": {
+        "aria-required-children": 1
+      },
+      "nodes": [
+        "aria-required-children: .items-end :: <div role=\"tablist\" aria-label=\"Project tabs\" class=\"flex min-w-0 flex-1 items-end gap-1 overflow-x-auto pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidd"
+      ]
+    },
+    "/work": {
+      "violations": 1,
+      "byRule": {
+        "aria-required-children": 1
+      },
+      "nodes": [
+        "aria-required-children: .items-end :: <div role=\"tablist\" aria-label=\"Project tabs\" class=\"flex min-w-0 flex-1 items-end gap-1 overflow-x-auto pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidd"
+      ]
+    },
+    "/library": {
+      "violations": 1,
+      "byRule": {
+        "aria-required-children": 1
+      },
+      "nodes": [
+        "aria-required-children: .items-end :: <div role=\"tablist\" aria-label=\"Project tabs\" class=\"flex min-w-0 flex-1 items-end gap-1 overflow-x-auto pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidd"
+      ]
+    },
+    "/ask": {
+      "violations": 1,
+      "byRule": {
+        "aria-required-children": 1
+      },
+      "nodes": [
+        "aria-required-children: .items-end :: <div role=\"tablist\" aria-label=\"Project tabs\" class=\"flex min-w-0 flex-1 items-end gap-1 overflow-x-auto pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidd"
+      ]
+    },
+    "/system": {
+      "violations": 2,
+      "byRule": {
+        "aria-required-children": 1,
+        "label": 1
+      },
+      "nodes": [
+        "aria-required-children: .items-end :: <div role=\"tablist\" aria-label=\"Project tabs\" class=\"flex min-w-0 flex-1 items-end gap-1 overflow-x-auto pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidd",
+        "label: .h-1\\.5 :: <input min=\"0\" max=\"1.5\" step=\"0.0625\" class=\"h-1.5 w-40 cursor-pointer appearance-none rounded-full bg-muted accent-primary\" type=\"range\" value=\"0.625\">"
+      ]
+    }
+  }
+}

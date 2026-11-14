@@ -6,111 +6,104 @@
     "totalMemGb": 15.9,
     "node": "v24.14.0"
   },
-  "dock": {
-    "groups": 1,
-    "groupTabs": [
-      "/dashboard",
-      "/brain"
+  "tabs": {
+    "tabs": [
+      "/today",
+      "/capture"
     ],
     "samples": [
-      6,
-      9,
-      6,
-      16,
-      12,
-      19,
       8,
-      9,
-      6,
-      10
+      11,
+      10,
+      16,
+      8,
+      11,
+      14,
+      8,
+      7,
+      8
     ],
     "attempts": [
       {
         "i": 0,
-        "target": "/dashboard",
-        "dt": -2,
-        "why": "already visible"
+        "target": "/today",
+        "dt": 7.7999999998137355,
+        "why": "ok"
       },
       {
         "i": 1,
-        "target": "/brain",
-        "dt": 6,
+        "target": "/capture",
+        "dt": 10.599999999627471,
         "why": "ok"
       },
       {
         "i": 2,
-        "target": "/dashboard",
-        "dt": 9,
+        "target": "/today",
+        "dt": 9.900000000372529,
         "why": "ok"
       },
       {
         "i": 3,
-        "target": "/brain",
-        "dt": 6.199999988079071,
+        "target": "/capture",
+        "dt": 15.800000000279397,
         "why": "ok"
       },
       {
         "i": 4,
-        "target": "/dashboard",
-        "dt": 16.100000023841858,
+        "target": "/today",
+        "dt": 7.5,
         "why": "ok"
       },
       {
         "i": 5,
-        "target": "/brain",
-        "dt": 11.699999988079071,
+        "target": "/capture",
+        "dt": 11.399999999906868,
         "why": "ok"
       },
       {
         "i": 6,
-        "target": "/dashboard",
-        "dt": 19,
+        "target": "/today",
+        "dt": 14.200000000186265,
         "why": "ok"
       },
       {
         "i": 7,
-        "target": "/brain",
-        "dt": 8.400000005960464,
+        "target": "/capture",
+        "dt": 7.7999999998137355,
         "why": "ok"
       },
       {
         "i": 8,
-        "target": "/dashboard",
-        "dt": 8.900000005960464,
+        "target": "/today",
+        "dt": 6.899999999906868,
         "why": "ok"
       },
       {
         "i": 9,
-        "target": "/brain",
-        "dt": 6.299999982118607,
-        "why": "ok"
-      },
-      {
-        "i": 10,
-        "target": "/dashboard",
-        "dt": 9.700000017881393,
+        "target": "/capture",
+        "dt": 7.7000000001862645,
         "why": "ok"
       }
     ],
     "median": 9,
-    "p95": 19,
+    "p95": 16,
     "budget": 250
   },
   "routeNav": {
     "samples": [
-      14,
-      21,
-      30,
-      17,
-      18,
+      11,
+      22,
       16,
-      14,
-      17,
-      18,
-      19
+      33,
+      22,
+      19,
+      19,
+      19,
+      15,
+      22
     ],
-    "median": 18,
-    "p95": 30,
+    "median": 19,
+    "p95": 33,
     "budget": 700
   }
 }

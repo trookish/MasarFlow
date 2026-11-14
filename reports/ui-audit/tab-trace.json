@@ -1,0 +1,3769 @@
+[
+  {
+    "step": "1000: click Today",
+    "count": 1,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/today?view=dashboard"
+  },
+  {
+    "step": "1000: Today › Focus",
+    "count": 1,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/today?view=focus"
+  },
+  {
+    "step": "1000: Today › Dashboard",
+    "count": 1,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/today?view=dashboard"
+  },
+  {
+    "step": "1000: click Capture",
+    "count": 2,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/capture"
+  },
+  {
+    "step": "1000: Capture › Notes",
+    "count": 2,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/capture?view=notes"
+  },
+  {
+    "step": "1000: Capture › Canvas",
+    "count": 2,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/capture?view=canvas"
+  },
+  {
+    "step": "1000: Capture › Templates",
+    "count": 2,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/capture?view=templates"
+  },
+  {
+    "step": "1000: Capture › Files",
+    "count": 2,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/capture?view=files"
+  },
+  {
+    "step": "1000: click Work",
+    "count": 3,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/work"
+  },
+  {
+    "step": "1000: Work › Task Boards",
+    "count": 3,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/work?view=board"
+  },
+  {
+    "step": "1000: Work › Specifications",
+    "count": 3,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/work?view=specs"
+  },
+  {
+    "step": "1000: Work › Sprints",
+    "count": 3,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/work?view=sprints"
+  },
+  {
+    "step": "1000: Work › Dev Logs",
+    "count": 3,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/work?view=log"
+  },
+  {
+    "step": "1000: click Library",
+    "count": 3,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/library"
+  },
+  {
+    "step": "1000: Library › Documentation",
+    "count": 4,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/library?view=docs"
+  },
+  {
+    "step": "1000: Library › Standards",
+    "count": 4,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/library?view=standards"
+  },
+  {
+    "step": "1000: Library › Architecture",
+    "count": 4,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/library?view=architecture"
+  },
+  {
+    "step": "1000: Library › Knowledge Graph",
+    "count": 4,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/library?view=graph"
+  },
+  {
+    "step": "1000: Library › Semantic Search",
+    "count": 4,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/library?view=search"
+  },
+  {
+    "step": "1000: click Ask",
+    "count": 5,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/ask"
+  },
+  {
+    "step": "1000: Ask › Chat",
+    "count": 5,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/ask?view=chat"
+  },
+  {
+    "step": "1000: Ask › AI Agents",
+    "count": 5,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/ask?view=agents"
+  },
+  {
+    "step": "1000: Ask › AI Workflow",
+    "count": 5,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/ask?view=workflow"
+  },
+  {
+    "step": "1000: click System",
+    "count": 5,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/system"
+  },
+  {
+    "step": "1000: System › Settings",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=settings"
+  },
+  {
+    "step": "1000: System › Control Center",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=control-center"
+  },
+  {
+    "step": "1000: System › Git",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=git"
+  },
+  {
+    "step": "1000: System › Sync Panel",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=sync"
+  },
+  {
+    "step": "1000: System › Project Watcher",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=watcher"
+  },
+  {
+    "step": "1000: System › Features",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=features"
+  },
+  {
+    "step": "1000: System › Terminal",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=terminal"
+  },
+  {
+    "step": "1000: System › Logs",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=logs"
+  },
+  {
+    "step": "1000: System › System Info",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=system-info"
+  },
+  {
+    "step": "1280: click Today",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "true"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/today?view=dashboard"
+  },
+  {
+    "step": "1280: Today › Focus",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "true"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/today?view=focus"
+  },
+  {
+    "step": "1280: Today › Dashboard",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "true"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/today?view=dashboard"
+  },
+  {
+    "step": "1280: click Capture",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/capture?view=files"
+  },
+  {
+    "step": "1280: Capture › Notes",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/capture?view=notes"
+  },
+  {
+    "step": "1280: Capture › Canvas",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/capture?view=canvas"
+  },
+  {
+    "step": "1280: Capture › Templates",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/capture?view=templates"
+  },
+  {
+    "step": "1280: Capture › Files",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/capture?view=files"
+  },
+  {
+    "step": "1280: click Work",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/work?view=log"
+  },
+  {
+    "step": "1280: Work › Task Boards",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/work?view=board"
+  },
+  {
+    "step": "1280: Work › Specifications",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/work?view=specs"
+  },
+  {
+    "step": "1280: Work › Sprints",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/work?view=sprints"
+  },
+  {
+    "step": "1280: Work › Dev Logs",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/work?view=log"
+  },
+  {
+    "step": "1280: click Library",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/library?view=search"
+  },
+  {
+    "step": "1280: Library › Documentation",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/library?view=docs"
+  },
+  {
+    "step": "1280: Library › Standards",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/library?view=standards"
+  },
+  {
+    "step": "1280: Library › Architecture",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/library?view=architecture"
+  },
+  {
+    "step": "1280: Library › Knowledge Graph",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/library?view=graph"
+  },
+  {
+    "step": "1280: Library › Semantic Search",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/library?view=search"
+  },
+  {
+    "step": "1280: click Ask",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "true"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/ask?view=workflow"
+  },
+  {
+    "step": "1280: Ask › Chat",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "true"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/ask?view=chat"
+  },
+  {
+    "step": "1280: Ask › AI Agents",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "true"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/ask?view=agents"
+  },
+  {
+    "step": "1280: Ask › AI Workflow",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "true"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/ask?view=workflow"
+  },
+  {
+    "step": "1280: click System",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=system-info"
+  },
+  {
+    "step": "1280: System › Settings",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=settings"
+  },
+  {
+    "step": "1280: System › Control Center",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=control-center"
+  },
+  {
+    "step": "1280: System › Git",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=git"
+  },
+  {
+    "step": "1280: System › Sync Panel",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=sync"
+  },
+  {
+    "step": "1280: System › Project Watcher",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=watcher"
+  },
+  {
+    "step": "1280: System › Features",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=features"
+  },
+  {
+    "step": "1280: System › Terminal",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=terminal"
+  },
+  {
+    "step": "1280: System › Logs",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=logs"
+  },
+  {
+    "step": "1280: System › System Info",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=system-info"
+  },
+  {
+    "step": "1600: click Today",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "true"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/today?view=dashboard"
+  },
+  {
+    "step": "1600: Today › Focus",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "true"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/today?view=focus"
+  },
+  {
+    "step": "1600: Today › Dashboard",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "true"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/today?view=dashboard"
+  },
+  {
+    "step": "1600: click Capture",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/capture?view=files"
+  },
+  {
+    "step": "1600: Capture › Notes",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/capture?view=notes"
+  },
+  {
+    "step": "1600: Capture › Canvas",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/capture?view=canvas"
+  },
+  {
+    "step": "1600: Capture › Templates",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/capture?view=templates"
+  },
+  {
+    "step": "1600: Capture › Files",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/capture?view=files"
+  },
+  {
+    "step": "1600: click Work",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/work?view=log"
+  },
+  {
+    "step": "1600: Work › Task Boards",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/work?view=board"
+  },
+  {
+    "step": "1600: Work › Specifications",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/work?view=specs"
+  },
+  {
+    "step": "1600: Work › Sprints",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/work?view=sprints"
+  },
+  {
+    "step": "1600: Work › Dev Logs",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/work?view=log"
+  },
+  {
+    "step": "1600: click Library",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/library?view=search"
+  },
+  {
+    "step": "1600: Library › Documentation",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/library?view=docs"
+  },
+  {
+    "step": "1600: Library › Standards",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/library?view=standards"
+  },
+  {
+    "step": "1600: Library › Architecture",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/library?view=architecture"
+  },
+  {
+    "step": "1600: Library › Knowledge Graph",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/library?view=graph"
+  },
+  {
+    "step": "1600: Library › Semantic Search",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/library?view=search"
+  },
+  {
+    "step": "1600: click Ask",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "true"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/ask?view=workflow"
+  },
+  {
+    "step": "1600: Ask › Chat",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "true"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/ask?view=chat"
+  },
+  {
+    "step": "1600: Ask › AI Agents",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "true"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/ask?view=agents"
+  },
+  {
+    "step": "1600: Ask › AI Workflow",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "true"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/ask?view=workflow"
+  },
+  {
+    "step": "1600: click System",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=system-info"
+  },
+  {
+    "step": "1600: System › Settings",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=settings"
+  },
+  {
+    "step": "1600: System › Control Center",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=control-center"
+  },
+  {
+    "step": "1600: System › Git",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=git"
+  },
+  {
+    "step": "1600: System › Sync Panel",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=sync"
+  },
+  {
+    "step": "1600: System › Project Watcher",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=watcher"
+  },
+  {
+    "step": "1600: System › Features",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=features"
+  },
+  {
+    "step": "1600: System › Terminal",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=terminal"
+  },
+  {
+    "step": "1600: System › Logs",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=logs"
+  },
+  {
+    "step": "1600: System › System Info",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=system-info"
+  },
+  {
+    "step": "repeat 1: Today",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "true"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/today?view=dashboard"
+  },
+  {
+    "step": "repeat 2: Today",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "true"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/today?view=dashboard"
+  },
+  {
+    "step": "repeat 1: Capture",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/capture?view=files"
+  },
+  {
+    "step": "repeat 2: Capture",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "true"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/capture?view=files"
+  },
+  {
+    "step": "repeat 1: Work",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/work?view=log"
+  },
+  {
+    "step": "repeat 2: Work",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "true"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/work?view=log"
+  },
+  {
+    "step": "repeat 1: Library",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/library?view=search"
+  },
+  {
+    "step": "repeat 2: Library",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "true"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/library?view=search"
+  },
+  {
+    "step": "repeat 1: Ask",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "true"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/ask?view=workflow"
+  },
+  {
+    "step": "repeat 2: Ask",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "true"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "false"
+      }
+    ],
+    "address": "masarflow://app/ask?view=workflow"
+  },
+  {
+    "step": "repeat 1: System",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=system-info"
+  },
+  {
+    "step": "repeat 2: System",
+    "count": 6,
+    "tabs": [
+      {
+        "url": "/today",
+        "label": "Today",
+        "selected": "false"
+      },
+      {
+        "url": "/capture",
+        "label": "Capture",
+        "selected": "false"
+      },
+      {
+        "url": "/work",
+        "label": "Work",
+        "selected": "false"
+      },
+      {
+        "url": "/library",
+        "label": "Library",
+        "selected": "false"
+      },
+      {
+        "url": "/ask",
+        "label": "Ask",
+        "selected": "false"
+      },
+      {
+        "url": "/system",
+        "label": "System",
+        "selected": "true"
+      }
+    ],
+    "address": "masarflow://app/system?view=system-info"
+  }
+]

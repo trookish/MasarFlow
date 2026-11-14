@@ -1,0 +1,905 @@
+[
+  {
+    "width": 1000,
+    "route": "/today",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/dashboard",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/brain",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/brain/canvas",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/brain/templates",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/files",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/tasks",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      },
+      {
+        "selector": "button[Add task]",
+        "overflowPx": 103
+      },
+      {
+        "selector": "button[Add task]",
+        "overflowPx": 403
+      },
+      {
+        "selector": "button[Add task]",
+        "overflowPx": 703
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/specs",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/sprints",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/devlogs",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/docs",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/standards",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/architecture",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/knowledge",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/search",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/chat",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/agents",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/workflow",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/settings",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/control-center",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/git",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/sync",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/watcher",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/plugins",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/tools/terminal",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/tools/logs",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1000,
+    "route": "/tools/system",
+    "clipped": [
+      {
+        "selector": "button[Minimize window]",
+        "overflowPx": 11
+      },
+      {
+        "selector": "button[Maximize window]",
+        "overflowPx": 55
+      },
+      {
+        "selector": "button[Close window]",
+        "overflowPx": 99
+      }
+    ]
+  },
+  {
+    "width": 1280,
+    "route": "/today",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/dashboard",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/brain",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/brain/canvas",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/brain/templates",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/files",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/tasks",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/specs",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/sprints",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/devlogs",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/docs",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/standards",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/architecture",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/knowledge",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/search",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/chat",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/agents",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/workflow",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/settings",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/control-center",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/git",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/sync",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/watcher",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/plugins",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/tools/terminal",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/tools/logs",
+    "clipped": []
+  },
+  {
+    "width": 1280,
+    "route": "/tools/system",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/today",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/dashboard",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/brain",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/brain/canvas",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/brain/templates",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/files",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/tasks",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/specs",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/sprints",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/devlogs",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/docs",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/standards",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/architecture",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/knowledge",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/search",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/chat",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/agents",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/workflow",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/settings",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/control-center",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/git",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/sync",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/watcher",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/plugins",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/tools/terminal",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/tools/logs",
+    "clipped": []
+  },
+  {
+    "width": 1440,
+    "route": "/tools/system",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/today",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/dashboard",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/brain",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/brain/canvas",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/brain/templates",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/files",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/tasks",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/specs",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/sprints",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/devlogs",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/docs",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/standards",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/architecture",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/knowledge",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/search",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/chat",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/agents",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/workflow",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/settings",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/control-center",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/git",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/sync",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/watcher",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/plugins",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/tools/terminal",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/tools/logs",
+    "clipped": []
+  },
+  {
+    "width": 1920,
+    "route": "/tools/system",
+    "clipped": []
+  }
+]
