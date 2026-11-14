@@ -8,6 +8,8 @@
  *   Every state is normalized to one linear tab group on load and on
  *   project switch (see normalizeWorkspaceTabs).
  * - closedTabs: recently closed tab URLs per project, for Ctrl+Shift+T.
+ * - pinnedTabs: page ids pinned per project. Pinned tabs sit at the front of the strip (the tree
+ *   order is moved to match, so every index-based shortcut sees the same order) and refuse to close.
  * - In the browser, persistence uses localStorage; in non-DOM environments
  *   (tests, SSR utilities) it falls back to an in-memory storage.
  */
@@ -15,14 +17,17 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import {
+  clampTabIndex,
   defaultWorkspaceTabsState,
   normalizeWorkspaceTabs,
+  openPins,
+  workspaceTabIds,
 } from "@/lib/navigation/workspace-tabs";
 import { parseProjectState } from "@/lib/dock/serde";
 import type { ProjectDockState } from "@/lib/dock/types";
 import { joinPanelId, pageIdOf, paramsOf } from "@/lib/dock/types";
 import { resolveLegacyUrl } from "@/lib/navigation/redirects";
-import { applyUrlFocus, closeEverywhere } from "@/lib/dock/dock-core";
+import { applyUrlFocus, closeEverywhere, focusedPanelId } from "@/lib/dock/dock-core";
 import { collectPages, findHolder, focusPanel, reorderTab } from "@/lib/dock/tree";
 import { getPageDef } from "@/lib/dock/registry";
 import { pushToast } from "@/lib/stores/toast";
@@ -49,6 +54,8 @@ interface DockStore {
   activeProjectId: string | null;
   /** Recently closed tabs per project, oldest first. */
   closedTabs: Record<string, string[]>;
+  /** Pinned page ids per project. */
+  pinnedTabs: Record<string, string[]>;
 
   getProject: () => ProjectDockState | null;
   setProject: (id: string | null) => void;
@@ -58,9 +65,41 @@ interface DockStore {
   /** Close a tab; the last tab never closes. Records it for reopen. */
   close: (panelId: string) => void;
   reopenClosedTab: () => void;
+  /**
+   * The tab for `url`'s page was closed before its last navigation reached the dock (Ctrl+W in the
+   * same tick as a section switch). Record that navigation on the closed entry, so Ctrl+Shift+T
+   * reopens the section the user was looking at rather than the one before it.
+   */
+  amendLastClosed: (url: string) => void;
   focus: (panelId: string) => void;
-  /** Move a tab to `index` within its strip (Alt+Shift+Left/Right). */
+  /** Move a tab to `index` within its strip (Alt+Shift+Left/Right). Pinned tabs keep the front. */
   reorder: (nodeId: string, panelId: string, index: number) => void;
+  /** Pin or unpin a tab. Pinning moves it to the end of the pinned block; unpinning to just after it. */
+  togglePin: (panelId: string) => void;
+}
+
+/** Pinned page ids of the active project that are still open, in strip order. */
+export function activePins(s: Pick<DockStore, "activeProjectId" | "projects" | "pinnedTabs">): string[] {
+  const id = s.activeProjectId;
+  const state = id ? s.projects[id] : undefined;
+  if (!id || !state) return [];
+  return openPins(workspaceTabIds(state), s.pinnedTabs[id] ?? []);
+}
+
+/** Move one tab of the active workspace to `index`, leaving the focused tab focused. */
+function moveTab(state: ProjectDockState, panelId: string, index: number): ProjectDockState {
+  const wsEntry = state.workspaces[state.activeWorkspace];
+  const holder = findHolder(wsEntry.tree, panelId);
+  if (!holder || holder.type !== "tabs") return state;
+  const focused = focusedPanelId(state);
+  const moved = reorderTab(wsEntry.tree, holder.id, panelId, index);
+  return {
+    ...state,
+    workspaces: {
+      ...state.workspaces,
+      [state.activeWorkspace]: { ...wsEntry, tree: focusPanel(moved, focused) },
+    },
+  };
 }
 
 /** Update the active project's state through a reducer (no-op when absent). */
@@ -89,6 +128,7 @@ export const useDockStore = create<DockStore>()(
       projects: {},
       activeProjectId: null,
       closedTabs: {},
+      pinnedTabs: {},
 
       getProject: (): ProjectDockState | null => {
         const s = get();
@@ -118,6 +158,13 @@ export const useDockStore = create<DockStore>()(
           const path = pageIdOf(canonical);
           const openPages = collectPages(before.workspaces[before.activeWorkspace].tree);
           if (!openPages.includes(path) || openPages.length === 1) return {};
+          if (activePins(s).includes(path)) {
+            pushToast({
+              title: `${panelLabel(path)} is pinned`,
+              description: "Unpin the tab to close it.",
+            });
+            return {};
+          }
           const next = update(s, (state) =>
             normalizeWorkspaceTabs(closeEverywhere(state, path)),
           );
@@ -138,6 +185,15 @@ export const useDockStore = create<DockStore>()(
               [id]: [...(s.closedTabs[id] ?? []), closedUrl].slice(-20),
             },
           };
+        }),
+
+      amendLastClosed: (url) =>
+        set((s) => {
+          const id = s.activeProjectId;
+          const history = id ? (s.closedTabs[id] ?? []) : [];
+          const last = history.at(-1);
+          if (!id || !last || pageIdOf(last) !== pageIdOf(url) || last === url) return {};
+          return { closedTabs: { ...s.closedTabs, [id]: [...history.slice(0, -1), url] } };
         }),
 
       reopenClosedTab: () =>
@@ -173,18 +229,41 @@ export const useDockStore = create<DockStore>()(
         set((s) =>
           update(s, (state) => {
             const wsEntry = state.workspaces[state.activeWorkspace];
+            const pins = activePins(s);
+            const tabs = workspaceTabIds(state);
+            const target = clampTabIndex(index, pins.includes(pageIdOf(panelId)), pins.length, tabs.length);
             return {
               ...state,
               workspaces: {
                 ...state.workspaces,
                 [state.activeWorkspace]: {
                   ...wsEntry,
-                  tree: reorderTab(wsEntry.tree, nodeId, panelId, index),
+                  tree: reorderTab(wsEntry.tree, nodeId, panelId, target),
                 },
               },
             };
           }),
         ),
+
+      togglePin: (panelId) =>
+        set((s) => {
+          const id = s.activeProjectId;
+          const state = id ? s.projects[id] : undefined;
+          if (!id || !state) return {};
+          const tabs = workspaceTabIds(state);
+          const tabId = tabs.find((t) => pageIdOf(t) === pageIdOf(panelId));
+          if (!tabId) return {};
+          const page = pageIdOf(tabId);
+          const pins = activePins(s);
+          const pinning = !pins.includes(page);
+          const nextPins = pinning ? [...pins, page] : pins.filter((p) => p !== page);
+          // Pinned block first: a pinned tab goes to its end, an unpinned one to just after it.
+          const index = pinning ? pins.length : nextPins.length;
+          return {
+            projects: { ...s.projects, [id]: moveTab(state, tabId, index) },
+            pinnedTabs: { ...s.pinnedTabs, [id]: nextPins },
+          };
+        }),
     }),
     {
       name: "masarflow-dock-v1",
@@ -197,6 +276,7 @@ export const useDockStore = create<DockStore>()(
         projects: s.projects,
         activeProjectId: s.activeProjectId,
         closedTabs: s.closedTabs,
+        pinnedTabs: s.pinnedTabs,
       }),
       // Untrusted persisted JSON: validate, never trust. Invalid payloads
       // (old versions, hand-edits) fall back to fresh defaults.
@@ -220,9 +300,21 @@ export const useDockStore = create<DockStore>()(
             }
           }
         }
+        const pinnedTabs: Record<string, string[]> = {};
+        if (raw.pinnedTabs && typeof raw.pinnedTabs === "object") {
+          for (const [id, value] of Object.entries(raw.pinnedTabs)) {
+            if (Array.isArray(value)) {
+              pinnedTabs[id] = value
+                .filter((entry): entry is string => typeof entry === "string")
+                .map((entry) => pageIdOf(canonicalize(entry)))
+                .filter((entry, index, all) => all.indexOf(entry) === index);
+            }
+          }
+        }
         return {
           ...current,
           closedTabs,
+          pinnedTabs,
           projects:
             Object.keys(projects).length > 0
               ? projects

@@ -1,5 +1,7 @@
 /** Pure helpers for URL-driven selection (?task=…, ?sprint=…). */
 
+import { isPageLocation } from "@/lib/navigation/surfaces";
+
 /** New search string selecting `id` for `param`. `null` writes an EXPLICIT empty value:
  * the dock keeps a per-panel snapshot and only an explicit value overrides it. */
 export function withSelection(search: string, param: string, id: string | null): string {
@@ -14,7 +16,8 @@ export function readSelection(search: string, param: string): string | null {
 
 /**
  * The selection a (possibly hidden) page should show. `pathname` is the URL of the
- * FOCUSED panel; when it is not this page's `path`, keep `kept` (the last known value).
+ * FOCUSED tab; when it does not show this page's `path` (directly or as its surface
+ * section), keep `kept` (the last known value).
  */
 export function selectionFor(
   pathname: string,
@@ -23,5 +26,5 @@ export function selectionFor(
   param: string,
   kept: string | null,
 ): string | null {
-  return pathname === path ? readSelection(search, param) : kept;
+  return isPageLocation(path, pathname, search) ? readSelection(search, param) : kept;
 }

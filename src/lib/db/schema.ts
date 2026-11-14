@@ -587,6 +587,18 @@ const chatThreadObject = z.object({
     .default([]),
   /** Provider id of the selected connection (e.g. "anthropic"). Not indexed. */
   providerId: z.string().default(""),
+  /**
+   * Set on a side chat: the main thread and the message it branched from. A side
+   * thread shares the main thread's context up to that message; its own messages
+   * live under its own id and never appear in the main thread. Not indexed.
+   */
+  sideOf: z
+    .object({
+      threadId: z.string(),
+      messageId: z.string(),
+      messageCreatedAt: z.number(),
+    })
+    .optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
@@ -607,6 +619,12 @@ export const toolActivitySchema = z.object({
   ok: z.boolean().default(true),
   /** True while the tool is executing during a live stream (not persisted). */
   running: z.boolean().default(false),
+  /** Provider call id. Absent on messages saved before grouped tool calls. */
+  id: z.string().optional(),
+  /** Arguments the model passed. Absent on messages saved before grouped tool calls. */
+  arguments: z.record(z.string(), z.unknown()).optional(),
+  /** Tool output, truncated when stored. Absent on messages saved before grouped tool calls. */
+  result: z.string().optional(),
 });
 export type ToolActivity = z.infer<typeof toolActivitySchema>;
 

@@ -136,17 +136,17 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: Bot,
     items: [
       {
-        label: "Chat",
+        label: "Sessions",
         href: "/chat",
         icon: MessageSquare,
-        keywords: ["ai", "claude", "openai", "openrouter", "llm", "providers"],
+        keywords: ["chat", "ask", "ai", "claude", "openai", "openrouter", "llm", "providers"],
       },
-      { label: "AI Agents", href: "/agents", icon: Bot },
+      { label: "Agents", href: "/agents", icon: Bot, keywords: ["ai agents"] },
       {
-        label: "AI Workflow",
+        label: "Automations",
         href: "/workflow",
         icon: Workflow,
-        keywords: ["16-step", "pipeline"],
+        keywords: ["ai workflow", "workflow", "16-step", "pipeline"],
       },
     ],
   },

@@ -29,6 +29,22 @@ export function defaultWorkspaceTabsState(): ProjectDockState {
   };
 }
 
+/**
+ * Where a tab may move to when pinned tabs keep the front of the strip: a pinned tab stays inside the
+ * pinned block, an unpinned tab stays after it. `pinnedCount` is how many tabs are pinned.
+ */
+export function clampTabIndex(index: number, pinned: boolean, pinnedCount: number, tabCount: number): number {
+  const min = pinned ? 0 : pinnedCount;
+  const max = pinned ? Math.max(0, pinnedCount - 1) : Math.max(0, tabCount - 1);
+  return Math.max(min, Math.min(max, index));
+}
+
+/** Pinned page ids that are still open, in strip order. Stale pins (a page no longer open) are dropped. */
+export function openPins(tabs: readonly string[], pinned: readonly string[]): string[] {
+  const set = new Set(pinned);
+  return tabs.map(pageIdOf).filter((page) => set.has(page));
+}
+
 /** The linear tab order for the active project workspace. */
 export function workspaceTabIds(state: ProjectDockState): string[] {
   const workspace = state.workspaces[state.activeWorkspace];

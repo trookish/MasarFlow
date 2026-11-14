@@ -15,6 +15,8 @@ import { syncGithubCommits } from "@/lib/github-sync";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { usePublishSelection } from "@/lib/inspector/use-publish-selection";
+import { cn } from "@/lib/utils/cn";
 
 /**
  * Compact GitHub commits card for the dashboard grid. Real Octokit sync: the
@@ -38,6 +40,14 @@ export function GithubCommitsCard({
   const [error, setError] = useState<string | null>(null);
   const [lastAdded, setLastAdded] = useState<number | null>(null);
   const specById = new Map(specs.map((s) => [s.id, s]));
+  // A clicked commit is shown in the Inspector (properties, linked specs, Ask).
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  usePublishSelection(
+    "/dashboard",
+    selectedId && commits.some((c) => c.id === selectedId)
+      ? { ref: { kind: "commit", id: selectedId } }
+      : null,
+  );
 
   async function sync() {
     if (!projectId || syncing) return;
@@ -121,7 +131,7 @@ export function GithubCommitsCard({
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            The token stays in this browser and is sent only to the local
+            The token stays on this computer and is sent only to the local
             Octokit proxy — a fine-grained token with read-only Contents access
             is enough. Commits mentioning RFC numbers or task titles link
             automatically.
@@ -153,7 +163,16 @@ export function GithubCommitsCard({
       ) : (
         <ul className="space-y-2">
           {commits.slice(0, 5).map((c) => (
-            <li key={c.id} className="flex items-start gap-2.5">
+            <li key={c.id}>
+              <button
+                type="button"
+                aria-pressed={selectedId === c.id}
+                onClick={() => setSelectedId((cur) => (cur === c.id ? null : c.id))}
+                className={cn(
+                  "flex w-full items-start gap-2.5 rounded-md px-1.5 py-1 text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  selectedId === c.id && "bg-accent",
+                )}
+              >
               <GitCommitHorizontal className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm">{c.message.split("\n")[0]}</div>
@@ -173,6 +192,7 @@ export function GithubCommitsCard({
                   })}
                 </div>
               </div>
+              </button>
             </li>
           ))}
         </ul>

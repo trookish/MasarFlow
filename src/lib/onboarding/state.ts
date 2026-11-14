@@ -14,7 +14,7 @@ export interface WizardProgress {
 }
 
 export interface WizardContext {
-  /** False in a plain browser (pnpm dev) and during SSR. */
+  /** False during SSR and when the desktop bridge is missing. */
   desktop: boolean;
   /** From main-process settings; null = never completed. */
   completedAt: string | null;

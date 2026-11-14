@@ -30,6 +30,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils/cn";
+import { pageUrl } from "@/lib/navigation/surfaces";
 
 function slugifyName(name: string): string {
   return (
@@ -92,7 +93,7 @@ export function CanvasToolbar({
       projectId,
       name: `Canvas ${(canvases?.length ?? 0) + 1}`,
     });
-    router.replace(`/brain/canvas?canvas=${canvas.id}`);
+    router.replace(pageUrl("/brain/canvas", `canvas=${canvas.id}`));
   }
 
   async function handleImportFile(file: File) {
@@ -116,7 +117,7 @@ export function CanvasToolbar({
       for (const e of imported.edges) {
         await canvasRepo.addEdge({ canvasId: canvas.id, ...e });
       }
-      router.replace(`/brain/canvas?canvas=${canvas.id}`);
+      router.replace(pageUrl("/brain/canvas", `canvas=${canvas.id}`));
     } finally {
       setImporting(false);
     }
@@ -142,7 +143,9 @@ export function CanvasToolbar({
             <DropdownMenuItem
               key={c.id}
               active={c.id === canvasId}
-              onSelect={() => router.replace(`/brain/canvas?canvas=${c.id}`)}
+              onSelect={() =>
+                router.replace(pageUrl("/brain/canvas", `canvas=${c.id}`))
+              }
             >
               <LayoutTemplate className="h-4 w-4" />
               <span className="truncate">{c.name}</span>

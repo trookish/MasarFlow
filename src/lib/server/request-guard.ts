@@ -64,7 +64,7 @@ export interface DevGuardRequest extends GuardRequest {
 }
 
 /**
- * Guard for browser development (`next dev`, no launch token). It cannot prove the caller is
+ * Guard for development (`pnpm dev`: `next dev` behind Electron, no launch token). It cannot prove the caller is
  * MasarFlow, but it blocks the two browser-borne attacks: DNS rebinding (Host allow-list) and
  * cross-site requests (Origin + Fetch Metadata). A local process can forge headers; that attacker
  * already runs code as the user and is out of scope (SECURITY.md).

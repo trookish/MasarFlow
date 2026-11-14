@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DocEditor } from "./doc-editor";
+import { pageUrl } from "@/lib/navigation/surfaces";
 
 export function DocsView() {
   const projectId = useActiveProjectId();
@@ -60,7 +61,7 @@ export function DocsView() {
 
   function select(id: string | null) {
     setListOpen(false);
-    router.replace(id ? `/docs?doc=${id}` : "/docs", { scroll: false });
+    router.replace(pageUrl("/docs", id ? `doc=${id}` : ""), { scroll: false });
   }
 
   async function createDoc() {

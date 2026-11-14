@@ -9,7 +9,7 @@ import {
  * Coarse tool sets (v0.3 P4 T3). The model sees about ten tools with a `kind` discriminator instead of
  * the 61 per-entity workspace tools. Each coarse call is expanded back into the legacy tool call
  * before it runs, so the executor, its validation and the undo ledger are unchanged, and threads
- * stored with the old names still replay (the legacy names stay accepted for 0.3; removed in 0.4).
+ * stored with the old names still replay (the legacy names stay accepted for 0.2; removed in 0.3).
  */
 
 export type ToolsetId = "none" | "workspace";

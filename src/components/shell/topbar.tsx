@@ -1,7 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, Command as CommandIcon, Keyboard, PanelLeft, PanelRight, RefreshCw, AppWindow } from "lucide-react";
+import {
+  Search,
+  Command as CommandIcon,
+  Keyboard,
+  PanelBottomClose,
+  PanelBottomOpen,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRight,
+  PanelRightClose,
+  PanelRightOpen,
+  RefreshCw,
+  AppWindow,
+} from "lucide-react";
+import { useInspectorPlacement } from "@/lib/inspector/use-inspector-placement";
 import { useUIStore } from "@/lib/stores/ui";
 import { useMounted } from "@/lib/hooks/use-mounted";
 import { getDesktop } from "@/lib/desktop/bridge";
@@ -23,9 +37,11 @@ export function Topbar() {
   const setPaletteOpen = useUIStore((s) => s.setPaletteOpen);
   const setShortcutsOpen = useUIStore((s) => s.setShortcutsOpen);
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
-  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
-  const inspectorOpen = useUIStore((s) => s.inspectorOpen);
-  const toggleInspector = useUIStore((s) => s.toggleInspector);
+  const sidebarPosition = useUIStore((s) => s.sidebarPosition);
+  const dockCollapsed = useUIStore((s) => s.dockCollapsed);
+  const toggleNavigation = useUIStore((s) => s.toggleNavigation);
+  const inspector = useInspectorPlacement();
+  const inspectorShown = inspector.presentation !== "hidden";
 
   const [updateOpen, setUpdateOpen] = useState(false);
   const updateInfo = useUpdatesStore((s) => s.info);
@@ -50,11 +66,17 @@ export function Topbar() {
   }
 
 
-  const toggleLabel = !mounted
-    ? "Collapse sidebar (⌘B)"
-    : sidebarCollapsed
-      ? "Expand sidebar (⌘B)"
-      : "Collapse sidebar (⌘B)";
+  // The same control folds whichever navigation is showing: the rail on
+  // either edge, or the bottom dock.
+  const dock = mounted && sidebarPosition === "bottom";
+  const folded = mounted && (dock ? dockCollapsed : sidebarCollapsed);
+  const toggleLabel = `${folded ? "Expand" : "Collapse"} ${dock ? "dock" : "sidebar"} (⌘B)`;
+  const position = mounted ? sidebarPosition : "left";
+  const ToggleIcon = {
+    left: folded ? PanelLeftOpen : PanelLeftClose,
+    right: folded ? PanelRightOpen : PanelRightClose,
+    bottom: folded ? PanelBottomOpen : PanelBottomClose,
+  }[position];
 
   const toggleButton = (
     <Tooltip label={toggleLabel} side="bottom" align="start">
@@ -62,9 +84,9 @@ export function Topbar() {
         variant="ghost"
         size="icon"
         aria-label={toggleLabel}
-        onClick={toggleSidebar}
+        onClick={toggleNavigation}
       >
-        <PanelLeft className="h-4 w-4" />
+        <ToggleIcon className="h-4 w-4" />
       </Button>
     </Tooltip>
   );
@@ -137,14 +159,13 @@ export function Topbar() {
             <Keyboard className="h-4 w-4" />
           </Button>
         </Tooltip>
-        <Tooltip label={inspectorOpen ? "Hide inspector" : "Show inspector"} side="bottom">
+        <Tooltip label={inspectorShown ? "Hide inspector" : "Show inspector"} side="bottom">
           <Button
             variant="ghost"
             size="icon"
-            aria-label={inspectorOpen ? "Hide inspector" : "Show inspector"}
-            aria-pressed={inspectorOpen}
-            onClick={toggleInspector}
-            className="hidden xl:inline-flex"
+            aria-label={inspectorShown ? "Hide inspector" : "Show inspector"}
+            aria-pressed={inspectorShown}
+            onClick={inspector.toggle}
           >
             <PanelRight className="h-4 w-4" />
           </Button>

@@ -73,7 +73,7 @@ export function UpdatePanel() {
     return (
       <section className="space-y-2 text-sm">
         <p className="text-muted-foreground">
-          Updates are managed by the MasarFlow desktop app. In a browser, use the topbar’s update check.
+          The updater is unavailable because the desktop bridge did not load. Use the topbar’s update check.
         </p>
       </section>
     );

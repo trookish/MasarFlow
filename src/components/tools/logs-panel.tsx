@@ -60,8 +60,8 @@ export function LogsPanel() {
     return (
       <EmptyState
         icon={ScrollText}
-        title="Logs are read by the desktop app"
-        description="The browser build has no access to the application's log folder. Open the desktop app to read them."
+        title="Logs are unavailable"
+        description="The desktop bridge did not load, so the log folder cannot be read. Restart the app to try again."
       />
     );
   }

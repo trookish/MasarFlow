@@ -112,6 +112,7 @@ function SwitcherMenu({
       <DropdownMenuTrigger>
         <button
           type="button"
+          data-testid="project-switcher"
           className="flex h-9 items-center gap-2 rounded-md border border-border bg-card px-2.5 text-sm hover:bg-accent"
         >
           <ProjectIcon

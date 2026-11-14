@@ -51,6 +51,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { GithubCommitsCard } from "./commits-panel";
 import { entityHref } from "@/lib/entities/registry";
 
+import { pageUrl } from "@/lib/navigation/surfaces";
 /* ── Small helpers ────────────────────────────────────────────────────── */
 
 function relTime(ts: number): string {
@@ -368,7 +369,7 @@ export function DashboardView() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push("/chat")}
+                onClick={() => router.push(pageUrl("/chat"))}
               >
                 <Sparkles className="h-3.5 w-3.5 text-primary" /> Ask AI
               </Button>
@@ -407,7 +408,7 @@ export function DashboardView() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => router.push("/chat")}
+                    onClick={() => router.push(pageUrl("/chat"))}
                   >
                     <MessageSquare className="h-3.5 w-3.5" /> Ask AI
                   </Button>

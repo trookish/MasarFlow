@@ -1,7 +1,7 @@
 "use client";
 
-import { createElement, useEffect, useRef } from "react";
-import { ChevronDown, Plus, RotateCcw, X } from "lucide-react";
+import { createElement, useEffect, useRef, useState } from "react";
+import { ChevronDown, Pin, PinOff, Plus, RotateCcw, X } from "lucide-react";
 import { useDockStore } from "@/lib/stores/dock";
 import { useUIStore } from "@/lib/stores/ui";
 import { focusedPanelId } from "@/lib/dock/dock-core";
@@ -10,7 +10,10 @@ import { pageIdOf } from "@/lib/dock/types";
 import { useDockSync } from "@/lib/hooks/use-dock-sync";
 import { useTerminalSync } from "@/lib/hooks/use-terminal-sync";
 import { showPanel, useIsMounted } from "@/lib/dock/mount-cap";
-import { adjacentTabId, workspaceTabIds } from "@/lib/navigation/workspace-tabs";
+import { adjacentTabId, openPins, workspaceTabIds } from "@/lib/navigation/workspace-tabs";
+import { PanelPageContext } from "@/lib/dock/panel-context";
+import { useUnsavedStore } from "@/lib/stores/unsaved";
+import { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "@/components/ui/context-menu";
 import { PanelErrorBoundary, PanelMissing } from "@/components/dock/panel-error";
 import { panelComponent } from "@/components/dock/panel-loader";
 import { SurfaceView } from "@/components/shell/surface-view";
@@ -34,29 +37,46 @@ function WorkspacePanel({ panelId, active, index }: { panelId: string; active: b
       aria-hidden={!active}
       data-testid={active ? "dock-panel" : undefined}
       data-dock-url={panelId}
-      className="h-full min-h-0"
+      hidden={!active}
+      // Kept-alive tabs share one box. An inactive panel must leave the layout
+      // entirely: a hidden child inside an in-flow wrapper still stacked the
+      // wrappers, pushed the active tab below the fold, and focus then scrolled
+      // <main> so the tab strip and inspector disappeared.
+      className={cn("absolute inset-0 min-h-0", !active && "hidden")}
     >
-      <div className={cn("h-full min-h-0", !active && "hidden")} aria-hidden={!active}>
-        <PanelErrorBoundary panelId={panelId}>
-          {surface ? <SurfaceView id={surface.id} /> : Page ? createElement(Page) : <PanelMissing panelId={panelId} />}
-        </PanelErrorBoundary>
+      <div className="h-full min-h-0">
+        <PanelPageContext.Provider value={pageIdOf(panelId)}>
+          <PanelErrorBoundary panelId={panelId}>
+            {surface ? <SurfaceView id={surface.id} /> : Page ? createElement(Page) : <PanelMissing panelId={panelId} />}
+          </PanelErrorBoundary>
+        </PanelPageContext.Provider>
       </div>
     </div>
   );
 }
 
 /** One project, one linear set of tabs. Legacy split layouts are migrated by the store. */
-export function WorkspaceTabs() {
+/**
+ * `ready` drives the e2e anchor `data-testid="shell-ready"`: a project is
+ * active and no first-run UI (setup wizard, first project dialog) is
+ * blocking the shell.
+ */
+export function WorkspaceTabs({ ready }: { ready: boolean }) {
   useDockSync();
   useTerminalSync();
   const projectState = useDockStore((s) => (s.activeProjectId ? s.projects[s.activeProjectId] : null));
   const focus = useDockStore((s) => s.focus);
   const close = useDockStore((s) => s.close);
   const undo = useDockStore((s) => s.reopenClosedTab);
+  const togglePin = useDockStore((s) => s.togglePin);
+  const storedPins = useDockStore((s) => (s.activeProjectId ? s.pinnedTabs[s.activeProjectId] : undefined));
+  const unsavedPages = useUnsavedStore((s) => s.byPage);
   const setPaletteOpen = useUIStore((s) => s.setPaletteOpen);
   const tabRefs = useRef(new Map<string, HTMLButtonElement>());
+  const [menu, setMenu] = useState<{ panelId: string; x: number; y: number } | null>(null);
 
   const tabs = projectState ? workspaceTabIds(projectState) : [];
+  const pinned = new Set(openPins(tabs, storedPins ?? []));
   const focused = projectState ? focusedPanelId(projectState) : null;
   const activeTab = focused && tabs.includes(focused) ? focused : tabs[0];
 
@@ -71,7 +91,7 @@ export function WorkspaceTabs() {
 
   return (
     <div
-      data-testid="shell-ready"
+      data-testid={ready ? "shell-ready" : undefined}
       data-dock-workspace
       data-layout="tabs"
       className="flex h-full min-h-0 flex-col bg-background"
@@ -83,16 +103,34 @@ export function WorkspaceTabs() {
             const Icon = def?.icon;
             const active = panelId === activeTab;
             const label = def?.label ?? pageIdOf(panelId);
+            const isPinned = pinned.has(pageIdOf(panelId));
+            const unsaved = (unsavedPages[pageIdOf(panelId)]?.length ?? 0) > 0;
+            const state = [isPinned ? "Pinned" : null, unsaved ? "Unsaved changes" : null].filter(Boolean).join(", ");
             return (
               <div
                 key={panelId}
+                data-pinned={isPinned ? "" : undefined}
+                data-unsaved={unsaved ? "" : undefined}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  setMenu({ panelId, x: event.clientX, y: event.clientY });
+                }}
                 className={cn(
-                  "group relative flex h-9 min-w-32 max-w-52 shrink-0 items-center rounded-t-md border border-b-0 transition-colors",
+                  "group relative flex h-9 shrink-0 items-center rounded-t-md border border-b-0 transition-colors",
+                  isPinned ? "min-w-0" : "min-w-32 max-w-52",
                   active
                     ? "border-border bg-background text-foreground shadow-sm"
                     : "border-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground",
                 )}
               >
+                {active ? (
+                  <span aria-hidden className="pointer-events-none absolute inset-x-2 top-0 h-0.5 rounded-b-full bg-primary" />
+                ) : null}
+                {state ? (
+                  <span id={`workspace-tab-state-${index}`} hidden>
+                    {state}
+                  </span>
+                ) : null}
                 <button
                   ref={(node) => {
                     if (node) tabRefs.current.set(panelId, node);
@@ -103,7 +141,10 @@ export function WorkspaceTabs() {
                   role="tab"
                   aria-selected={active}
                   aria-controls={`workspace-panel-${index}`}
+                  aria-label={isPinned ? label : undefined}
+                  aria-describedby={state ? `workspace-tab-state-${index}` : undefined}
                   tabIndex={active ? 0 : -1}
+                  aria-keyshortcuts="Delete Shift+F10"
                   data-dock-tab
                   data-dock-url={panelId}
                   onClick={() => focus(panelId)}
@@ -111,8 +152,21 @@ export function WorkspaceTabs() {
                     if (event.button === 1) close(panelId);
                   }}
                   onKeyDown={(event) => {
+                    if (event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey)) {
+                      event.preventDefault();
+                      const box = event.currentTarget.getBoundingClientRect();
+                      setMenu({ panelId, x: box.left, y: box.bottom });
+                      requestAnimationFrame(() =>
+                        document.querySelector<HTMLElement>('[data-tab-menu] [role="menuitem"]')?.focus(),
+                      );
+                      return;
+                    }
                     if (event.key === "Delete" && tabs.length > 1) {
                       event.preventDefault();
+                      if (isPinned) {
+                        close(panelId); // refused by the store with a notice: unpin first
+                        return;
+                      }
                       const neighbour = adjacentTabId(tabs, panelId, tabs.indexOf(panelId) === tabs.length - 1 ? -1 : 1);
                       close(panelId);
                       if (neighbour) focusAndScroll(neighbour);
@@ -127,24 +181,46 @@ export function WorkspaceTabs() {
                         : adjacentTabId(tabs, panelId, event.key === "ArrowRight" ? 1 : -1);
                     if (next) focusAndScroll(next);
                   }}
-                  className="flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2 px-3 text-left text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                  title={label}
+                  className={cn(
+                    "flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2 text-left text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    isPinned ? "px-2.5" : "px-3",
+                  )}
+                  title={isPinned ? `${label} (pinned)` : label}
                 >
                   {Icon ? <Icon className={cn("h-3.5 w-3.5 shrink-0", active && "text-primary")} /> : null}
-                  <span className="truncate">{label}</span>
+                  {/* A pinned tab keeps only its icon; the label stays in the accessible name and the tooltip. */}
+                  {isPinned ? null : <span className="truncate">{label}</span>}
+                  {isPinned && unsaved ? (
+                    <span data-unsaved-dot aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-primary" />
+                  ) : null}
                 </button>
-                <button
-                  type="button"
-                  aria-label={`Close ${label} tab`}
-                  title={`Close ${label}`}
-                  onClick={() => close(panelId)}
-                  className={cn(
-                    "mr-1.5 flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    !active && "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
-                  )}
-                >
-                  <X className="h-3 w-3" />
-                </button>
+                {/* Pointer affordance only: a tablist may own nothing but tabs, so the
+                    close control stays out of the accessibility tree and the tab order.
+                    Keyboard users close the focused tab with Delete (or Ctrl+W). */}
+                {/* A pinned tab has no close control. An unsaved tab shows a dot in its place until
+                    hovered, the convention every editor uses for a write that has not landed yet. */}
+                {isPinned ? null : (
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    title={unsaved ? `Close ${label} (changes are still saving)` : `Close ${label}`}
+                    onClick={() => close(panelId)}
+                    className={cn(
+                      "group/close mr-1.5 flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      !active && !unsaved && "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+                    )}
+                  >
+                    {unsaved ? (
+                      <>
+                        <span data-unsaved-dot className="h-2 w-2 rounded-full bg-primary group-hover/close:hidden" />
+                        <X className="hidden h-3 w-3 group-hover/close:block" />
+                      </>
+                    ) : (
+                      <X className="h-3 w-3" />
+                    )}
+                  </button>
+                )}
               </div>
             );
           })}
@@ -180,6 +256,7 @@ export function WorkspaceTabs() {
                   <DropdownMenuItem key={panelId} active={panelId === activeTab} onSelect={() => focus(panelId)}>
                     {Icon ? <Icon className="h-4 w-4" /> : null}
                     <span className="truncate">{def?.label ?? pageIdOf(panelId)}</span>
+                    {pinned.has(pageIdOf(panelId)) ? <Pin aria-label="Pinned" className="ml-auto h-3.5 w-3.5 text-muted-foreground" /> : null}
                   </DropdownMenuItem>
                 );
               })}
@@ -193,7 +270,43 @@ export function WorkspaceTabs() {
         </div>
       </div>
 
-      <div className="relative min-h-0 flex-1">
+      <ContextMenu coords={menu ? { x: menu.x, y: menu.y } : null} onClose={() => setMenu(null)} className="w-48">
+        {menu ? (
+          <div data-tab-menu aria-label="Tab actions">
+            <ContextMenuItem
+              onSelect={() => {
+                togglePin(menu.panelId);
+                setMenu(null);
+              }}
+            >
+              {pinned.has(pageIdOf(menu.panelId)) ? (
+                <>
+                  <PinOff className="h-4 w-4" /> Unpin tab
+                </>
+              ) : (
+                <>
+                  <Pin className="h-4 w-4" /> Pin tab
+                </>
+              )}
+            </ContextMenuItem>
+            {pinned.has(pageIdOf(menu.panelId)) || tabs.length < 2 ? null : (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem
+                  onSelect={() => {
+                    close(menu.panelId);
+                    setMenu(null);
+                  }}
+                >
+                  <X className="h-4 w-4" /> Close tab
+                </ContextMenuItem>
+              </>
+            )}
+          </div>
+        ) : null}
+      </ContextMenu>
+
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         {tabs.map((panelId, index) => (
           <WorkspacePanel key={panelId} panelId={panelId} active={panelId === activeTab} index={index} />
         ))}

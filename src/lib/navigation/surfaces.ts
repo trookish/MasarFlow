@@ -1,9 +1,9 @@
 import {
   CalendarDays,
   PenTool,
+  Sparkles,
   KanbanSquare,
   BookOpen,
-  MessageSquare,
   MonitorCog,
   type LucideIcon,
 } from "lucide-react";
@@ -29,7 +29,7 @@ export interface Surface {
   sections: SurfaceSection[];
 }
 
-export type SurfaceId = "today" | "capture" | "work" | "library" | "ask" | "system";
+export type SurfaceId = "today" | "capture" | "work" | "library" | "ai" | "system";
 
 export const SURFACES: Surface[] = [
   {
@@ -84,15 +84,15 @@ export const SURFACES: Surface[] = [
     ],
   },
   {
-    id: "ask",
-    label: "Ask",
-    route: "/ask",
-    icon: MessageSquare,
-    description: "Chat with the project, run agents and automate workflows.",
+    id: "ai",
+    label: "AI",
+    route: "/ai",
+    icon: Sparkles,
+    description: "Sessions, agents and automations for the active project.",
     sections: [
-      { id: "chat", label: "Chat", href: "/chat" },
-      { id: "agents", label: "AI Agents", href: "/agents" },
-      { id: "workflow", label: "AI Workflow", href: "/workflow" },
+      { id: "chat", label: "Sessions", href: "/chat" },
+      { id: "agents", label: "Agents", href: "/agents" },
+      { id: "workflow", label: "Automations", href: "/workflow" },
     ],
   },
   {
@@ -157,6 +157,31 @@ export function surfaceForPath(pathname: string): SurfaceId | null {
 }
 
 /** The URL of a surface section. The first section is the surface's bare route. */
+/**
+ * Whether a URL shows the page `pagePath` (a legacy page route such as "/specs"). Since 0.2 a page
+ * is hosted as a section of its surface ("/work?view=specs"), so `pathname === pagePath` is only
+ * true for the legacy URL itself. A surface URL without `view` shows its first section.
+ */
+export function isPageLocation(pagePath: string, pathname: string, search = ""): boolean {
+  const clean = pathname.replace(/\/+$/, "") || "/";
+  if (clean === pagePath) return true;
+  const hit = locate(pagePath);
+  if (!hit || clean !== hit.surface.route) return false;
+  const view = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search).get("view");
+  return (view ?? hit.surface.sections[0]?.id) === hit.section.id;
+}
+
+/** The canonical URL of a page route plus a query: "/specs" + "spec=1" -> "/work?view=specs&spec=1". */
+export function pageUrl(pagePath: string, query = ""): string {
+  const hit = locate(pagePath);
+  const base = hit ? sectionUrl(hit.surface, hit.section.id) : pagePath;
+  const extra = new URLSearchParams(query.startsWith("?") ? query.slice(1) : query);
+  extra.delete("view");
+  const rest = extra.toString();
+  if (!rest) return base;
+  return `${base}${base.includes("?") ? "&" : "?"}${rest}`;
+}
+
 export function sectionUrl(surface: Surface, sectionId: string): string {
   return surface.sections[0]?.id === sectionId ? surface.route : `${surface.route}?view=${sectionId}`;
 }

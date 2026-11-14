@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SpecEditor } from "./spec-editor";
+import { pageUrl } from "@/lib/navigation/surfaces";
 
 export function SpecsView() {
   const projectId = useActiveProjectId();
@@ -84,7 +85,7 @@ export function SpecsView() {
       // select() would merge THIS render's search — which still holds the
       // ?new=<nonce> intent — back into the URL. Replace with the selection
       // alone so the address bar and dock snapshot drop the intent.
-      router.replace(`/specs?spec=${spec.id}`, { scroll: false });
+      router.replace(pageUrl("/specs", `spec=${spec.id}`), { scroll: false });
     } else {
       select(spec.id);
     }
@@ -167,7 +168,7 @@ export function SpecsView() {
             notes={notes ?? []}
             linkedTasks={linkedTasks}
             onDelete={deleteSpec}
-            onOpenTask={(taskId) => router.push(`/tasks?task=${taskId}`)}
+            onOpenTask={(taskId) => router.push(pageUrl("/tasks", `task=${taskId}`))}
             onCreateTask={createTaskForSpec}
           />
         ) : (

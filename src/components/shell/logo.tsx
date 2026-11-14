@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { logoPaint } from "@/lib/stores/logo-paint";
 import { useThemeStore } from "@/lib/stores/theme";
 import { cn } from "@/lib/utils/cn";
 
@@ -11,27 +12,15 @@ const LOGO_SRC = "/logo.png";
  * a transparent PNG, so a tint (accent or custom hex) is applied by using the
  * image as a CSS mask and filling its shape with the chosen color; "original"
  * shows the source PNG untouched. The mark sits on a configurable background
- * (none / white / accent / custom). Falls back to a hand-built SVG if the file
+ * (none / white / accent / custom); both layers follow a gradient accent (see logoPaint).
+ * Falls back to a hand-built SVG if the file
  * is missing so the brand spot never renders broken.
  */
 export function MasarFlowLogo({ className }: { className?: string }) {
   const [failed, setFailed] = useState(false);
-  const {
-    logoColorMode,
-    logoColor,
-    logoBgMode,
-    logoBgColor,
-    accentColor,
-  } = useThemeStore();
-
-  const background =
-    logoBgMode === "none"
-      ? "transparent"
-      : logoBgMode === "white"
-        ? "#ffffff"
-        : logoBgMode === "accent"
-          ? accentColor
-          : logoBgColor;
+  const theme = useThemeStore();
+  const { logoColorMode, logoBgMode } = theme;
+  const paint = logoPaint(theme);
 
   const mark = failed ? (
     <FallbackMark />
@@ -41,7 +30,7 @@ export function MasarFlowLogo({ className }: { className?: string }) {
       aria-hidden
       className="block h-full w-full"
       style={{
-        backgroundColor: logoColorMode === "accent" ? accentColor : logoColor,
+        ...paint.mark,
         WebkitMaskImage: `url(${LOGO_SRC})`,
         maskImage: `url(${LOGO_SRC})`,
         WebkitMaskRepeat: "no-repeat",
@@ -57,7 +46,7 @@ export function MasarFlowLogo({ className }: { className?: string }) {
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={LOGO_SRC}
-      alt="MasarFlow"
+      alt=""
       className="h-full w-full object-contain"
       onError={() => setFailed(true)}
     />
@@ -72,7 +61,7 @@ export function MasarFlowLogo({ className }: { className?: string }) {
         logoBgMode === "none" ? "p-0" : "p-[4%]",
         className,
       )}
-      style={{ backgroundColor: background }}
+      style={paint.plate}
     >
       {mark}
     </span>
@@ -85,8 +74,7 @@ function FallbackMark() {
     <svg
       viewBox="0 0 512 512"
       className="h-full w-full"
-      role="img"
-      aria-label="MasarFlow"
+      aria-hidden
     >
       <mask id="masar-road-fallback">
         <rect width="512" height="512" fill="white" />

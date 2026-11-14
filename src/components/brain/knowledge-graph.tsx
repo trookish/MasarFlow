@@ -25,16 +25,13 @@ import {
 } from "@/lib/db/repos";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { usePageSettings } from "@/lib/stores/page-settings";
-import { openEntity } from "@/lib/entities/open";
 import { GRAPH_VAR, GRAPH_KIND_LABEL, type GraphKind } from "@/lib/colors";
 import { cn } from "@/lib/utils/cn";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
-import {
-  NoteDetailPanel,
-  type EntityCategory,
-  type SelectedGraphNode,
-} from "./note-detail-panel";
+import { usePublishSelection } from "@/lib/inspector/use-publish-selection";
+
+export type EntityCategory = "note" | "spec" | "task" | "system" | "commit";
 
 const W = 960;
 const H = 660;
@@ -267,17 +264,14 @@ export function KnowledgeGraph({
     };
   }, [filtered, layout]);
 
-  const selectedNode: SelectedGraphNode | null = (() => {
-    const n = gnodes.find((x) => x.key === selectedKey);
-    if (!n) return null;
-    return {
-      key: n.key,
-      category: n.category,
-      refId: n.refId,
-      label: n.label,
-      kind: n.kind,
-    };
-  })();
+  // The Inspector shows the selected node (properties, connections, Open / Ask).
+  const selectedNode = gnodes.find((x) => x.key === selectedKey) ?? null;
+  usePublishSelection(
+    "/knowledge",
+    selectedNode
+      ? { ref: { kind: selectedNode.category, id: selectedNode.refId } }
+      : null,
+  );
 
   function clientToSvg(clientX: number, clientY: number) {
     const rect = svgRef.current!.getBoundingClientRect();
@@ -358,10 +352,6 @@ export function KnowledgeGraph({
       simRef.current?.alphaTarget(0);
     }
     drag.current = { mode: "none", sx: 0, sy: 0, ox: 0, oy: 0 };
-  }
-
-  function openNode(category: EntityCategory, refId: string) {
-    openEntity({ kind: category, id: refId });
   }
 
   function toggleCat(cat: EntityCategory) {
@@ -480,7 +470,7 @@ export function KnowledgeGraph({
                           x={(s.x + t.x) / 2}
                           y={(s.y + t.y) / 2}
                           textAnchor="middle"
-                          className="pointer-events-none fill-muted-foreground/70 text-[7px]"
+                          className="pointer-events-none fill-muted-foreground/70 text-xs"
                         >
                           {linkRelation(s.category, t.category)}
                         </text>
@@ -544,15 +534,6 @@ export function KnowledgeGraph({
           </>
         )}
       </div>
-
-      {selectedNode ? (
-        <NoteDetailPanel
-          node={selectedNode}
-          onClose={() => setSelectedKey(null)}
-          onSelectNote={(id) => setSelectedKey(`note:${id}`)}
-          onOpen={openNode}
-        />
-      ) : null}
     </div>
   );
 }

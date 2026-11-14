@@ -21,7 +21,14 @@ import { useUpdatesStore } from "@/lib/stores/updates";
 import { useActivityTracking } from "@/lib/hooks/use-activity-tracking";
 import { WorkspaceTabs } from "@/components/shell/workspace-tabs";
 import { SurfaceSidebar } from "@/components/shell/surface-sidebar";
-import { Inspector } from "@/components/entity/inspector";
+import { SurfaceDock } from "@/components/shell/surface-dock";
+import { AccentIconGradient } from "@/components/shell/accent-icon-gradient";
+import { cn } from "@/lib/utils/cn";
+import { InspectorDock, InspectorOverlay, useRevealOnSelection } from "@/components/shell/inspector-host";
+import { StatusBar } from "@/components/shell/status-bar";
+import { usePageSettings } from "@/lib/stores/page-settings";
+import { useElementWidth } from "@/lib/hooks/use-element-width";
+import { useInspectorSelection } from "@/lib/inspector/selection";
 import { useUIStore } from "@/lib/stores/ui";
 import { getDesktop } from "@/lib/desktop/bridge";
 import { shouldShowWizard } from "@/lib/onboarding/state";
@@ -40,8 +47,15 @@ export default function WorkspaceLayout() {
   const activeProjectId = useProjectStore((s) => s.activeProjectId);
   const setActiveProjectId = useProjectStore((s) => s.setActiveProjectId);
   const activeProject = useActiveProject();
-  const inspectorOpen = useUIStore((s) => s.inspectorOpen);
+  const sidebarPosition = useUIStore((s) => s.sidebarPosition);
+  // Row density is a frame-level setting: every list inside reads --row-h.
+  const density = usePageSettings((s) => s.interface.density);
   const projectCount = useLiveQuery(() => projectsRepo.count(), []);
+  // The Inspector docks or floats depending on how much room the workspace area has.
+  const [mainRef, mainWidth] = useElementWidth<HTMLElement>();
+  const setInspectorContentWidth = useInspectorSelection((s) => s.setContentWidth);
+  useEffect(() => setInspectorContentWidth(mainWidth), [mainWidth, setInspectorContentWidth]);
+  useRevealOnSelection();
 
   // Banner as the workspace background (background mode).
   const projectBackground =
@@ -149,13 +163,19 @@ export default function WorkspaceLayout() {
 
   return (
     <DbGate>
-      <div className="flex h-screen overflow-hidden" data-testid="app-shell">
+      <div
+        className={cn("flex h-screen overflow-hidden", sidebarPosition === "bottom" && "flex-col")}
+        data-testid="app-shell"
+        data-sidebar-position={sidebarPosition}
+        data-density={density}
+      >
         <SecretsBootstrap />
         <AutoBackup />
-        <SurfaceSidebar />
-        <div className="flex min-w-0 flex-1 flex-col" data-layout="tabs">
+        <AccentIconGradient />
+        {sidebarPosition === "left" ? <SurfaceSidebar side="left" /> : null}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col" data-layout="tabs">
           <Topbar />
-          <main className="relative flex min-h-0 flex-1 overflow-hidden">
+          <main ref={mainRef} className="relative flex min-h-0 flex-1 overflow-hidden">
             {projectBackground ? (
               <div
                 aria-hidden
@@ -168,12 +188,17 @@ export default function WorkspaceLayout() {
             ) : null}
             <div className="relative z-10 h-full min-w-0 flex-1">
               <Suspense fallback={null}>
-                <WorkspaceTabs />
+                <WorkspaceTabs ready={Boolean(activeProjectId) && !wizardOpen && !firstRunOpen} />
               </Suspense>
+              <InspectorOverlay />
             </div>
-            {inspectorOpen ? <Inspector className="relative z-20 hidden w-80 shrink-0 xl:block" /> : null}
+            <InspectorDock />
+            {/* Under the topbar, so the window controls keep the top-right corner. */}
+            {sidebarPosition === "right" ? <SurfaceSidebar side="right" /> : null}
           </main>
+          <StatusBar />
         </div>
+        {sidebarPosition === "bottom" ? <SurfaceDock /> : null}
         <CommandPalette />
         <QuickSwitcher />
         <Toaster />

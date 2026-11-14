@@ -54,8 +54,8 @@ export const KIND_META: Record<EntityKindId, KindMeta> = {
   sprint: { label: "Sprint", route: "/work", view: "sprints", param: "sprint" },
   devlog: { label: "Dev log", route: "/work", view: "log", param: "devlog" },
   canvas: { label: "Canvas", route: "/capture", view: "canvas", param: "canvas" },
-  agent: { label: "Agent", route: "/ask", view: "agents", param: "agent" },
-  thread: { label: "Chat", route: "/ask", param: "thread" },
+  agent: { label: "Agent", route: "/ai", view: "agents", param: "agent" },
+  thread: { label: "Session", route: "/ai", param: "thread" },
 };
 
 export function isEntityKind(value: unknown): value is EntityKindId {

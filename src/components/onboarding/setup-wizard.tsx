@@ -103,7 +103,7 @@ export function SetupWizard({ onDone }: { onDone: () => void }) {
         </div>
         <p className="px-6 pb-3 text-xs text-muted-foreground">
           Everything stays on this computer. MasarFlow never uploads your workspace; only the AI provider
-          you choose sends the text you send it. {desktop ? "" : "(Browser preview: folder linking needs the desktop app.)"}
+          you choose sends the text you send it.
         </p>
       </div>
     </div>

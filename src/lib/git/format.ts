@@ -178,7 +178,7 @@ export interface GitStateCopy {
 export function describeGitState(state: GitPanelState): GitStateCopy {
   if (state.kind === "no-desktop") {
     return {
-      title: "Git needs the desktop app",
+      title: "Git is unavailable",
       body: GIT_DESKTOP_REQUIRED,
       action: null,
     };

@@ -5,17 +5,17 @@ import type { GitFailureCode } from "@desktop-shared/git";
 /**
  * Thin renderer-side wrapper around the preload git surface.
  *
- * The browser build has no `window.masarflow` at all (Playwright's webServer
- * runs `pnpm start`), so every git UI must handle `null` — that is the
- * "desktop required" panel, not an error state.
+ * `window.masarflow` is missing during SSR and if the preload failed to load,
+ * so every git UI must handle `null` — that is the "desktop required" panel,
+ * not an error state.
  */
 
 export type GitBridge = NonNullable<MasarflowApi["git"]>;
 
 export const GIT_DESKTOP_REQUIRED =
-  "Git runs inside the MasarFlow desktop app. Start it with `pnpm desktop:dev` (or install the packaged build) — the browser preview cannot run git.";
+  "Git is unavailable because the MasarFlow desktop bridge did not load. Restart MasarFlow; if this persists, use Copy diagnostics in Control Center.";
 
-/** The git surface of the desktop bridge, or null in a browser tab. */
+/** The git surface of the desktop bridge, or null when the bridge is missing. */
 export function gitBridge(): GitBridge | null {
   const desktop = getDesktop() as (MasarflowApi & { git?: GitBridge }) | null;
   return desktop?.git ?? null;

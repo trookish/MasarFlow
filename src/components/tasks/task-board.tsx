@@ -35,6 +35,7 @@ interface TaskBoardProps {
   tasks: Task[];
   specsById: Map<string, Spec>;
   groupBy: GroupBy;
+  selectedId?: string | null;
   onOpen: (taskId: string) => void;
   onSet: (taskId: string, patch: Partial<Task>) => void;
   onCreate: (patch: Partial<Task>) => void;
@@ -44,6 +45,7 @@ export function TaskBoard({
   tasks,
   specsById,
   groupBy,
+  selectedId = null,
   onOpen,
   onSet,
   onCreate,
@@ -124,6 +126,7 @@ export function TaskBoard({
                       : undefined
                   }
                   dragging={dragId === task.id}
+                  selected={selectedId === task.id}
                   onClick={() => onOpen(task.id)}
                   onDragStart={(e) => {
                     setDragId(task.id);

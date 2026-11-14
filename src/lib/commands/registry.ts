@@ -43,7 +43,7 @@ export const WORKSPACE_PAGES: { href: string; label: string }[] = [
   { href: "/capture", label: "Capture" },
   { href: "/work", label: "Work" },
   { href: "/library", label: "Library" },
-  { href: "/ask", label: "Ask" },
+  { href: "/ai", label: "AI" },
   { href: "/system", label: "System" },
   { href: "/settings", label: "Settings" },
 ];
@@ -62,6 +62,7 @@ export interface CommandActions {
   navigate: (href: string) => void;
   closeFocusedPanel: () => void;
   reopenClosedTab: () => void;
+  togglePinFocusedTab: () => void;
   toggleTheme: () => void;
   switchProject: (projectId: string) => void;
   newTask: () => void;
@@ -80,6 +81,7 @@ const NOOP_ACTIONS: CommandActions = {
   navigate: () => {},
   closeFocusedPanel: () => {},
   reopenClosedTab: () => {},
+  togglePinFocusedTab: () => {},
   toggleTheme: () => {},
   switchProject: () => {},
   newTask: () => {},
@@ -146,6 +148,13 @@ export function buildCommands(
         hint: "Ctrl+Shift+T",
         run: () => actions.reopenClosedTab(),
       },
+      {
+        id: "tab:pin",
+        label: "Pin or unpin the active tab",
+        group: "Tabs",
+        keywords: ["pin", "unpin", "keep", "lock"],
+        run: () => actions.togglePinFocusedTab(),
+      },
     );
   }
 
@@ -202,7 +211,7 @@ export function buildCommands(
     tone: "danger",
     confirm: {
       title: "Reset all data?",
-      body: "Every project, note, task and activity row in this browser profile is deleted. This cannot be undone.",
+      body: "Every project, note, task and activity row on this computer is deleted. This cannot be undone.",
       confirmLabel: "Delete everything",
     },
     run: () => actions.resetAllData(),

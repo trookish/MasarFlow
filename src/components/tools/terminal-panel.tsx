@@ -99,8 +99,8 @@ export function TerminalPanel() {
     return (
       <EmptyState
         icon={SquareTerminal}
-        title="The terminal runs in the desktop app"
-        description="Open MasarFlow as the desktop app to run commands. The browser build cannot start a shell on this machine."
+        title="The terminal is unavailable"
+        description="The desktop bridge did not load, so MasarFlow cannot start a shell. Restart the app to try again."
       />
     );
   }

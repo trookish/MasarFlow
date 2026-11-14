@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
@@ -25,6 +25,7 @@ import type { System } from "@/lib/db/schema";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { usePageSettings } from "@/lib/stores/page-settings";
 import { layoutSystems, type LayoutSystem } from "@/lib/arch-layout";
+import { usePublishSelection } from "@/lib/inspector/use-publish-selection";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -109,6 +110,14 @@ function ArchitectureDiagramInner({
     [],
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  // A clicked node is shown in the Inspector; double-click still opens the editor.
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  usePublishSelection(
+    "/architecture",
+    selectedNodeId && systems?.some((s) => s.id === selectedNodeId)
+      ? { ref: { kind: "system", id: selectedNodeId } }
+      : null,
+  );
 
   // Auto-layout positions for systems without a saved arrangement.
   const autoPositions = useMemo(() => {
@@ -223,6 +232,8 @@ function ArchitectureDiagramInner({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeDragStop={(_, node) => persistPosition(node)}
+        onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+        onPaneClick={() => setSelectedNodeId(null)}
         nodeTypes={nodeTypes}
         nodesConnectable={false}
         colorMode={resolvedTheme === "light" ? "light" : "dark"}

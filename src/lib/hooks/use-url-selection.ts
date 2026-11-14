@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { readSelection, selectionFor, withSelection } from "@/lib/entities/url";
+import { isPageLocation, locate, pageUrl } from "@/lib/navigation/surfaces";
 import { useDockStore } from "@/lib/stores/dock";
 
 /**
@@ -15,14 +16,19 @@ function usePanelSnapshot(path: string, param: string): string | null {
   return useDockStore((s) => {
     const st = s.activeProjectId ? s.projects[s.activeProjectId] : null;
     const entry = st?.workspaces[st.activeWorkspace];
-    return readSelection(entry?.params[path] ?? "", param);
+    // Tabs are keyed by surface route ("/work"); the snapshot is ours only while
+    // that tab shows our section (view=specs).
+    const tab = locate(path)?.surface.route ?? path;
+    const query = entry?.params[tab] ?? "";
+    return isPageLocation(path, tab, query) ? readSelection(query, param) : null;
   });
 }
 
 /**
  * Selection stored in the URL so it can be deep-linked and opened by openEntity().
- * `path` is THIS page's route (e.g. "/sprints"); it is explicit because under the
- * dock `usePathname()` is always the focused panel's path, not ours.
+ * `path` is THIS page's route (e.g. "/sprints"); it is explicit because
+ * `usePathname()` is always the focused tab's path, and since 0.2 the page is
+ * hosted as a surface section ("/work?view=sprints").
  */
 export function useUrlSelection(
   path: string,
@@ -31,7 +37,7 @@ export function useUrlSelection(
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams()?.toString() ?? "";
-  const onThisPage = pathname === path;
+  const onThisPage = isPageLocation(path, pathname, search);
   const live = onThisPage ? readSelection(search, param) : null;
   const snapshot = usePanelSnapshot(path, param);
   const [kept, setKept] = useState<string | null>(live ?? snapshot);
@@ -44,7 +50,7 @@ export function useUrlSelection(
   const select = useCallback(
     (id: string | null) => {
       const base = onThisPage ? search : "";
-      router.replace(`${path}?${withSelection(base, param, id)}`, { scroll: false });
+      router.replace(pageUrl(path, withSelection(base, param, id)), { scroll: false });
       setKept(id);
     },
     [router, path, param, search, onThisPage],

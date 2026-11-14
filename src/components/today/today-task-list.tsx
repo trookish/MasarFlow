@@ -2,7 +2,7 @@
 
 /**
  * One Today bucket: a titled list with a due-date control per row. Every row
- * can be opened in the dock (EntityChip semantics, P5) and its deadline set to
+ * can be opened in a project tab (EntityChip semantics, P5) and its deadline set to
  * today or cleared — the two actions that make this list worth having.
  */
 
@@ -51,7 +51,7 @@ export function TodayTaskList({
                 type="button"
                 onClick={() => openEntity({ kind: "task", id: task.id })}
                 className="min-w-0 flex-1 truncate text-left text-sm hover:underline"
-                title="Open in the dock"
+                title="Open in Work"
               >
                 {task.title}
               </button>

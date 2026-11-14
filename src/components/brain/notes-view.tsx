@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Search, PenTool } from "lucide-react";
 import { notesRepo, foldersRepo } from "@/lib/db/repos";
@@ -9,6 +9,7 @@ import { promoteNote, type PromoteTarget } from "@/lib/domain/commands";
 import type { Note } from "@/lib/db/schema";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
 import { useUrlSelection } from "@/lib/hooks/use-url-selection";
+import { isPageLocation } from "@/lib/navigation/surfaces";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -23,6 +24,7 @@ export function NotesView() {
   const projectId = useActiveProjectId();
   const router = useRouter();
   const pathname = usePathname();
+  const search = useSearchParams()?.toString() ?? "";
   // ?note= lives in the URL; the dock keeps a per-panel snapshot of it, so the
   // selection survives a reload even when the Brain panel is restored unfocused
   // (P9: "the dock's persisted panel URL brings it back").
@@ -98,12 +100,12 @@ export function NotesView() {
   // Only when this panel owns the URL — while unfocused the app URL belongs to
   // another page, and the panel just renders "No note selected".
   useEffect(() => {
-    if (pathname !== "/brain") return;
+    if (!isPageLocation("/brain", pathname, search)) return;
     if (!notes || !selectedId) return;
     if (!allNotes.some((n) => n.id === selectedId)) {
       select(null);
     }
-  }, [pathname, notes, selectedId, allNotes, select]);
+  }, [pathname, search, notes, selectedId, allNotes, select]);
 
   async function createNote() {
     if (!projectId) return;

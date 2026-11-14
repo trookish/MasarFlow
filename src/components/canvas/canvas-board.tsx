@@ -68,6 +68,7 @@ import {
   type CanvasNodeSummary,
 } from "@/lib/canvas-ai";
 import { entityHref } from "@/lib/entities/registry";
+import { pageUrl } from "@/lib/navigation/surfaces";
 
 type AnyNodeData = Record<string, unknown> & BaseNodeData;
 
@@ -921,7 +922,7 @@ function CanvasBoardInner() {
       projectId,
       name: `Canvas ${(canvases?.length ?? 0) + 1}`,
     });
-    router.replace(`/brain/canvas?canvas=${canvas.id}`);
+    router.replace(pageUrl("/brain/canvas", `canvas=${canvas.id}`));
   }
 
   if (!projectId) return null;

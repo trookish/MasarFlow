@@ -122,6 +122,11 @@ function PalettePanel({ onClose }: { onClose: () => void }) {
       if (state) dock.close(focusedPanelId(state));
     },
     reopenClosedTab: () => useDockStore.getState().reopenClosedTab(),
+    togglePinFocusedTab: () => {
+      const dock = useDockStore.getState();
+      const state = dock.activeProjectId ? dock.projects[dock.activeProjectId] : null;
+      if (state) dock.togglePin(focusedPanelId(state));
+    },
     toggleTheme: () => setTheme(theme === "light" ? "dark" : "light"),
     switchProject: (id) => {
       setActiveProjectId(id);

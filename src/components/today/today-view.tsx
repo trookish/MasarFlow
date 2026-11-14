@@ -3,7 +3,7 @@
 /**
  * Today: the answer to "what do I do now". Four task buckets from the local
  * database, the repository card, the recent activity feed and today's note.
- * Everything here is a link into the dock — this page never edits a task in
+ * Everything here is a link into a project tab — this page never edits a task in
  * place beyond its deadline.
  */
 
@@ -118,7 +118,7 @@ export function TodayView() {
 
       <footer className="mt-auto border-t border-border px-4 py-3 text-xs text-muted-foreground">
         <ListChecks className="mr-1.5 inline h-3.5 w-3.5" />
-        Everything here links into the dock: a task opens in Task Boards, a change opens in its page. Use
+        Everything here opens in its own tab: a task opens in Work, a change opens in its page. Use
         ⌘/Ctrl+K to find anything else.
       </footer>
     </div>

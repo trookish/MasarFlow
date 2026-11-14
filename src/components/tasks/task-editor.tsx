@@ -13,12 +13,6 @@ import {
 import { TASK_ASSIGNEES, assigneeLabel } from "@/lib/domain/task-model";
 import { dayKey, parseDayKey } from "@/lib/today/model";
 import { clearTaskDue, setTaskDue } from "@/lib/today/tasks";
-import {
-  Dialog,
-  DialogHeader,
-  DialogBody,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,7 +27,7 @@ import { TagInput } from "@/components/brain/tag-input";
 import { BacklinksSection } from "@/components/entities/backlinks-section";
 import { PropertiesPanel } from "@/components/vault/properties-panel";
 
-interface TaskDetailProps {
+interface TaskEditorProps {
   task: Task;
   specs: Spec[];
   sprints: Sprint[];
@@ -81,14 +75,18 @@ function SelectMenu({
   );
 }
 
-export function TaskDetail({
+/**
+ * The task editor shown in the Inspector (a side peek, not a modal), so the board stays visible and
+ * interactive while a task is edited. `onClose` clears the selection.
+ */
+export function TaskEditor({
   task,
   specs,
   sprints,
   onClose,
   onPatch,
   onDelete,
-}: TaskDetailProps) {
+}: TaskEditorProps) {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description);
   const [advanced, setAdvanced] = useState(false);
@@ -102,8 +100,8 @@ export function TaskDetail({
   const priority = priorityMeta(task.priority);
 
   return (
-    <Dialog open onOpenChange={onClose} className="max-w-2xl" showClose={false}>
-      <DialogHeader>
+    <div className="flex min-h-0 flex-1 flex-col" data-testid="task-editor">
+      <div className="shrink-0 border-b border-border px-3 py-2.5">
         <div className="flex items-start gap-2">
           <Input
             value={title}
@@ -130,9 +128,9 @@ export function TaskDetail({
             <X className="h-4 w-4" />
           </Button>
         </div>
-      </DialogHeader>
+      </div>
 
-      <DialogBody className="space-y-4">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
         <Field label="Description">
           <Textarea
             value={description}
@@ -323,13 +321,7 @@ export function TaskDetail({
             </div>
           )}
         </div>
-      </DialogBody>
-
-      <DialogFooter>
-        <Button variant="outline" onClick={onClose}>
-          Done
-        </Button>
-      </DialogFooter>
-    </Dialog>
+      </div>
+    </div>
   );
 }

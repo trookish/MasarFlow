@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, ChevronDown, Filter } from "lucide-react";
+import { Plus, ChevronDown, Filter, KanbanSquare } from "lucide-react";
 import { tasksRepo, specsRepo, sprintsRepo } from "@/lib/db/repos";
 import type { Assignee, Task } from "@/lib/db/schema";
 import { useActiveProjectId } from "@/lib/hooks/use-project";
@@ -12,6 +12,14 @@ import { useUrlSelection } from "@/lib/hooks/use-url-selection";
 import { useCreateIntent } from "@/lib/hooks/use-create-intent";
 import { ASSIGNEES } from "@/lib/workflow";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  PageFrame,
+  PageHeader,
+  PageStage,
+  Toolbar,
+  ToolbarGroup,
+} from "@/components/page";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -19,7 +27,8 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { TaskBoard } from "./task-board";
-import { TaskDetail } from "./task-detail";
+import { patchTask as patchTaskRow } from "@/lib/domain/task-actions";
+import { pageUrl } from "@/lib/navigation/surfaces";
 
 export function TasksView() {
   const projectId = useActiveProjectId();
@@ -57,7 +66,6 @@ export function TasksView() {
       ),
     [allTasks, sprintFilter, assigneeFilter, showCompleted],
   );
-  const selectedTask = allTasks.find((t) => t.id === selectedId) ?? null;
 
   // The dashboard's "New task" action deep-links here with ?new=<nonce>. Each
   // nonce creates at most one task (see lib/navigation/create-intent.ts), so a
@@ -67,23 +75,9 @@ export function TasksView() {
     createTask({ status: "todo" }, true),
   );
 
-  async function recompute(...specIds: (string | null | undefined)[]) {
-    for (const id of new Set(specIds.filter((x): x is string => Boolean(x)))) {
-      await specsRepo.recomputeProgress(id);
-    }
-  }
-
   async function patchTask(id: string, patch: Partial<Task>) {
     const t = allTasks.find((x) => x.id === id);
-    await tasksRepo.update(id, patch);
-    await recompute(t?.specId, patch.specId);
-  }
-
-  async function deleteTask(id: string) {
-    const t = allTasks.find((x) => x.id === id);
-    await tasksRepo.remove(id);
-    select(null);
-    await recompute(t?.specId);
+    await patchTaskRow({ id, specId: t?.specId ?? null }, patch);
   }
 
   async function createTask(patch: Partial<Task>, consumeIntent = false) {
@@ -98,7 +92,7 @@ export function TasksView() {
       // select() would merge THIS render's search — which still holds the
       // ?new=<nonce> intent — back into the URL. Replace with the selection
       // alone so the address bar and dock snapshot drop the intent.
-      router.replace(`/tasks?task=${task.id}`, { scroll: false });
+      router.replace(pageUrl("/tasks", `task=${task.id}`), { scroll: false });
     } else {
       select(task.id);
     }
@@ -109,12 +103,38 @@ export function TasksView() {
       ? "All sprints"
       : (sprints.find((s) => s.id === sprintFilter)?.name ?? "Sprint");
 
+  const openCount = filtered.filter((t) => t.status !== "done").length;
+
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-2.5">
-        <h1 className="text-sm font-semibold">Task Boards</h1>
-        <div className="ml-auto flex items-center gap-2">
-          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+    <PageFrame archetype="board">
+      <PageHeader
+        title="Task Boards"
+        icon={KanbanSquare}
+        meta={
+          <>
+            <Badge variant="outline">{openCount} open</Badge>
+            {filtered.length !== allTasks.length ? (
+              <Badge>{allTasks.length} total</Badge>
+            ) : null}
+          </>
+        }
+        description="Drag a card between columns to change its status. Click one to see its properties in the Inspector."
+        actions={
+          <Button
+            size="sm"
+            onClick={() => createTask({ status: "todo" })}
+            disabled={!projectId}
+          >
+            <Plus className="h-4 w-4" /> New task
+          </Button>
+        }
+      />
+      <Toolbar aria-label="Task board filters">
+        <ToolbarGroup>
+          <Filter
+            className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+            aria-hidden
+          />
           <DropdownMenu>
             <DropdownMenuTrigger>
               <Button variant="outline" size="sm">
@@ -149,7 +169,10 @@ export function TasksView() {
                 <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-h-72 overflow-y-auto">
+            <DropdownMenuContent
+              align="end"
+              className="max-h-72 overflow-y-auto"
+            >
               <DropdownMenuItem
                 active={assigneeFilter === "all"}
                 onSelect={() => setAssigneeFilter("all")}
@@ -167,38 +190,20 @@ export function TasksView() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button
-            size="sm"
-            onClick={() => createTask({ status: "todo" })}
-            disabled={!projectId}
-          >
-            <Plus className="h-4 w-4" /> New task
-          </Button>
-        </div>
-      </div>
+        </ToolbarGroup>
+      </Toolbar>
 
-      <div className="min-h-0 flex-1">
+      <PageStage>
         <TaskBoard
           tasks={filtered}
           specsById={specsById}
           groupBy={defaultGroup}
+          selectedId={selectedId}
           onOpen={select}
           onSet={patchTask}
           onCreate={createTask}
         />
-      </div>
-
-      {selectedTask ? (
-        <TaskDetail
-          key={selectedTask.id}
-          task={selectedTask}
-          specs={specs}
-          sprints={sprints}
-          onClose={() => select(null)}
-          onPatch={(patch) => patchTask(selectedTask.id, patch)}
-          onDelete={() => deleteTask(selectedTask.id)}
-        />
-      ) : null}
-    </div>
+      </PageStage>
+    </PageFrame>
   );
 }

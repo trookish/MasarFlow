@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Activity, Database, FolderOpen, KeyRound, RefreshCw, ScrollText } from "lucide-react";
+import { cn } from "@/lib/utils/cn";
 import { getDesktop } from "@/lib/desktop/bridge";
 import { useMounted } from "@/lib/hooks/use-mounted";
 import { AutoBackupsCard } from "@/components/settings/auto-backups-card";
@@ -23,6 +24,7 @@ export function ControlCenterView() {
   const [tab, setTab] = useState<Tab>("overview");
   const [info, setInfo] = useState<{ version: string; displayVersion: string; userData: string; packaged: boolean } | null>(null);
   const [health, setHealth] = useState<string>("checking…");
+  const [healthOk, setHealthOk] = useState<boolean | null>(null);
   const [roots, setRoots] = useState<string[]>([]);
   const [present, setPresent] = useState<Record<string, boolean>>({});
   const [connectionKeys, setConnectionKeys] = useState<string[]>([]);
@@ -34,6 +36,7 @@ export function ControlCenterView() {
     const res = await fetch("/api/health").catch(() => null);
     const json = res ? ((await res.json().catch(() => null)) as { ok?: boolean; version?: string } | null) : null;
     setHealth(json?.ok ? `ok (build ${json.version ?? "?"})` : "no answer from the local service");
+    setHealthOk(Boolean(json?.ok));
     if (!desktop) return;
     setInfo(await desktop.app.info());
     setRoots(await desktop.roots.list());
@@ -80,7 +83,7 @@ export function ControlCenterView() {
         <div>
           <h1 className="text-lg font-semibold">Control Center</h1>
           <p className="text-sm text-muted-foreground">
-            {info ? `MasarFlow ${info.displayVersion} (${info.version}) · ${info.userData}` : "Running in a browser — desktop information unavailable."}
+            {info ? `MasarFlow ${info.displayVersion} (${info.version}) · ${info.userData}` : "App information is loading."}
           </p>
         </div>
         <div className="flex gap-2">
@@ -102,13 +105,30 @@ export function ControlCenterView() {
       </nav>
       {note ? <p className="text-xs text-muted-foreground">{note}</p> : null}
       {tab === "overview" ? (
-        <section className="space-y-2 text-sm">
-          <p>Local service: {health}</p>
-          <p>Registered folders: {roots.length}</p>
-          <p>Automatic backups: listed in the Backups tab</p>
-          <p>Secrets present: {Object.values(present).filter(Boolean).length}</p>
+        <section className="space-y-4 text-sm">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <StatusCard
+              testId="cc-service"
+              label="Local service"
+              value={health}
+              tone={healthOk === null ? "muted" : healthOk ? "ok" : "bad"}
+            />
+            <StatusCard
+              label="Linked folders"
+              value={roots.length === 0 ? "None yet" : String(roots.length)}
+              tone={roots.length === 0 ? "muted" : "ok"}
+              onOpen={() => setTab("roots")}
+            />
+            <StatusCard label="Automatic backups" value="Rolling, kept locally" tone="ok" onOpen={() => setTab("backups")} />
+            <StatusCard
+              label="Secrets stored"
+              value={String(Object.values(present).filter(Boolean).length)}
+              tone="muted"
+              onOpen={() => setTab("secrets")}
+            />
+          </div>
           {desktop ? (
-            <label className="flex items-center gap-2 pt-2 text-sm">
+            <label className="flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-sm">
               <input
                 type="checkbox"
                 checked={hideOnClose}
@@ -194,6 +214,53 @@ export function ControlCenterView() {
         </section>
       ) : null}
       {tab === "updates" ? <UpdatePanel /> : null}
+    </div>
+  );
+}
+
+function StatusCard({
+  label,
+  value,
+  tone,
+  testId,
+  onOpen,
+}: {
+  label: string;
+  value: string;
+  tone: "ok" | "bad" | "muted";
+  testId?: string;
+  onOpen?: () => void;
+}) {
+  const body = (
+    <>
+      <span className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span
+          aria-hidden
+          className={cn(
+            "size-2 rounded-full",
+            tone === "ok" && "bg-success",
+            tone === "bad" && "bg-destructive",
+            tone === "muted" && "bg-muted-foreground/50",
+          )}
+        />
+        {label}
+      </span>
+      <span className="mt-1.5 block truncate text-sm font-medium text-foreground">{value}</span>
+    </>
+  );
+  const cls = "rounded-lg border border-border bg-card px-4 py-3 text-left";
+  return onOpen ? (
+    <button
+      type="button"
+      data-testid={testId}
+      onClick={onOpen}
+      className={cn(cls, "cursor-pointer transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring")}
+    >
+      {body}
+    </button>
+  ) : (
+    <div data-testid={testId} className={cls}>
+      {body}
     </div>
   );
 }

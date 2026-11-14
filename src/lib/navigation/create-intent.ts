@@ -12,6 +12,8 @@
  * Pure module (no React): unit-tested under the node vitest environment.
  */
 
+import { isPageLocation } from "./surfaces";
+
 const CONSUMED = new Set<string>();
 
 /** Bound on remembered nonces; each is one user click, so this is generous. */
@@ -24,9 +26,9 @@ const MAX_REMEMBERED = 500;
 export function readCreateIntent(
   route: string,
   pathname: string,
-  params: { get(name: string): string | null },
+  params: { get(name: string): string | null; toString(): string },
 ): string | null {
-  if (pathname !== route) return null;
+  if (!isPageLocation(route, pathname, params.toString())) return null;
   const nonce = params.get("new");
   return nonce ? nonce : null;
 }

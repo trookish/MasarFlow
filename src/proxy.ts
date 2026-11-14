@@ -1,13 +1,22 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { TOKEN_HEADER, checkDevRequest, checkRequest, guardConfigFromEnv } from "@/lib/server/request-guard";
+import { renamedSurfaceUrl } from "@/lib/navigation/renamed-routes";
 
 /**
  * Next 16 proxy (the renamed `middleware`). Every mode is guarded:
  * - packaged app: Electron main supplies a launch token; Host, token and Origin are checked;
- * - browser development (no token): Host, Origin and Fetch Metadata are checked on `/api/*`.
- * The guard has no exempt paths — see request-guard.ts.
+ * - development (`pnpm dev`, no token): Host, Origin and Fetch Metadata are checked on `/api/*`.
+ * The guard has no exempt paths — see request-guard.ts. A renamed surface route (`/ask` → `/ai`) is
+ * redirected only after the guard passes.
  */
 export function proxy(request: NextRequest): NextResponse {
+  const allowed = guard(request);
+  if (allowed.status !== 200) return allowed;
+  const renamed = renamedSurfaceUrl(request.nextUrl.pathname, request.nextUrl.search);
+  return renamed ? NextResponse.redirect(new URL(renamed, request.url), 307) : allowed;
+}
+
+function guard(request: NextRequest): NextResponse {
   const cfg = guardConfigFromEnv(process.env);
   if (!cfg) {
     const dev = checkDevRequest(

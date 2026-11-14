@@ -48,7 +48,7 @@ export function useGlobalHotkeys(): void {
       }
       if (mod && key === "b" && !e.shiftKey) {
         e.preventDefault();
-        ui.toggleSidebar();
+        ui.toggleNavigation();
         return;
       }
       if (mod && e.shiftKey && key === "t") {

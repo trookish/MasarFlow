@@ -26,6 +26,7 @@ import { BacklinksPanel } from "./backlinks-panel";
 import { BacklinksSection } from "@/components/entities/backlinks-section";
 import { PropertiesPanel } from "@/components/vault/properties-panel";
 import { asList } from "@/lib/vault/frontmatter";
+import { useUnsavedSignal } from "@/lib/hooks/use-unsaved-signal";
 
 interface NoteEditorProps {
   note: Note;
@@ -80,18 +81,24 @@ export function NoteEditor({
   const loaded = useRef(note);
   const latest = useRef({ title: note.title, body: note.body, type: note.type, tags: note.tags, props: note.props });
 
-  // Debounced autosave.
+  // Debounced autosave. The tab shows a dot until the write lands (or for as long as it fails).
+  const signalUnsaved = useUnsavedSignal();
   useEffect(() => {
     latest.current = { title, body, type, tags, props };
     const l = loaded.current;
     if (l.id !== noteId) return;
-    if (title === l.title && body === l.body && type === l.type && arraysEqual(tags, l.tags) && propsEqual(props, l.props)) return;
+    if (title === l.title && body === l.body && type === l.type && arraysEqual(tags, l.tags) && propsEqual(props, l.props)) {
+      signalUnsaved(false);
+      return;
+    }
+    signalUnsaved(true);
     const handle = setTimeout(async () => {
       await notesRepo.update(noteId, { title, body, type, tags, props });
       loaded.current = { ...loaded.current, title, body, type, tags, props };
+      signalUnsaved(false);
     }, 450);
     return () => clearTimeout(handle);
-  }, [title, body, type, tags, props, noteId]);
+  }, [title, body, type, tags, props, noteId, signalUnsaved]);
 
   // Flush on unmount (switching notes faster than debounce).
   useEffect(() => {

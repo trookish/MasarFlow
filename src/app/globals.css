@@ -144,6 +144,26 @@
   --sidebar-border: #141418;
 }
 
+/* ── Page Shell ───────────────────────────────────────────────────────────
+ * One measurement set for every page: row heights by density, control and
+ * chrome heights, and the gutters pages align to. A row is `min-h-[var(--row-h)]`
+ * and nothing re-invents 28/36 px; the shell sets data-density on the frame. */
+:root {
+  --row-h-compact: 28px;
+  --row-h-comfortable: 36px;
+  --row-h: var(--row-h-comfortable);
+  --page-header-h: 44px; /* PageHeader */
+  --toolbar-h: 40px; /* Toolbar */
+  --statusbar-h: 26px; /* StatusBar */
+  --panel-header-h: 36px; /* PanelHeader */
+  --page-pad-x: 16px;
+  --page-gap: 12px;
+}
+[data-density="compact"] {
+  --row-h: var(--row-h-compact);
+  --page-gap: 8px;
+}
+
 /* ── Accent ───────────────────────────────────────────────────────────────
  * --primary / --primary-foreground / --ring are written inline on <html> by
  * the appearance applier. In gradient mode, repaint solid primary surfaces
@@ -156,6 +176,11 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+/* Stroked icons that wear the accent: the solid accent via text-primary, the
+ * gradient via the SVG paint server rendered by <AccentIconGradient />. */
+[data-accent-mode="gradient"] .accent-icon {
+  stroke: url(#mf-accent-icon-gradient);
 }
 .accent-gradient-bg {
   background-image: var(--accent-gradient);

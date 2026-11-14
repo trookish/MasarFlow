@@ -13,6 +13,7 @@ import { MarkdownPreview } from "@/components/brain/markdown-preview";
 import { RichMarkdownEditor } from "@/components/brain/rich-markdown-editor";
 import { BacklinksSection } from "@/components/entities/backlinks-section";
 import { PropertiesPanel } from "@/components/vault/properties-panel";
+import { useUnsavedSignal } from "@/lib/hooks/use-unsaved-signal";
 
 /** Common documentation buckets offered as a datalist (category is free-text). */
 export const DOC_CATEGORY_SUGGESTIONS = [
@@ -53,17 +54,23 @@ export function DocEditor({
   const savedJson = useRef(JSON.stringify(form));
   const latest = useRef(form);
 
-  // Debounced autosave — only when content actually changed.
+  // Debounced autosave — only when content actually changed. The tab shows a dot until it lands.
+  const signalUnsaved = useUnsavedSignal();
   useEffect(() => {
     latest.current = form;
     const json = JSON.stringify(form);
-    if (json === savedJson.current) return;
+    if (json === savedJson.current) {
+      signalUnsaved(false);
+      return;
+    }
+    signalUnsaved(true);
     const handle = setTimeout(async () => {
       await docsRepo.update(docId, form);
       savedJson.current = json;
+      signalUnsaved(false);
     }, 450);
     return () => clearTimeout(handle);
-  }, [form, docId]);
+  }, [form, docId, signalUnsaved]);
 
   // Flush a still-pending edit on unmount (switching docs faster than debounce).
   useEffect(() => {

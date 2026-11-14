@@ -10,6 +10,8 @@ interface TaskCardProps {
   task: Task;
   specNumber?: string;
   dragging: boolean;
+  /** The task open in the Inspector. */
+  selected?: boolean;
   onClick: () => void;
   onDragStart: (e: React.DragEvent) => void;
   onDragEnd: () => void;
@@ -19,6 +21,7 @@ export function TaskCard({
   task,
   specNumber,
   dragging,
+  selected = false,
   onClick,
   onDragStart,
   onDragEnd,
@@ -32,9 +35,20 @@ export function TaskCard({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      aria-current={selected ? "true" : undefined}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       className={cn(
-        "cursor-grab space-y-2 rounded-md border border-border bg-card p-2.5 text-left shadow-sm transition-opacity active:cursor-grabbing",
-        dragging ? "opacity-40" : "hover:border-primary/40",
+        "cursor-grab space-y-2 rounded-md border bg-card p-2.5 text-left shadow-sm transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing",
+        selected ? "border-primary ring-1 ring-primary/60" : "border-border",
+        dragging ? "opacity-40" : !selected && "hover:border-primary/40",
       )}
     >
       <div className="text-sm font-medium">{task.title}</div>

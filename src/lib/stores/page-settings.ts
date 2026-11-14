@@ -128,7 +128,13 @@ export interface CanvasSettings {
   lodThreshold: number;
 }
 
+export interface InterfaceSettings {
+  /** Row height for every list, table and toolbar in the app. */
+  density: "comfortable" | "compact";
+}
+
 export interface AllPageSettings {
+  interface: InterfaceSettings;
   dashboard: DashboardSettings;
   brain: BrainSettings;
   specs: SpecsSettings;
@@ -152,6 +158,7 @@ export interface AllPageSettings {
 export type PageKey = keyof AllPageSettings;
 
 export const PAGE_SETTINGS_DEFAULTS: AllPageSettings = {
+  interface: { density: "comfortable" },
   dashboard: { showMetrics: true, showActivity: true },
   brain: { defaultView: "notes", showWordCount: false, lineWrap: true },
   specs: { defaultSort: "updatedAt", showCompleted: true },

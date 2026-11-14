@@ -21,6 +21,7 @@ import {
 import { StringListEditor } from "./string-list-editor";
 import { BacklinksSection } from "@/components/entities/backlinks-section";
 import { PropertiesPanel } from "@/components/vault/properties-panel";
+import { useUnsavedSignal } from "@/lib/hooks/use-unsaved-signal";
 
 interface SpecEditorProps {
   spec: Spec;
@@ -81,17 +82,23 @@ export function SpecEditor({
   const savedJson = useRef(JSON.stringify(form));
   const latest = useRef(form);
 
-  // Debounced autosave when the form differs from the last saved snapshot.
+  // Debounced autosave when the form differs from the last saved snapshot. The tab shows a dot until it lands.
+  const signalUnsaved = useUnsavedSignal();
   useEffect(() => {
     latest.current = form;
     const json = JSON.stringify(form);
-    if (json === savedJson.current) return;
+    if (json === savedJson.current) {
+      signalUnsaved(false);
+      return;
+    }
+    signalUnsaved(true);
     const handle = setTimeout(async () => {
       await specsRepo.update(specId, form);
       savedJson.current = json;
+      signalUnsaved(false);
     }, 450);
     return () => clearTimeout(handle);
-  }, [form, specId]);
+  }, [form, specId, signalUnsaved]);
 
   // Flush a pending edit on unmount (e.g. switching specs within the debounce).
   useEffect(() => {

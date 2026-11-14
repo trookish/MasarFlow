@@ -1,66 +1,92 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { SURFACES, surfaceForPath } from "@/lib/navigation/surfaces";
+import { useDockStore } from "@/lib/stores/dock";
 import { useUIStore } from "@/lib/stores/ui";
 import { cn } from "@/lib/utils/cn";
 import { MasarFlowLogo } from "@/components/shell/logo";
+import { NavIconChip, SurfaceNavLink } from "@/components/shell/surface-nav-item";
 
-/** Standard layout navigation: the six surfaces, with the description as the hover explanation. */
-export function SurfaceSidebar() {
+/**
+ * Each surface tab keeps a query snapshot (its section, its selection). The
+ * link carries it, so the shell's URL sync has nothing to mirror: a mirror
+ * replace issued after this navigation would supersede a click made right
+ * after it and drop the user's next navigation.
+ */
+export function useSurfaceLinks() {
   const pathname = usePathname();
   const active = surfaceForPath(pathname);
+  const snapshots = useDockStore((s) => {
+    const st = s.activeProjectId ? s.projects[s.activeProjectId] : null;
+    return st?.workspaces[st.activeWorkspace]?.params;
+  });
+  return SURFACES.map((s) => {
+    const snapshot = snapshots?.[s.route];
+    return { surface: s, href: snapshot ? `${s.route}?${snapshot}` : s.route, active: active === s.id };
+  });
+}
+
+/**
+ * The surface rail on the left or right edge. Every icon and the logo sit at a
+ * fixed size and position; expanding only reveals the labels beside them.
+ */
+export function SurfaceSidebar({ side = "left" }: { side?: "left" | "right" }) {
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
-  const toggle = useUIStore((s) => s.toggleSidebar);
+  const toggle = useUIStore((s) => s.toggleNavigation);
+  const links = useSurfaceLinks();
+  const CollapseIcon =
+    side === "left"
+      ? collapsed
+        ? PanelLeftOpen
+        : PanelLeftClose
+      : collapsed
+        ? PanelRightOpen
+        : PanelRightClose;
 
   return (
     <aside
       className={cn(
-        "flex h-full shrink-0 flex-col border-r border-border bg-card/60 transition-[width]",
-        collapsed ? "w-14" : "w-52",
+        "relative z-20 flex h-full shrink-0 flex-col overflow-hidden bg-card/60 transition-[width] duration-200 ease-out",
+        side === "left" ? "border-r border-border" : "border-l border-border",
+        collapsed ? "w-[60px]" : "w-56",
       )}
       data-testid="surface-sidebar"
+      data-side={side}
     >
-      <div className={cn("flex h-12 items-center gap-2 px-3", collapsed && "justify-center px-0")}>
-        <MasarFlowLogo className="size-6 shrink-0" />
-        {collapsed ? null : <span className="truncate text-sm font-semibold tracking-tight">MasarFlow</span>}
+      <div className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4">
+        <MasarFlowLogo className="size-7 shrink-0" />
+        {collapsed ? null : (
+          <span className="truncate whitespace-nowrap text-sm font-semibold tracking-tight">MasarFlow</span>
+        )}
       </div>
-      <nav aria-label="Surfaces" className="flex flex-1 flex-col gap-0.5 px-2 py-2">
-        {SURFACES.map((s) => {
-          const Icon = s.icon;
-          const isActive = active === s.id;
-          return (
-            <Link
-              key={s.id}
-              href={s.route}
-              aria-label={s.label}
-              aria-current={isActive ? "page" : undefined}
-              title={collapsed ? `${s.label}: ${s.description}` : s.description}
-              className={cn(
-                "group flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
-                collapsed && "justify-center px-0",
-                isActive
-                  ? "bg-accent font-medium text-foreground"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-              )}
-            >
-              <Icon className={cn("size-4 shrink-0", isActive && "text-primary")} />
-              {collapsed ? null : <span className="truncate">{s.label}</span>}
-            </Link>
-          );
-        })}
+      <nav aria-label="Surfaces" className="flex flex-1 flex-col gap-1 px-3 py-3">
+        {links.map(({ surface: s, href, active }) => (
+          <SurfaceNavLink
+            key={s.id}
+            href={href}
+            label={s.label}
+            title={collapsed ? `${s.label}: ${s.description}` : s.description}
+            icon={s.icon}
+            active={active}
+            showLabel={!collapsed}
+            className={collapsed ? undefined : "pr-3 hover:bg-accent/40"}
+          />
+        ))}
       </nav>
       <button
         type="button"
         onClick={toggle}
-        className="m-2 flex items-center justify-center gap-2 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+        className={cn(
+          "group mx-3 mb-3 flex items-center gap-3 rounded-lg text-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+          !collapsed && "pr-3 hover:bg-accent/40",
+        )}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        title={collapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
       >
-        {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
-        {collapsed ? null : <span>Collapse</span>}
+        <NavIconChip icon={CollapseIcon} active={false} />
+        {collapsed ? null : <span className="whitespace-nowrap">Collapse</span>}
       </button>
     </aside>
   );

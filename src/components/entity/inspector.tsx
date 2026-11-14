@@ -9,7 +9,7 @@
  * repositories the entity views use; connections are the project's real links.
  *
  * "Ask about this" uses no private chat runtime: it focuses/opens the entity,
- * then opens the existing Ask surface. Chat already derives its active context
+ * then opens the AI surface. A session already derives its active context
  * from the open dock panels (src/lib/ai/active-context.ts), so the entity stays
  * in that context while the conversation starts.
  */
@@ -21,11 +21,15 @@ import {
   Link2,
   MessageSquare,
   PanelRight,
+  Pin,
+  PinOff,
+  X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EntityChip } from "@/components/entities/entity-chip";
+import { TaskEditor } from "@/components/tasks/task-editor";
 import { deriveActiveContext } from "@/lib/ai/active-context";
 import { db } from "@/lib/db";
 import {
@@ -44,6 +48,12 @@ import {
   systemsRepo,
   tasksRepo,
 } from "@/lib/db/repos";
+import { deleteTask, patchTask } from "@/lib/domain/task-actions";
+import { useUrlSelection } from "@/lib/hooks/use-url-selection";
+import {
+  useInspectorSelection,
+  type InspectorCard,
+} from "@/lib/inspector/selection";
 import { getPageDef } from "@/lib/dock/registry";
 import { pageIdOf, paramsOf, type ProjectDockState } from "@/lib/dock/types";
 import { assigneeLabel } from "@/lib/domain/task-model";
@@ -77,6 +87,8 @@ export interface InspectorView {
   surface: Surface | null;
   section: SurfaceSection | null;
   openTabs: number;
+  /** Where pages publish their selection for the focused tab (section href, else page id). */
+  selectionKey: string | null;
 }
 
 export interface InspectorProperty {
@@ -92,6 +104,7 @@ const EMPTY_VIEW: Omit<InspectorView, "projectId"> = {
   surface: null,
   section: null,
   openTabs: 0,
+  selectionKey: null,
 };
 
 /** The section a focused tab shows; `view` wins for surface routes. */
@@ -142,6 +155,7 @@ export function deriveInspectorView(
     surface,
     section,
     openTabs: active.panels.length,
+    selectionKey: section?.href ?? pageId,
   };
 }
 
@@ -318,22 +332,31 @@ export async function loadEntityProperties(
   }
 }
 
-/** Display labels for the entity kinds a surface can select, e.g. "task". */
-export function selectableKindLabels(surface: Surface): string[] {
-  const routes = new Set([
-    surface.route,
-    ...surface.sections.map((section) => section.href),
-  ]);
-  return ENTITY_KINDS.filter((kind) => routes.has(KIND_META[kind].route)).map(
-    (kind) => KIND_META[kind].label.toLowerCase(),
-  );
+/**
+ * Display labels for the entity kinds a section can select, e.g. "task". Without a section: every
+ * kind its surface can select.
+ */
+export function selectableKindLabels(
+  surface: Surface,
+  section?: SurfaceSection | null,
+): string[] {
+  const first = surface.sections[0];
+  return ENTITY_KINDS.filter((kind) => {
+    const meta = KIND_META[kind];
+    if (meta.route !== surface.route) return false;
+    if (!section) return true;
+    return (meta.view ?? first?.id) === section.id;
+  }).map((kind) => KIND_META[kind].label.toLowerCase());
 }
 
-/** Concise, surface-specific explanation shown when nothing is selected. */
-export function selectionHint(surface: Surface): string {
-  const labels = selectableKindLabels(surface);
+/** Concise, section-specific explanation shown when nothing is selected. */
+export function selectionHint(
+  surface: Surface,
+  section?: SurfaceSection | null,
+): string {
+  const labels = selectableKindLabels(surface, section);
   if (labels.length === 0) {
-    return "This page does not select a single item. Open a tab with a selection to inspect it here.";
+    return "Nothing on this page opens as a single item. Open a task, note or change from here and it shows up in its own tab.";
   }
   const list =
     labels.length === 1
@@ -346,13 +369,13 @@ export function selectionHint(surface: Surface): string {
 }
 
 /**
- * Focus-or-open the entity, then open Ask. This is the real context handoff:
+ * Focus-or-open the entity, then open the AI surface. This is the real context handoff:
  * the chat assembles "currently open" from the dock, so the entity tab must be
  * open when the chat panel starts.
  */
 export function askAboutEntity(ref: EntityRef): void {
   openEntity(ref);
-  useDockStore.getState().open("/ask");
+  useDockStore.getState().open("/ai");
 }
 
 function PropertyRows({
@@ -468,6 +491,59 @@ function Connections({
   );
 }
 
+function TaskInspector({
+  projectId,
+  entity,
+}: {
+  projectId: string;
+  entity: EntityRef;
+}) {
+  const task = useLiveQuery(() => tasksRepo.get(entity.id), [entity.id]);
+  const specs = useLiveQuery(() => specsRepo.listByProject(projectId), [projectId]) ?? [];
+  const sprints = useLiveQuery(() => sprintsRepo.listByProject(projectId), [projectId]) ?? [];
+  const [, select] = useUrlSelection("/tasks", "task");
+
+  if (task === undefined) {
+    return <p className="p-4 text-xs text-muted-foreground">Loading task…</p>;
+  }
+  if (!task) {
+    return (
+      <div className="space-y-2 p-4">
+        <h3 className="text-sm font-semibold">Task not found</h3>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          It was deleted or belongs to another project.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <>
+      <TaskEditor
+        key={task.id}
+        task={task}
+        specs={specs}
+        sprints={sprints}
+        onClose={() => select(null)}
+        onPatch={(patch) => void patchTask(task, patch)}
+        onDelete={() => {
+          select(null);
+          void deleteTask(task);
+        }}
+      />
+      <div className="shrink-0 border-t border-border p-3">
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => askAboutEntity(entity)}
+        >
+          <MessageSquare className="h-4 w-4" aria-hidden />
+          Ask about this
+        </Button>
+      </div>
+    </>
+  );
+}
+
 function EntityInspector({
   projectId,
   view,
@@ -526,15 +602,67 @@ function EntityInspector({
         <Connections connections={connections} />
 
         <div className="space-y-2 border-t border-border pt-4">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => openEntity(entity)}
+          >
+            <ArrowUpRight className="h-4 w-4" aria-hidden />
+            Open in its page
+          </Button>
           <Button className="w-full" onClick={() => askAboutEntity(entity)}>
             <MessageSquare className="h-4 w-4" aria-hidden />
             Ask about this
           </Button>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Opens Ask and keeps this item open so the assistant can use it as
+            Opens AI and keeps this item open so the assistant can use it as
             context.
           </p>
         </div>
+      </div>
+    </ScrollArea>
+  );
+}
+
+/** A selection a page published that is not a database entity (a graph node, a file, a diagram node). */
+function CardInspector({ card }: { card: InspectorCard }) {
+  return (
+    <ScrollArea className="min-h-0 flex-1">
+      <div className="space-y-5 p-4" data-testid="inspector-card">
+        <header className="space-y-1.5">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {card.kicker}
+          </p>
+          <h3 className="min-w-0 break-words text-base font-semibold leading-snug">
+            {card.title}
+          </h3>
+          {card.note ? (
+            <p className="text-xs leading-relaxed text-muted-foreground">{card.note}</p>
+          ) : null}
+        </header>
+        {card.rows.length > 0 ? (
+          <section aria-label="Properties">
+            <h4 className="text-xs font-semibold">Properties</h4>
+            <dl className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-xs">
+              {card.rows.map((row) => (
+                <div key={row.label} className="contents">
+                  <dt className="text-muted-foreground">{row.label}</dt>
+                  <dd className="min-w-0 break-words text-foreground">{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ) : null}
+        {card.links && card.links.length > 0 ? (
+          <section aria-label="Connections" className="space-y-1.5">
+            <h4 className="text-xs font-semibold">Connections</h4>
+            <div className="flex flex-wrap gap-1.5">
+              {card.links.map((ref) => (
+                <EntityChip key={`${ref.kind}:${ref.id}`} entity={ref} />
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
     </ScrollArea>
   );
@@ -569,18 +697,51 @@ function SurfaceSummary({ view }: { view: InspectorView }) {
         <h3 className="text-sm font-semibold">
           {view.section?.label ?? view.pageLabel}
         </h3>
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          {view.surface.description}
-        </p>
       </header>
       <div className="space-y-1.5 rounded-md border border-border bg-background/60 p-3">
         <p className="text-xs font-medium">Nothing selected</p>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          {selectionHint(view.surface)}
+          {selectionHint(view.surface, view.section)}
         </p>
       </div>
+      <Button
+        variant="outline"
+        className="w-full"
+        onClick={() => useDockStore.getState().open("/ai")}
+      >
+        <MessageSquare className="h-4 w-4" aria-hidden />
+        Ask about this page
+      </Button>
     </div>
   );
+}
+
+export interface InspectorFrame {
+  presentation: "docked" | "overlay";
+  /** Pages that float the Inspector offer a pin that docks it as a column. */
+  pinnable?: boolean;
+  pinned?: boolean;
+  onPinToggle?: () => void;
+  onClose?: () => void;
+}
+
+/** The focused tab's inspector view merged with whatever the page published. */
+export function useInspectorView(): {
+  view: InspectorView;
+  projectId: string | null;
+  card: InspectorCard | null;
+} {
+  const projectId = useDockStore((s) => s.activeProjectId);
+  const projectState = useDockStore((s) =>
+    s.activeProjectId ? (s.projects[s.activeProjectId] ?? null) : null,
+  );
+  const base = deriveInspectorView(projectState, projectId);
+  const published = useInspectorSelection((s) =>
+    base.selectionKey ? s.selections[base.selectionKey] : undefined,
+  );
+  const view = base.ref ? base : { ...base, ref: published?.ref ?? null };
+  const card = view.ref ? null : (published?.card ?? null);
+  return { view, projectId, card };
 }
 
 /**
@@ -591,16 +752,22 @@ export function InspectorContent({
   view,
   projectId,
   className,
+  card,
+  frame,
 }: {
   view: InspectorView;
   projectId: string | null;
   className?: string;
+  card?: InspectorCard | null;
+  frame?: InspectorFrame;
 }) {
+  const mode = view.ref ? "entity" : card ? "card" : "surface";
   return (
     <aside
       aria-label="Inspector"
       data-testid="inspector"
-      data-inspector-mode={view.ref ? "entity" : "surface"}
+      data-inspector-mode={mode}
+      data-inspector-presentation={frame?.presentation ?? "docked"}
       className={cn(
         "flex h-full min-h-0 w-full flex-col border-l border-border bg-card/40",
         className,
@@ -609,11 +776,38 @@ export function InspectorContent({
       <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border px-3">
         <PanelRight className="h-4 w-4 text-muted-foreground" aria-hidden />
         <h2 className="text-sm font-semibold">Inspector</h2>
-        {view.openTabs > 0 ? (
-          <span className="ml-auto text-xs text-muted-foreground">
-            {view.openTabs} {view.openTabs === 1 ? "tab" : "tabs"}
-          </span>
-        ) : null}
+        <div className="ml-auto flex items-center gap-0.5">
+          {frame?.pinnable && frame.onPinToggle ? (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={frame.pinned ? "Float inspector" : "Dock inspector"}
+              aria-pressed={frame.pinned}
+              title={
+                frame.pinned
+                  ? "Float over the page again"
+                  : "Keep the inspector docked as a column on this page"
+              }
+              onClick={frame.onPinToggle}
+            >
+              {frame.pinned ? (
+                <PinOff className="h-3.5 w-3.5" aria-hidden />
+              ) : (
+                <Pin className="h-3.5 w-3.5" aria-hidden />
+              )}
+            </Button>
+          ) : null}
+          {frame?.onClose ? (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Collapse panel"
+              onClick={frame.onClose}
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+            </Button>
+          ) : null}
+        </div>
       </header>
 
       {!projectId ? (
@@ -624,8 +818,12 @@ export function InspectorContent({
             its connections here.
           </p>
         </div>
+      ) : view.ref?.kind === "task" ? (
+        <TaskInspector projectId={projectId} entity={view.ref} />
       ) : view.ref ? (
         <EntityInspector projectId={projectId} view={view} entity={view.ref} />
+      ) : card ? (
+        <CardInspector card={card} />
       ) : (
         <ScrollArea className="min-h-0 flex-1">
           <SurfaceSummary view={view} />
@@ -636,17 +834,25 @@ export function InspectorContent({
 }
 
 /**
- * Right-hand inspector. The shell owns the panel width and visibility, so the
- * component intentionally has no close button of its own.
+ * Right-hand inspector. The shell decides where it sits (docked column or floating overlay) and
+ * passes the frame; the selection comes from the focused tab's URL or from what the page published.
  */
-export function Inspector({ className }: { className?: string }) {
-  const projectId = useDockStore((s) => s.activeProjectId);
-  const projectState = useDockStore((s) =>
-    s.activeProjectId ? (s.projects[s.activeProjectId] ?? null) : null,
-  );
-  const view = deriveInspectorView(projectState, projectId);
+export function Inspector({
+  className,
+  frame,
+}: {
+  className?: string;
+  frame?: InspectorFrame;
+}) {
+  const { view, projectId, card } = useInspectorView();
 
   return (
-    <InspectorContent view={view} projectId={projectId} className={className} />
+    <InspectorContent
+      view={view}
+      projectId={projectId}
+      className={className}
+      card={card}
+      frame={frame}
+    />
   );
 }

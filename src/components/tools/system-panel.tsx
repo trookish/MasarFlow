@@ -121,7 +121,7 @@ export function SystemPanel() {
           </ul>
           <p className="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground">
             <Info className="mt-0.5 h-3 w-3 shrink-0" />
-            The desktop app additionally reports versions, paths, allowed folders and MasarFlow&apos;s own
+            MasarFlow also reports versions, paths, allowed folders and its own
             environment. Editable environment settings (API keys, providers, .env values) arrive with
             Settings → System + AI Providers — this panel stays read-only on purpose.
           </p>

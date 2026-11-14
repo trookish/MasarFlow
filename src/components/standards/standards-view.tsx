@@ -21,6 +21,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StandardEditor } from "./standard-editor";
 import { EnforcerPanel } from "./enforcer-panel";
+import { pageUrl } from "@/lib/navigation/surfaces";
 
 export function StandardsView() {
   const projectId = useActiveProjectId();
@@ -74,7 +75,7 @@ export function StandardsView() {
   const selected = sorted.find((s) => s.id === selectedId) ?? null;
 
   function select(id: string | null) {
-    router.replace(id ? `/standards?standard=${id}` : "/standards", {
+    router.replace(pageUrl("/standards", id ? `standard=${id}` : ""), {
       scroll: false,
     });
   }

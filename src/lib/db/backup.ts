@@ -4,8 +4,8 @@ export const BACKUP_FORMAT = "masarflow-backup";
 /** File layout version (unchanged since 0.2). */
 export const BACKUP_VERSION = 1;
 /**
- * Meaning of the rows. 2 = 0.2.x (sync rows without an adapter, no events/trash tables);
- * 3 = 0.3 (replica adapter on sync rows, domain events and trash). Older values migrate forward.
+ * Meaning of the rows. 2 = 0.1.x and 0.2 pre-release builds (sync rows without an adapter, no
+ * events/trash tables); 3 = 0.2 (replica adapter on sync rows, domain events and trash). Older values migrate forward.
  */
 export const DATA_VERSION = 3;
 

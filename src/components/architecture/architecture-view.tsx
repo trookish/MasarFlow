@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SystemEditor } from "./system-editor";
 import { ArchitectureDiagram } from "./architecture-diagram";
+import { pageUrl } from "@/lib/navigation/surfaces";
 
 const STATUS_DOT: Record<System["status"], string> = {
   active: "bg-success",
@@ -45,7 +46,7 @@ export function ArchitectureView() {
   const selected = sorted.find((s) => s.id === selectedId) ?? null;
 
   function select(id: string | null) {
-    router.replace(id ? `/architecture?system=${id}` : "/architecture", {
+    router.replace(pageUrl("/architecture", id ? `system=${id}` : ""), {
       scroll: false,
     });
   }

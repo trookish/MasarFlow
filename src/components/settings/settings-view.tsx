@@ -55,6 +55,7 @@ import {
 
 import { MasarFlowLogo } from "@/components/shell/logo";
 import { useProjectStore } from "@/lib/stores/project";
+import { useUIStore } from "@/lib/stores/ui";
 import { useActiveProject } from "@/lib/hooks/use-project";
 import { useMounted } from "@/lib/hooks/use-mounted";
 import {
@@ -62,6 +63,7 @@ import {
   type PageKey,
   type AllPageSettings,
 } from "@/lib/stores/page-settings";
+import { DENSITIES, DENSITY_LABEL, normalizeDensity } from "@/lib/ui/density";
 import {
   useAgentSettings,
   type AgentSettingsState,
@@ -104,6 +106,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils/cn";
+import { pageUrl } from "@/lib/navigation/surfaces";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -178,10 +181,10 @@ const NAV: NavGroup[] = [
   {
     label: "AI",
     items: [
-      { id: "chat", label: "Chat", icon: MessageSquare },
+      { id: "chat", label: "Sessions", icon: MessageSquare },
       { id: "agent", label: "Agent Loop", icon: Gauge },
-      { id: "agents", label: "AI Agents", icon: Bot },
-      { id: "workflow", label: "AI Workflow", icon: Workflow },
+      { id: "agents", label: "Agents", icon: Bot },
+      { id: "workflow", label: "Automations", icon: Workflow },
       { id: "ai-service", label: "Local AI Service", icon: Cpu },
     ],
   },
@@ -210,7 +213,10 @@ function SettingRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-border/50 py-3.5 last:border-0">
+    <div
+      data-setting-row={label}
+      className="flex min-h-[calc(var(--row-h)+16px)] items-start justify-between gap-4 border-b border-border/50 py-2 last:border-0"
+    >
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{label}</p>
         {description && (
@@ -696,16 +702,97 @@ function RangeField({
 }
 
 function InterfaceSection() {
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
+  const setSidebarCollapsed = useUIStore((s) => s.setSidebarCollapsed);
+  const sidebarPosition = useUIStore((s) => s.sidebarPosition);
+  const setSidebarPosition = useUIStore((s) => s.setSidebarPosition);
+  const dockCollapsed = useUIStore((s) => s.dockCollapsed);
+  const setDockCollapsed = useUIStore((s) => s.setDockCollapsed);
+  const inspectorOpen = useUIStore((s) => s.inspectorOpen);
+  const setInspectorOpen = useUIStore((s) => s.setInspectorOpen);
+  const setShortcutsOpen = useUIStore((s) => s.setShortcutsOpen);
+  const { interface: ui, update, reset: resetInterfaces } = usePageSettings();
+  const density = ui.density;
+
   return (
     <SectionPanel
       title="Interface"
-      description="Six surfaces, one project tab strip, and no window-layout management."
+      description="How the workspace frame is laid out. Changes apply immediately and are remembered."
+      onReset={() => {
+        setSidebarPosition("left");
+        setSidebarCollapsed(false);
+        setDockCollapsed(false);
+        setInspectorOpen(true);
+        resetInterfaces("interface");
+      }}
     >
-
-      <p className="max-w-xl text-sm leading-6 text-muted-foreground">
-        Navigate between six surfaces in the sidebar. Each project keeps its own linear tabs;
-        open, close, reorder, and reopen them without managing window layouts.
-      </p>
+      <SettingRow
+        label="Sidebar position"
+        description="Where the six surfaces sit: a rail on the left or right edge, or a dock along the bottom."
+      >
+        <SegmentedControl
+          value={sidebarPosition}
+          options={[
+            { value: "left", label: "Left" },
+            { value: "bottom", label: "Bottom" },
+            { value: "right", label: "Right" },
+          ]}
+          onChange={setSidebarPosition}
+        />
+      </SettingRow>
+      {sidebarPosition === "bottom" ? (
+        <SettingRow
+          label="Dock"
+          description="Show the dock, or collapse it to a single button at the bottom edge. Ctrl+B switches between the two."
+        >
+          <SegmentedControl
+            value={dockCollapsed ? "collapsed" : "expanded"}
+            options={[
+              { value: "expanded", label: "Expanded" },
+              { value: "collapsed", label: "Collapsed" },
+            ]}
+            onChange={(v) => setDockCollapsed(v === "collapsed")}
+          />
+        </SettingRow>
+      ) : (
+        <SettingRow
+          label="Sidebar"
+          description="Show the six surfaces with labels, or as a compact icon rail. Ctrl+B switches between the two."
+        >
+          <SegmentedControl
+            value={sidebarCollapsed ? "rail" : "full"}
+            options={[
+              { value: "full", label: "Full" },
+              { value: "rail", label: "Icon rail" },
+            ]}
+            onChange={(v) => setSidebarCollapsed(v === "rail")}
+          />
+        </SettingRow>
+      )}
+      <SettingRow
+        label="Row density"
+        description="How tall a row is in every list, table and board: Comfortable for reading, Compact for more on one screen."
+      >
+        <SegmentedControl
+          value={density}
+          options={DENSITIES.map((d) => ({ value: d, label: DENSITY_LABEL[d] }))}
+          onChange={(v) => update("interface", { density: normalizeDensity(v) })}
+        />
+      </SettingRow>
+      <SettingRow
+        label="Inspector"
+        description="The right column with the selected item's properties and links. It docks beside the page when there is room and floats over boards and canvases otherwise; drag its edge to resize."
+      >
+        <Toggle value={inspectorOpen} onChange={setInspectorOpen} />
+      </SettingRow>
+      <SettingRow
+        label="Keyboard shortcuts"
+        description="Tabs: Ctrl+Tab cycles, Ctrl+1–9 jumps, Ctrl+W or Delete closes, Ctrl+Shift+T reopens."
+      >
+        <Button size="sm" variant="outline" onClick={() => setShortcutsOpen(true)}>
+          View all
+        </Button>
+      </SettingRow>
     </SectionPanel>
   );
 }
@@ -802,10 +889,17 @@ function DataSection() {
 
   async function loadDemo() {
     setSeeding(true);
+    // Seeding takes a few seconds. Switch to the demo only if the user is still
+    // where they started: a late push would pull them off whatever they opened
+    // in the meantime, and a late project switch would swap their project.
+    const startedAt = window.location.pathname + window.location.search;
+    const startedProject = useProjectStore.getState().activeProjectId;
     try {
       const id = await seedDemoProject();
-      setActiveProjectId(id);
-      router.push("/dashboard");
+      if (useProjectStore.getState().activeProjectId === startedProject) setActiveProjectId(id);
+      if (window.location.pathname + window.location.search === startedAt) {
+        router.push(pageUrl("/dashboard"));
+      }
     } finally {
       setSeeding(false);
     }
@@ -859,7 +953,7 @@ function DataSection() {
         </SettingRow>
         <SettingRow
           label="Reset"
-          description="Permanently delete every project, note, spec, and task in this browser."
+          description="Permanently delete every project, note, spec, and task on this computer."
         >
           <Button
             variant="destructive"
@@ -880,7 +974,7 @@ function DataSection() {
           <DialogTitle>Reset all data?</DialogTitle>
           <DialogDescription>
             This permanently deletes every project, note, spec, task, and canvas
-            in this browser.{" "}
+            on this computer.{" "}
             {desktop ? "A backup is saved first. " : ""}This cannot be undone.
           </DialogDescription>
         </DialogHeader>
@@ -891,12 +985,12 @@ function DataSection() {
           <Button
             variant="destructive"
             onClick={async () => {
-              // Desktop: keep a disk copy before the wipe (a no-op in a browser).
+              // Keep a disk copy before the wipe.
               await backupNow().catch(() => null);
               await resetData();
               setActiveProjectId(null);
               setConfirmReset(false);
-              router.push("/dashboard");
+              router.push(pageUrl("/dashboard"));
             }}
           >
             Reset everything
@@ -1309,8 +1403,8 @@ function ChatSection() {
 
   return (
     <SectionPanel
-      title="Chat"
-      description="AI chat interface preferences."
+      title="Sessions"
+      description="Preferences for AI sessions: models, context and replies."
       onReset={() => reset("chat")}
     >
       <SettingRow
@@ -1583,7 +1677,7 @@ function AgentsSection() {
 
   return (
     <SectionPanel
-      title="AI Agents"
+      title="Agents"
       description="Agents list and management preferences."
       onReset={() => reset("agents")}
     >
@@ -1609,8 +1703,8 @@ function WorkflowSection() {
 
   return (
     <SectionPanel
-      title="AI Workflow"
-      description="16-step idea-to-implementation pipeline settings."
+      title="Automations"
+      description="Settings for the 16-step idea-to-implementation pipeline."
       onReset={() => reset("workflow")}
     >
       <SettingRow
