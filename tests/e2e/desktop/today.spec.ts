@@ -10,11 +10,11 @@
  * proves the due-today grouping by moving a task with the real row button.
  */
 import { test as base } from "@playwright/test";
-import { expect, launchApp, navigateTo, readTable, type AppHandle } from "./_harness";
+import { expect, launchApp, navigateTo, readTable, surfacePanel, type AppHandle } from "./_harness";
 
 const GROUPS_TITLE =
   "/today: TODAY view groups overdue, due today, in progress and up next from the local database";
-const DAILY_TITLE = "/today: TODAY opens (creating once) the daily note and focuses it in the dock";
+const DAILY_TITLE = "/today: TODAY opens (creating once) the daily note in Capture";
 
 const test = base.extend<object, { desktop: AppHandle }>({
   desktop: [
@@ -104,16 +104,21 @@ test(DAILY_TITLE, async ({ desktop }) => {
 
   await openButton.click();
   const day = localDay(Date.now());
-  // Several panels are docked; the daily note opens in the /brain panel.
-  // `data-dock-url` holds the bare route (the ?note= selection lives in the
-  // dock's per-panel params and mirrors into the URL while it is focused),
-  // and opening the note twice must never produce a second brain panel.
-  const focused = page.locator('[data-testid="dock-panel"][data-dock-url="/brain"]');
+  // A note is selected with its own href (registry.ts entityHref):
+  // "/capture?note=<id>", so the shell opens or focuses ONE Capture
+  // tab. The tab id may carry that query snapshot, hence the "?"-suffix match,
+  // and opening the note twice must never produce a second Capture tab.
+  const captureTab = page.locator(
+    '[data-dock-tab]:is([data-dock-url="/capture"],[data-dock-url^="/capture?"])',
+  );
+  const focused = surfacePanel(page, "Capture");
+  await expect(captureTab).toHaveCount(1, { timeout: 20_000 });
   await expect(focused).toHaveCount(1, { timeout: 20_000 });
-  await expect.poll(() => page.url(), { timeout: 20_000 }).toContain("/brain?note=");
+  await expect.poll(() => page.url(), { timeout: 20_000 }).toMatch(/\/capture\?note=/);
+  await expect(page.locator('[data-surface="capture"]')).toHaveAttribute("data-section", "notes");
   const firstUrl = page.url();
 
-  // The dock really shows the note, and the note is the day's.
+  // The surface really shows the note, and the note is the day's.
   await expect(focused.locator('input[placeholder="Untitled note"]')).toHaveValue(day, { timeout: 20_000 });
   const notesAfterFirst = (await readTable<{ id: string; title: string; tags: string[] }>(page, "notes")).filter(
     (n) => n.title === day,

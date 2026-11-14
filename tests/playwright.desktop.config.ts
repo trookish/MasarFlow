@@ -10,10 +10,8 @@ const outputDir = privateApp ? path.join(path.dirname(privateApp), "test-results
 /**
  * Desktop e2e: runs against the PACKAGED app (desktop/dist/win-unpacked).
  *
- * Differences from tests/playwright.config.ts (the web project):
+ * MasarFlow is desktop-only, so this is the only Playwright config:
  * - no webServer: the app starts its own Next server inside Electron;
- * - testDir is the desktop subdirectory, so `pnpm e2e` (web) never picks these
- *   up and vice versa;
  * - one worker: each spec owns a real app process and a real profile dir.
  *
  * Build first: `pnpm desktop:dist:dir`.

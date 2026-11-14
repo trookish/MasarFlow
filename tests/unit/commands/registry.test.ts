@@ -33,7 +33,7 @@ describe("buildCommands", () => {
 
   it("opens the six surfaces and every tool page", () => {
     const commands = buildCommands(CTX);
-    for (const href of ["/today", "/capture", "/work", "/library", "/ask", "/system", "/tools/terminal", "/tools/logs", "/tools/system"]) {
+    for (const href of ["/today", "/capture", "/work", "/library", "/ai", "/system", "/tools/terminal", "/tools/logs", "/tools/system"]) {
       expect(commands.some((c) => c.id === `open:${href}`), href).toBe(true);
     }
   });

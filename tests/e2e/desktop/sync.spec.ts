@@ -31,6 +31,7 @@ import {
   navigateTo,
   readTable,
   stubFolderPicker,
+  surfacePanel,
   test,
   type AppHandle,
 } from "./_harness";
@@ -48,7 +49,8 @@ interface NoteRow {
 }
 
 function syncPanel(page: Page): Locator {
-  return page.locator('[data-testid="dock-panel"][data-dock-url^="/sync"]');
+  // /sync is a section of the System surface; the panel is the System tab.
+  return surfacePanel(page, "Sync Panel");
 }
 
 /** The "Markdown vault" section (its own <section>), not the Obsidian panel. */
@@ -57,9 +59,8 @@ function vaultSection(page: Page): Locator {
 }
 
 function notesPanel(page: Page): Locator {
-  return page.locator(
-    '[data-testid="dock-panel"][data-dock-url="/brain"], [data-testid="dock-panel"][data-dock-url^="/brain?"]',
-  );
+  // Notes is the first section of the Capture surface.
+  return surfacePanel(page, "Notes");
 }
 
 /** Every .md file under `dir`, recursively. */

@@ -9,7 +9,7 @@
  * /api/obsidian proxy and the real import path — so this proves the /files view
  * renders the rows the app itself created, not a seeded fixture.
  */
-import { expect, launchApp, navigateTo, readTable, test } from "./_harness";
+import { expect, launchApp, navigateTo, readTable, surfacePanel, test } from "./_harness";
 import { startObsidianStub, stopAllObsidianStubs } from "./_obsidian-stub";
 
 const FILES_TITLE = "/files: lists vault attachments and finds one by name";
@@ -19,7 +19,8 @@ test.afterAll(async () => {
 });
 
 function syncPanel(page: import("@playwright/test").Page) {
-  return page.locator('[data-testid="dock-panel"][data-dock-url^="/sync"]');
+  // /sync is a section of the System surface, so its panel is the System tab.
+  return surfacePanel(page, "Sync Panel");
 }
 
 test(FILES_TITLE, async () => {
@@ -59,7 +60,7 @@ test(FILES_TITLE, async () => {
 
     // /files lists those rows by name and path.
     await navigateTo(page, "Files");
-    const files = page.locator('[data-testid="dock-panel"][data-dock-url="/files"]');
+    const files = surfacePanel(page, "Files");
     await expect(files.getByText("Vault Files & Attachments")).toBeVisible({
       timeout: 20_000,
     });

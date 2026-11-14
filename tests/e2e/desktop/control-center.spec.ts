@@ -1,9 +1,10 @@
 import { test, expect, navigateTo } from "./_harness";
 
 /**
- * The packaged dock is the bottom floating dock: nav links live in per-group
- * popups, so navigation goes through the harness's `navigateTo` (which handles
- * both rail and popup layouts) instead of a bare `getByRole("link")` click.
+ * The 0.2 shell has one sidebar of six surfaces, and every legacy route is a
+ * section inside one of them (/control-center → System → Control Center), so
+ * navigation goes through the harness's `navigateTo` rather than a bare
+ * `getByRole("link")` click.
  */
 test("/control-center: diagnostics and update panel", async ({ desktop }) => {
   const { page } = desktop;
@@ -15,9 +16,9 @@ test("/control-center: diagnostics and update panel", async ({ desktop }) => {
   await expect(cc.getByText(/MasarFlow 0\.2\.0\.0 \(0\.2\.0/)).toBeVisible();
 
   // Overview: the local service answered on the app protocol
-  await expect(cc.getByText(/Local service: ok/)).toBeVisible();
+  await expect(cc.getByTestId("cc-service")).toContainText(/Local service\s*ok/);
 
-  // Every tab is scoped to the Control Center so the Settings dock panel's own
+  // Every tab is scoped to the Control Center so the Settings surface's own
   // "Updates"/"Back up now" buttons can never collide with these.
   const tabs = cc.getByRole("navigation", { name: "Control Center sections" });
 

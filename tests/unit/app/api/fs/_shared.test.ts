@@ -1,18 +1,22 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as path from "node:path";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { resolveInsideRoot, isDeniedName } from "@/app/api/fs/_shared";
 
 const ROOT =
   process.platform === "win32" ? "C:\\projects\\game" : "/home/user/game";
 
-// Outside the desktop app the filesystem fails closed unless the root is listed (P1.T2).
-const previousRoots = process.env.MASARFLOW_DEV_ROOTS;
+// The filesystem fails closed unless the root is registered in <data dir>/roots.json (P1.T2).
+const previousDataDir = process.env.MASARFLOW_DATA_DIR;
 beforeAll(() => {
-  process.env.MASARFLOW_DEV_ROOTS = ROOT;
+  const dataDir = mkdtempSync(path.join(tmpdir(), "msf-shared-"));
+  writeFileSync(path.join(dataDir, "roots.json"), JSON.stringify({ roots: [ROOT] }));
+  process.env.MASARFLOW_DATA_DIR = dataDir;
 });
 afterAll(() => {
-  if (previousRoots === undefined) delete process.env.MASARFLOW_DEV_ROOTS;
-  else process.env.MASARFLOW_DEV_ROOTS = previousRoots;
+  if (previousDataDir === undefined) delete process.env.MASARFLOW_DATA_DIR;
+  else process.env.MASARFLOW_DATA_DIR = previousDataDir;
 });
 
 describe("resolveInsideRoot", () => {

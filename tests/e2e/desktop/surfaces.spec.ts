@@ -1,17 +1,17 @@
 import { test as base, expect } from "@playwright/test";
 import { launchApp, removeProfile, type AppHandle } from "./_harness";
 
-// The 0.3 default shell: six surfaces, legacy routes redirected, Studio available as an opt-in.
+// The 0.2 shell: six surfaces, legacy routes redirected into their surface section.
 const test = base.extend<{ desktop: AppHandle }>({
   desktop: async ({}, provide, testInfo) => {
-    const handle = await launchApp({ seed: "demo", layout: "standard" });
+    const handle = await launchApp({ seed: "demo" });
     await provide(handle);
     await handle.close();
     if (testInfo.status === "passed") removeProfile(handle.profileDir);
   },
 });
 
-const SURFACES = ["Today", "Capture", "Work", "Library", "Ask", "System"];
+const SURFACES = ["Today", "Capture", "Work", "Library", "AI", "System"];
 
 async function openSurface(page: AppHandle["page"], label: string) {
   await page.getByRole("navigation", { name: "Surfaces" }).getByRole("link", { name: label, exact: true }).click();
@@ -48,8 +48,23 @@ test("/library: surface sections switch the hosted page", async ({ desktop }) =>
   await switchSection(desktop.page, "/library", "Library", "standards", "Standards");
 });
 
-test("/ask: surface sections switch the hosted page", async ({ desktop }) => {
-  await switchSection(desktop.page, "/ask", "Ask", "agents", "AI Agents");
+test("/ai: surface sections switch the hosted page", async ({ desktop }) => {
+  await switchSection(desktop.page, "/ai", "AI", "agents", "Agents");
+});
+
+test("/ai: the renamed /ask address opens the AI surface on the same section", async ({ desktop }) => {
+  const { page } = desktop;
+  await openSurface(page, "Work");
+  await expect(page.locator('[data-surface="work"]')).toBeVisible({ timeout: 20_000 });
+  // A bookmark or stored tab from before the rename keeps working and keeps its section.
+  await page.evaluate(() => window.location.assign(new URL("/ask?view=agents", window.location.href).href));
+  await expect(page).toHaveURL(/\/ai\?view=agents$/, { timeout: 30_000 });
+  const surface = page.locator('[data-surface="ai"]');
+  await expect(surface).toHaveAttribute("data-section", "agents", { timeout: 30_000 });
+  await expect(surface.getByRole("tab", { name: "Agents", exact: true })).toHaveAttribute("aria-selected", "true");
+  // The sidebar names the surface once, with the new label; no tab is left behind under the old route.
+  await expect(page.getByRole("navigation", { name: "Surfaces" }).getByRole("link", { name: "AI", exact: true })).toBeVisible();
+  await expect(page.locator('[data-dock-tab][data-dock-url^="/ask"]')).toHaveCount(0);
 });
 
 test("/system: surface sections switch the hosted page", async ({ desktop }) => {
@@ -61,24 +76,9 @@ test("/work: legacy route redirects to its surface section", async ({ desktop })
   await openSurface(page, "Work");
   await expect(page.locator('[data-surface="work"]')).toBeVisible({ timeout: 20_000 });
   // The packaged app serves a custom protocol, so navigate from inside the page.
-  await page.evaluate(() => window.location.assign("/specs"));
+  await page.evaluate(() => window.location.assign(new URL("/specs", window.location.href).href));
   await expect(page).toHaveURL(/\/work\?view=specs$/, { timeout: 30_000 });
   await expect(page.locator('[data-surface="work"]')).toHaveAttribute("data-section", "specs");
-  await page.evaluate(() => window.location.assign("/brain/graph"));
+  await page.evaluate(() => window.location.assign(new URL("/brain/graph", window.location.href).href));
   await expect(page).toHaveURL(/\/library\?view=graph$/, { timeout: 30_000 });
-});
-
-test("/settings: switch between the standard and Studio layouts", async ({ desktop }) => {
-  const { page } = desktop;
-  await openSurface(page, "System");
-  const surface = page.locator('[data-surface="system"]');
-  await expect(surface).toHaveAttribute("data-section", "settings", { timeout: 20_000 });
-  await page.getByRole("button", { name: "Interface", exact: true }).first().click();
-  await page.getByRole("radio", { name: "Studio" }).or(page.getByRole("button", { name: "Studio", exact: true })).first().click();
-  await expect(page.locator('[data-layout="studio"]')).toBeVisible({ timeout: 20_000 });
-  await expect(page.locator("[data-dock-workspace]")).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole("navigation", { name: "Surfaces" })).toHaveCount(0);
-  // The choice survives a restart of the renderer.
-  await page.reload();
-  await expect(page.locator('[data-layout="studio"]')).toBeVisible({ timeout: 60_000 });
 });

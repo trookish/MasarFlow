@@ -4,6 +4,9 @@ import {
   expect,
   launchApp,
   navigateTo,
+  focusTab,
+  surfacePanel,
+  setWindowContentSize,
   addStubConnection,
   readTable,
 } from "./_harness";
@@ -23,6 +26,12 @@ import { startStubProvider, stopAllStubs, waitFor } from "./_stub-provider";
  * from the app's own IndexedDB via the harness `readTable` — not just that a
  * page rendered.
  *
+ * Navigation is the 0.2 shell: six surfaces, one tab each. /chat lives in the
+ * Ask tab, /docs and /architecture in Library, /agents in Ask, /brain/canvas in
+ * Capture, /watcher in System — while a *tab* stays open, its content (and its
+ * ?doc= snapshot) survives focus moving to another tab, which is exactly the
+ * state the workspace briefing must reflect.
+ *
  * One worker (tests/playwright.desktop.config.ts): every test owns its app.
  */
 
@@ -32,14 +41,14 @@ const DEMO_DOC2 = "Welcome to Pulse";
 const STUB_LABEL = "E2E stub";
 const STUB_MODEL = "stub-model";
 
-/** The chat panel's dock container (each route opens its own dock group). */
+/** The Ask surface's panel — the tab that hosts /chat. */
 function chatPanel(page: Page) {
-  return page.locator('[data-testid="dock-panel"][data-dock-url^="/chat"]');
+  return surfacePanel(page, "Chat");
 }
 
-/** The docs panel's dock container. */
+/** The Library surface's panel — the tab that hosts /docs. */
 function docsPanel(page: Page) {
-  return page.locator('[data-testid="dock-panel"][data-dock-url^="/docs"]');
+  return surfacePanel(page, "Documentation");
 }
 
 /** The composer textarea (agentic threads use the workspace placeholder). */
@@ -125,9 +134,10 @@ test("/chat: chat knows the open page", async () => {
     ).toBeVisible({ timeout: 15_000 });
     await catalogSettled;
 
-    // Leave a real entity open in another dock group. The Docs editor is
-    // inline (no modal), so its panel — and its ?doc= snapshot — stays
-    // docked: exactly the state the briefing must reflect after the return.
+    // Leave a real entity open in another tab. The Docs editor is inline (no
+    // modal), so the Library tab — with its ?doc= snapshot — stays open with
+    // that document selected: exactly the state the briefing must reflect
+    // after the return to Ask.
     await navigateTo(page, "Documentation");
     await docsPanel(page)
       .getByRole("button", { name: DEMO_DOC, exact: true })
@@ -137,11 +147,10 @@ test("/chat: chat knows the open page", async () => {
       DEMO_DOC,
     );
 
-    // Back to the chat group and send. Clicking an already-active dock tab is
-    // a no-op (dock-group.tsx focuses only a tab that is not active in its
-    // group), so the nav link is what re-focuses /chat — and the preserved
-    // ?thread= snapshot mirrors back into the URL.
-    await navigateTo(page, "Chat");
+    // Back to the Ask tab and send. Clicking the tab keeps its ?thread=
+    // snapshot (workspace-tabs.tsx focuses the tab and mirrors that URL back
+    // into the address bar), so the thread is still the selected one.
+    await focusTab(page, "Chat");
     await expect(composer(page)).toBeVisible();
     await sendTurn(page, "what am I looking at?");
 
@@ -180,18 +189,19 @@ test("/chat: chat knows the open page", async () => {
       .join("\n");
     expect(briefing).toContain("## Currently open");
     expect(briefing).toContain(`Doc "${DEMO_DOC}"`);
-    // The awareness tools travel with the turn.
-    const tools = (body.tools ?? []) as { function?: { name?: string } }[];
+    // The awareness tools travel with the turn. The model sees the coarse
+    // toolset: workspace_context carries the active page, backlinks, git status
+    // and open; list_entities carries activity.
+    const tools = (body.tools ?? []) as {
+      function?: { name?: string; description?: string; parameters?: unknown };
+    }[];
     const names = tools.map((t) => t.function?.name);
     expect(names).toEqual(
-      expect.arrayContaining([
-        "get_active_context",
-        "open_entity",
-        "get_backlinks",
-        "list_activity",
-        "git_status",
-      ]),
+      expect.arrayContaining(["workspace_context", "list_entities", "read_entity", "search_workspace"]),
     );
+    const contextTool = JSON.stringify(tools.find((t) => t.function?.name === "workspace_context"));
+    for (const kind of ["active", "backlinks", "git_status", "open"]) expect(contextTool).toContain(kind);
+    expect(JSON.stringify(tools.find((t) => t.function?.name === "list_entities"))).toContain("activity");
   } finally {
     await app.close();
     await stub.stop();
@@ -223,7 +233,7 @@ test("/chat: create task from message", async () => {
       .click();
 
     // The app opened the new task in the Task Boards panel (openEntity).
-    const detail = page.getByRole("dialog");
+    const detail = page.getByTestId("task-editor");
     await expect(detail.getByPlaceholder("Task title")).toHaveValue(
       /refactor the auth module/,
     );
@@ -244,68 +254,62 @@ test("/chat: create task from message", async () => {
   }
 });
 
-test("/chat: the conversation stays usable in a narrow panel", async () => {
+test("/chat: the conversation stays usable at the narrowest supported window", async () => {
   test.setTimeout(240_000);
   const stub = await startStubProvider();
   const app = await launchApp({ seed: "demo" });
   const { page } = app;
   try {
-    // The seed docks /dashboard and /chat side by side; adding the stub
-    // connection opens /agents in half the window and squeezes /chat to a
-    // quarter (~356 px at 1440): below the view's 600 px breakpoint, and the
-    // narrow panel this bug is about.
     await addStubConnection(page, stub.baseUrl, STUB_LABEL);
     await navigateTo(page, "Chat");
     await expect(chatPanel(page)).toHaveCount(1);
+
+    // The 0.2 shell has no split panes: a surface is as narrow as the window
+    // allows, and the smallest window the app accepts is 1000x640
+    // (desktop/src/main/windows/main-window.ts). Shrink to it and measure what
+    // a user on a small screen actually gets.
+    const size = await setWindowContentSize(app.app, 1000, 700);
+    expect(size.width).toBeLessThanOrEqual(1000);
     const panelBox = await chatPanel(page).boundingBox();
-    expect(panelBox?.width ?? 0).toBeLessThan(600);
+    expect(panelBox?.width ?? 0).toBeLessThan(900);
     expect(panelBox?.width ?? 0).toBeGreaterThanOrEqual(300);
 
-    // The bug: the fixed w-64 thread list starved the conversation column
-    // (flex-1 min-w-0) to a sliver.
+    // The bug this guards: the fixed w-64 thread list starved the conversation
+    // column (flex-1 min-w-0) to a sliver.
     const column = chatPanel(page).locator("div.min-w-0.flex-1.flex-col").first();
     const columnBox = await column.boundingBox();
-    console.log(`[narrow chat] panel=${panelBox?.width} column=${columnBox?.width}`);
+    console.log(`[min window chat] panel=${panelBox?.width} column=${columnBox?.width}`);
     expect(columnBox?.width ?? 0).toBeGreaterThanOrEqual(280);
 
-    // Below the breakpoint the thread list is an overlay behind a toggle.
-    // Choosing a thread closes it.
-    await chatPanel(page).getByRole("button", { name: "Show conversations" }).click();
+    // Above the view's 600 px breakpoint the thread list is docked beside the
+    // conversation: no overlay toggle, and choosing a thread leaves the column.
+    await expect(
+      chatPanel(page).getByRole("button", { name: "Show conversations" }),
+    ).toHaveCount(0);
     const row = chatPanel(page).getByRole("button", { name: DEMO_THREAD, exact: true });
     await expect(row).toBeVisible();
     await row.click();
-    await expect(
-      chatPanel(page).getByRole("button", { name: "Close conversations" }),
-    ).toHaveCount(0);
     await expect(composer(page)).toBeVisible();
     const composerBox = await composer(page).boundingBox();
-    console.log(`[narrow chat] composer=${composerBox?.width}`);
-    // The textarea shares its row with the attach/voice/send buttons, so it
-    // is measured against the panel: it was ~12 px before the fix.
-    expect(composerBox?.width ?? 0).toBeGreaterThanOrEqual((panelBox?.width ?? 0) * 0.6);
+    console.log(`[min window chat] composer=${composerBox?.width}`);
+    // The textarea shares its row with the attach/voice/send buttons, so it is
+    // measured against its conversation column (the thread list is docked
+    // beside it at this width): it was ~12 px before the fix.
+    const liveColumn = (await column.boundingBox())?.width ?? 0;
+    expect(composerBox?.width ?? 0).toBeGreaterThanOrEqual(liveColumn * 0.6);
+    expect(composerBox?.width ?? 0).toBeGreaterThanOrEqual(280);
 
-    // Still a working chat: repoint the thread at the stub, send, and the
-    // reply is VISIBLE in the narrow panel (not only persisted).
+    // Still a working chat at that width: repoint the thread at the stub, send,
+    // and the reply is VISIBLE in the window (not only persisted).
     await composer(page).fill(`/model ${STUB_LABEL}:${STUB_MODEL}`);
     await chatPanel(page).getByRole("button", { name: "Send" }).click();
     await expect(
       chatPanel(page).getByText(`Now using ${STUB_LABEL}:${STUB_MODEL}`),
     ).toBeVisible({ timeout: 15_000 });
-    await sendTurn(page, "status of the narrow panel");
+    await sendTurn(page, "status of the narrow window");
     await expect(
-      chatPanel(page).getByText(/STUB-REPLY status of the narrow panel/).first(),
+      chatPanel(page).getByText(/STUB-REPLY status of the narrow window/).first(),
     ).toBeVisible({ timeout: 30_000 });
-
-    // The overlay also closes from its backdrop (its exposed right edge: the
-    // 256 px list covers the rest).
-    await chatPanel(page).getByRole("button", { name: "Show conversations" }).click();
-    await expect(row).toBeVisible();
-    const backdrop = chatPanel(page).getByRole("button", { name: "Close conversations" });
-    const backdropBox = await backdrop.boundingBox();
-    await backdrop.click({
-      position: { x: (backdropBox?.width ?? 300) - 12, y: (backdropBox?.height ?? 200) / 2 },
-    });
-    await expect(row).toBeHidden();
   } finally {
     await app.close();
     await stub.stop();
@@ -315,9 +319,7 @@ test("/chat: the conversation stays usable in a narrow panel", async () => {
 test("/agents: roster seeds the default agents", async ({ desktop }) => {
   const { page } = desktop;
   await navigateTo(page, "AI Agents");
-  await expect(
-    page.locator('[data-testid="dock-panel"][data-dock-url="/agents"]'),
-  ).toHaveCount(1);
+  await expect(surfacePanel(page, "AI Agents")).toHaveCount(1);
 
   // ensureSeeded() runs on mount — the roster fills in from Dexie.
   const rows = page.getByTestId("agent-row");
@@ -343,9 +345,7 @@ test("/agents: roster seeds the default agents", async ({ desktop }) => {
 test("/architecture: create a system and open its diagram", async ({ desktop }) => {
   const { page } = desktop;
   await navigateTo(page, "Architecture");
-  await expect(
-    page.locator('[data-testid="dock-panel"][data-dock-url="/architecture"]'),
-  ).toHaveCount(1);
+  await expect(surfacePanel(page, "Architecture")).toHaveCount(1);
 
   await page.getByRole("button", { name: "New system" }).first().click();
   const name = page.getByPlaceholder("System name");
@@ -372,13 +372,10 @@ test("/architecture: create a system and open its diagram", async ({ desktop }) 
 
 test("/brain/canvas: add a card to the canvas", async ({ desktop }) => {
   const { page } = desktop;
-  // Canvas is a child of Brain in the dock's Capture group; open Brain first
-  // so the group popup lists its children (sidebar.tsx GroupItems).
-  await navigateTo(page, "Brain");
+  // Canvas is the second section of the Capture surface — the section tab bar
+  // is always visible, so no group has to be opened first.
   await navigateTo(page, "Canvas");
-  await expect(
-    page.locator('[data-testid="dock-panel"][data-dock-url="/brain/canvas"]'),
-  ).toHaveCount(1);
+  await expect(surfacePanel(page, "Canvas")).toHaveCount(1);
 
   await page.getByTestId("canvas-add-link").click();
   await page.getByPlaceholder("https://example.com").fill("https://example.com");
@@ -412,9 +409,7 @@ test("/brain/canvas: add a card to the canvas", async ({ desktop }) => {
 test("/docs: create a document", async ({ desktop }) => {
   const { page } = desktop;
   await navigateTo(page, "Documentation");
-  await expect(page.locator('[data-testid="dock-panel"][data-dock-url="/docs"]')).toHaveCount(
-    1,
-  );
+  await expect(surfacePanel(page, "Documentation")).toHaveCount(1);
 
   await page.getByRole("button", { name: "New doc" }).first().click();
   const title = page.getByPlaceholder("Untitled doc");
@@ -438,12 +433,11 @@ test("/docs: create a document", async ({ desktop }) => {
   });
 });
 
-test("/docs: the editor stays usable in a narrow panel", async ({ desktop }) => {
-  const { page } = desktop;
+test("/docs: the editor stays usable at the narrowest supported window", async ({ desktop }) => {
+  const { page, app } = desktop;
 
-  // Dashboard and chat are docked from the seed; /docs opens beside them.
-  // One more route then takes the other half, so /docs ends up in a quarter
-  // of the window (~360 px at 1440) — the narrow panel this bug is about.
+  // Two tabs open: Library (with a doc selected) and the System tab, so the
+  // docs tab has to keep its ?doc= snapshot while it is not focused.
   await navigateTo(page, "Chat");
   await navigateTo(page, "Documentation");
   await docsPanel(page)
@@ -455,29 +449,30 @@ test("/docs: the editor stays usable in a narrow panel", async ({ desktop }) => 
   );
 
   await navigateTo(page, "Project Watcher");
-  await expect(
-    page.locator('[data-testid="dock-panel"][data-dock-url^="/watcher"]'),
-  ).toHaveCount(1);
+  await expect(surfacePanel(page, "Project Watcher")).toHaveCount(1);
 
-  // Re-focus /docs: the dock keeps the panel's ?doc= snapshot, so the doc is
-  // selected again — this time in the narrow panel.
-  await navigateTo(page, "Documentation");
+  // Shrink to the smallest window the app accepts (1000x640 min), then come
+  // back to the docs tab: the snapshot survived the loss of focus.
+  await setWindowContentSize(app, 1000, 700);
+  await focusTab(page, "Documentation");
   await expect(docsPanel(page).getByPlaceholder("Untitled doc")).toHaveValue(
     DEMO_DOC,
   );
 
   const panel = await docsPanel(page).boundingBox();
-  expect(panel?.width ?? 0).toBeLessThan(500);
+  expect(panel?.width ?? 0).toBeLessThan(900);
 
-  // The bug: the fixed-width doc list (w-72) starves the editor column
-  // (flex-1 min-w-0) down to 0 px — in the DOM, but unusable.
+  // The bug this guards: the fixed-width doc list (w-72) starves the editor
+  // column (flex-1 min-w-0) down to 0 px — in the DOM, but unusable.
   const editor = docsPanel(page).locator("div.min-w-0.flex-1").first();
   const editorBox = await editor.boundingBox();
   expect(editorBox?.width ?? 0).toBeGreaterThanOrEqual(280);
 
-  // The fix's UX: below the panel-width threshold the list collapses to a
-  // toggle, and a doc is still reachable through the overlay it opens.
-  await docsPanel(page).getByRole("button", { name: "Show docs list" }).click();
+  // Above the panel-width threshold the list stays docked (no collapse
+  // toggle), and another doc is still one click away.
+  await expect(
+    docsPanel(page).getByRole("button", { name: "Show docs list" }),
+  ).toHaveCount(0);
   const other = docsPanel(page).getByRole("button", {
     name: DEMO_DOC2,
     exact: true,
@@ -492,9 +487,7 @@ test("/docs: the editor stays usable in a narrow panel", async ({ desktop }) => 
 test("/watcher: watch events view renders", async ({ desktop }) => {
   const { page } = desktop;
   await navigateTo(page, "Project Watcher");
-  await expect(
-    page.locator('[data-testid="dock-panel"][data-dock-url="/watcher"]'),
-  ).toHaveCount(1);
+  await expect(surfacePanel(page, "Project Watcher")).toHaveCount(1);
 
   // The seeded Pulse events are real rows from the app's DB, rendered by the
   // view: count, paths, and the Watch/Clear controls all come from that state.

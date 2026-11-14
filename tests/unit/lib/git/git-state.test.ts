@@ -22,7 +22,7 @@ describe("describeGitState", () => {
     expect(describeGitState({ kind: "failure", code: "git-missing" }).action).toBe("install");
   });
   it("describes the missing-desktop case and the detached-head state", () => {
-    expect(describeGitState({ kind: "no-desktop" }).title).toMatch(/desktop/i);
+    expect(describeGitState({ kind: "no-desktop" }).title).toMatch(/unavailable/i);
     expect(describeGitState({ kind: "detached" }).action).toBe("create-branch");
   });
   it("keeps git's raw diagnostics as the detail line", () => {

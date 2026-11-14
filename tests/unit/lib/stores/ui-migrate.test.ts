@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { migrateUi } from "@/lib/stores/ui";
 
-describe("ui store tabs-only migration", () => {
-  it("drops Studio and taskbar preferences while preserving the collapsed sidebar", () => {
+const DEFAULTS = { sidebarCollapsed: false, inspectorOpen: true, sidebarPosition: "left", dockCollapsed: false };
+
+describe("ui store migration", () => {
+  it("drops Studio preferences and keeps the 0.1 taskbar direction as the sidebar position", () => {
     expect(
       migrateUi(
         {
@@ -15,17 +17,29 @@ describe("ui store tabs-only migration", () => {
         },
         1,
       ),
-    ).toEqual({ sidebarCollapsed: true, inspectorOpen: true });
+    ).toEqual({ ...DEFAULTS, sidebarCollapsed: true, sidebarPosition: "right" });
   });
 
   it("also normalizes older dock-only preferences", () => {
     expect(migrateUi({ dockEnabled: true, taskbarDirection: "bottom" }, 0)).toEqual({
-      sidebarCollapsed: false,
-      inspectorOpen: true,
+      ...DEFAULTS,
+      sidebarPosition: "bottom",
     });
   });
 
-  it("starts with an expanded surface navigation", () => {
-    expect(migrateUi(null, 0)).toEqual({ sidebarCollapsed: false, inspectorOpen: true });
+  it("adds the position and dock state to a v2 state", () => {
+    expect(migrateUi({ sidebarCollapsed: true, inspectorOpen: false }, 2)).toEqual({
+      ...DEFAULTS,
+      sidebarCollapsed: true,
+      inspectorOpen: false,
+    });
+  });
+
+  it("ignores an unknown position", () => {
+    expect(migrateUi({ sidebarPosition: "top", taskbarDirection: "diagonal" }, 2)).toEqual(DEFAULTS);
+  });
+
+  it("starts with an expanded navigation on the left", () => {
+    expect(migrateUi(null, 0)).toEqual(DEFAULTS);
   });
 });

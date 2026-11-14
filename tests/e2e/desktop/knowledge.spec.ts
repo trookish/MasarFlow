@@ -16,9 +16,11 @@
 import { test as base } from "@playwright/test";
 import {
   expect,
+  focusTab,
   launchApp,
   navigateTo,
   readTable,
+  surfacePanel,
   waitForShellReady,
   type AppHandle,
 } from "./_harness";
@@ -45,16 +47,13 @@ const KNOWLEDGE_TITLE = "/knowledge: lists entities and opens one";
 const SEARCH_TITLE = "/search: fuzzy search finds a seeded note";
 
 /**
- * The dock group showing the notes page. `data-dock-url` is the group's panel
- * id — a bare route path; a panel's ?query selection lives in the dock's
- * per-panel params, mirrored into the app URL only while the panel is
- * focused. Assert selection through the editor or page.url(), never through
- * this attribute.
+ * The Capture surface's notes section. A tab's id may carry a selection
+ * snapshot ("/capture?note=<id>"), so match the exact route or a
+ * "?query" suffix. Assert selection through the editor or page.url(), never
+ * through this attribute.
  */
 function notesPanel(page: import("@playwright/test").Page) {
-  return page.locator(
-    '[data-testid="dock-panel"][data-dock-url="/brain"], [data-testid="dock-panel"][data-dock-url^="/brain?"]',
-  );
+  return surfacePanel(page, "Notes");
 }
 
 test(CREATE_TITLE, async ({ desktop }) => {
@@ -115,7 +114,7 @@ test(WIKILINK_TITLE, async ({ desktop }) => {
     "North Star: Live by Default",
     { timeout: 15_000 },
   );
-  await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/brain?note=");
+  await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/capture?note=");
   const notes = await readTable<{ id: string; title: string }>(page, "notes");
   const target = notes.find((n) => n.title === "North Star: Live by Default");
   await expect.poll(() => page.url(), { timeout: 15_000 }).toContain(`note=${target!.id}`);
@@ -207,8 +206,8 @@ test(RELOAD_TITLE, async ({ desktop }) => {
   await navigateTo(page, "Brain");
   const brain = notesPanel(page);
 
-  // Create a note; its id rides in the app URL and in the dock's panel
-  // snapshot (params — not the data-dock-url attribute, which stays "/brain").
+  // Create a note; its id rides in the app URL and in the tab's snapshot
+  // (params — not the data-dock-url attribute, which stays "/capture").
   const title = `P9 reload note ${Date.now()}`;
   await brain.getByRole("button", { name: "New note" }).first().click();
   // Wait for the NEW note's editor before typing: the create round-trips the
@@ -218,7 +217,7 @@ test(RELOAD_TITLE, async ({ desktop }) => {
   await expect(titleInput).toHaveValue("Untitled note", { timeout: 15_000 });
   await titleInput.fill(title);
   await expect(titleInput).toHaveValue(title);
-  await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/brain?note=");
+  await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/capture?note=");
   const noteId = /note=([^&]+)/.exec(page.url())?.[1];
   expect(noteId).toBeTruthy();
 
@@ -237,24 +236,22 @@ test(RELOAD_TITLE, async ({ desktop }) => {
   await page.waitForSelector('[data-testid="app-shell"]', { timeout: 120_000 });
   await waitForShellReady(page);
 
-  // The dock restored the Brain panel: its persisted panel URL must bring the
-  // note back (before P9 the editor said "No note selected" here).
+  // The Capture tab survived the reload unfocused (and, under the mount cap,
+  // unmounted). Clicking it brings the note back from the tab's persisted
+  // snapshot (before P9 the editor said "No note selected" here), and the
+  // snapshot is mirrored into the address bar.
+  await focusTab(page, "Capture");
   await expect(brain.getByPlaceholder("Untitled note")).toHaveValue(title, { timeout: 20_000 });
   await expect(brain.getByText("No note selected")).toHaveCount(0);
-
-  // Focusing the panel mirrors the snapshot back into the address bar.
-  await navigateTo(page, "Brain");
   await expect.poll(() => page.url(), { timeout: 15_000 }).toContain(`note=${noteId!}`);
-  await expect(brain.getByPlaceholder("Untitled note")).toHaveValue(title);
 });
 
 test(GRAPH_TITLE, async ({ desktop }) => {
   const { page } = desktop;
-  // The Brain children (Graph/Templates) only render in the Capture popup
-  // while a /brain route is active, so focus Brain first.
-  await navigateTo(page, "Brain");
-  await navigateTo(page, "Graph");
-  const graph = page.locator('[data-testid="dock-panel"][data-dock-url^="/brain/graph"]');
+  // /brain/graph is a legacy alias of the Library's Knowledge Graph section;
+  // the graph is the same view, now hosted in the Library tab.
+  await navigateTo(page, "Knowledge Graph");
+  const graph = surfacePanel(page, "Knowledge Graph");
   await expect(graph.locator("svg").first()).toBeVisible({ timeout: 20_000 });
 
   // The seeded notes render as nodes (labels are the note titles).
@@ -262,26 +259,24 @@ test(GRAPH_TITLE, async ({ desktop }) => {
   await expect(node).toBeVisible({ timeout: 20_000 });
   await node.locator("circle").first().click();
 
-  // Selecting a node opens its detail card; "Open in editor" focuses the note
-  // in the Brain panel.
-  const detail = graph.getByText("Dashboard UX", { exact: true }).last();
-  await expect(detail).toBeVisible();
-  await graph.getByRole("button", { name: "Open in editor" }).click();
+  // Selecting a node shows it in the Inspector; "Open in its page" focuses the
+  // note in the Notes section.
+  const inspector = page.getByTestId("inspector");
+  await expect(inspector.getByRole("heading", { name: "Dashboard UX" })).toBeVisible({ timeout: 15_000 });
+  await inspector.getByRole("button", { name: "Open in its page" }).click();
 
   const brain = notesPanel(page);
   await expect(brain.getByPlaceholder("Untitled note")).toHaveValue("Dashboard UX", {
     timeout: 15_000,
   });
-  await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/brain?note=");
+  await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/capture?note=");
 });
 
 test(TEMPLATES_TITLE, async ({ desktop }) => {
   const { page } = desktop;
-  // Same as Graph: the child link lives in the Capture popup, active only on
-  // a /brain route.
-  await navigateTo(page, "Brain");
+  // Templates is the third section of the Capture surface.
   await navigateTo(page, "Templates");
-  const templates = page.locator('[data-testid="dock-panel"][data-dock-url^="/brain/templates"]');
+  const templates = surfacePanel(page, "Templates");
   await expect(templates).toBeVisible({ timeout: 20_000 });
 
   const name = `P9 template ${Date.now()}`;
@@ -301,7 +296,7 @@ test(TEMPLATES_TITLE, async ({ desktop }) => {
 test(KNOWLEDGE_TITLE, async ({ desktop }) => {
   const { page } = desktop;
   await navigateTo(page, "Knowledge Graph");
-  const graph = page.locator('[data-testid="dock-panel"][data-dock-url^="/knowledge"]');
+  const graph = surfacePanel(page, "Knowledge Graph");
   await expect(graph.locator("svg").first()).toBeVisible({ timeout: 20_000 });
 
   // Every category is on by default: the seeded SPEC-001 spec node is visible
@@ -310,19 +305,19 @@ test(KNOWLEDGE_TITLE, async ({ desktop }) => {
   await expect(specNode).toBeVisible({ timeout: 20_000 });
   await specNode.locator("circle").first().click();
 
-  await graph.getByRole("button", { name: "Open Spec" }).click();
-  const specs = page.locator('[data-testid="dock-panel"][data-dock-url^="/specs"]');
+  await page.getByTestId("inspector").getByRole("button", { name: "Open in its page" }).click();
+  const specs = surfacePanel(page, "Specifications");
   await expect(specs.getByPlaceholder("Spec title")).toHaveValue(
     "Realtime Presence & Deploy Streams",
     { timeout: 15_000 },
   );
-  await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/specs?spec=");
+  await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/work?view=specs&spec=");
 });
 
 test(SEARCH_TITLE, async ({ desktop }) => {
   const { page } = desktop;
   await navigateTo(page, "Semantic Search");
-  const search = page.locator('[data-testid="dock-panel"][data-dock-url^="/search"]');
+  const search = surfacePanel(page, "Semantic Search");
   const input = search.getByPlaceholder(/Search across/);
   await expect(input).toBeVisible({ timeout: 20_000 });
 
@@ -339,5 +334,5 @@ test(SEARCH_TITLE, async ({ desktop }) => {
     "North Star: Live by Default",
     { timeout: 15_000 },
   );
-  await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/brain?note=");
+  await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/capture?note=");
 });

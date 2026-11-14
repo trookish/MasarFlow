@@ -1,5 +1,5 @@
 import { test as base, expect, _electron as electron } from "@playwright/test";
-import type { ElectronApplication, Page } from "@playwright/test";
+import type { ElectronApplication, Locator, Page } from "@playwright/test";
 import {
   existsSync,
   mkdirSync,
@@ -27,9 +27,11 @@ import { fileURLToPath } from "node:url";
  * The suite addresses the shell through the P9.T6 anchor contract
  * (guarded by tests/unit/repo-truth/anchor-contract.test.ts):
  *   [data-testid="app-shell"]   the workspace root div
- *   [data-testid="shell-ready"] dock workspace root — only while a project is active
- *   [data-testid="dock-panel"]  the focused panel's container, with [data-dock-url]
- *   [data-dock-tab][data-dock-url="<panel id>"]  the tab that focuses a panel
+ *   [data-testid="shell-ready"] the tab workspace root — only while a project is active
+ *   nav[aria-label="Surfaces"]  the six surface links (one tab per surface)
+ *   [data-surface="<id>"]       the active surface, with [data-section] and its section tabs
+ *   [data-dock-panel][data-dock-url="<surface route>"]  the focused tab's container
+ *   [data-dock-tab][data-dock-url="<surface route>"]    the tab that focuses a surface
  */
 
 export const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
@@ -87,24 +89,6 @@ export interface LaunchOptions {
    *             measurements, restart loops).
    */
   seed?: "none" | "demo" | "project";
-  /**
-   * Shell layout. Specs written for v0.2 drive the dock, so the harness opens them in the Studio
-   * layout; "standard" leaves the 0.3 default (six surfaces) in place.
-   */
-  layout?: "studio" | "standard";
-}
-
-/** Persists the layout and reloads the renderer (the ui store reads it on start). */
-export async function applyLayout(page: Page, layout: "studio" | "standard"): Promise<void> {
-  await page.evaluate((mode) => {
-    const raw = localStorage.getItem("masarflow-ui");
-    const parsed = raw ? (JSON.parse(raw) as { state?: Record<string, unknown>; version?: number }) : {};
-    const state = { ...(parsed.state ?? {}), layoutMode: mode, layoutNoticeSeen: true };
-    localStorage.setItem("masarflow-ui", JSON.stringify({ state, version: parsed.version ?? 1 }));
-  }, layout);
-  await page.reload();
-  await page.waitForSelector('[data-testid="app-shell"]', { timeout: 120_000 });
-  await page.waitForSelector(`[data-layout="${layout}"]`, { timeout: 60_000 });
 }
 
 /**
@@ -122,16 +106,10 @@ export async function launchApp(opts: LaunchOptions = {}): Promise<AppHandle> {
   // P3 removed the Python boot gate (src/components/shell/python-required-screen.tsx);
   // its heading must never appear in the shipped app.
   await expect(page.getByRole("heading", { name: /Python/i })).toHaveCount(0);
-  // Seeding drives the dock, so every launch starts in Studio and switches afterwards.
-  await applyLayout(page, "studio");
   if (opts.seed === "demo") await seedDemoProjects(page);
   else if (opts.seed === "project") {
     await createFirstProject(page, "E2E Project");
     await waitForShellReady(page);
-  }
-  if (opts.layout === "standard") {
-    await applyLayout(page, "standard");
-    if (opts.seed && opts.seed !== "none") await waitForShellReady(page);
   }
   return {
     app,
@@ -202,46 +180,225 @@ export async function createFirstProject(page: Page, name: string): Promise<void
 }
 
 /**
- * Navigates the shell to a nav destination by its label ("Settings",
- * "Plugins", "Brain", …), in either shell layout:
- * - left/right rail: the group panel holds the links;
- * - bottom floating dock (the packaged default, taskbarDirection "bottom"):
- *   links live in per-group popups — click the group button, then the link.
- * Specs must not assume one layout: the plan's `getByRole("link")` locators
- * only work in rail mode, which the packaged app does not default to.
+ * The 0.2 shell has exactly one surface per tab: Today, Capture, Work, Library,
+ * Ask, System (src/lib/navigation/surfaces.ts). A spec still asks for the legacy
+ * page names it always used ("Settings", "Task Boards", "Git"…), so this table
+ * folds each of them onto the surface + section that now hosts that page — the
+ * same mapping src/lib/navigation/redirects.ts applies to a legacy URL.
+ */
+type SurfaceName = "today" | "capture" | "work" | "library" | "ai" | "system";
+
+interface Destination {
+  id: SurfaceName;
+  /** data-section value inside the surface (also its ?view= id). */
+  section: string;
+  /** Section tab label, as rendered. */
+  tab: string;
+}
+
+const SURFACES: Record<SurfaceName, { label: string; route: string }> = {
+  today: { label: "Today", route: "/today" },
+  capture: { label: "Capture", route: "/capture" },
+  work: { label: "Work", route: "/work" },
+  library: { label: "Library", route: "/library" },
+  ai: { label: "AI", route: "/ai" },
+  system: { label: "System", route: "/system" },
+};
+
+/** Keys are lowercase labels the specs pass to navigateTo/surfacePanel. */
+const DESTINATIONS: Record<string, Destination> = {
+  // Today
+  today: { id: "today", section: "focus", tab: "Focus" },
+  focus: { id: "today", section: "focus", tab: "Focus" },
+  dashboard: { id: "today", section: "dashboard", tab: "Dashboard" },
+  // Capture
+  capture: { id: "capture", section: "notes", tab: "Notes" },
+  brain: { id: "capture", section: "notes", tab: "Notes" },
+  notes: { id: "capture", section: "notes", tab: "Notes" },
+  canvas: { id: "capture", section: "canvas", tab: "Canvas" },
+  templates: { id: "capture", section: "templates", tab: "Templates" },
+  files: { id: "capture", section: "files", tab: "Files" },
+  // Work
+  work: { id: "work", section: "board", tab: "Task Boards" },
+  board: { id: "work", section: "board", tab: "Task Boards" },
+  tasks: { id: "work", section: "board", tab: "Task Boards" },
+  "task boards": { id: "work", section: "board", tab: "Task Boards" },
+  specs: { id: "work", section: "specs", tab: "Specifications" },
+  specifications: { id: "work", section: "specs", tab: "Specifications" },
+  sprints: { id: "work", section: "sprints", tab: "Sprints" },
+  devlogs: { id: "work", section: "log", tab: "Dev Logs" },
+  devlog: { id: "work", section: "log", tab: "Dev Logs" },
+  "dev logs": { id: "work", section: "log", tab: "Dev Logs" },
+  log: { id: "work", section: "log", tab: "Dev Logs" },
+  // Library
+  library: { id: "library", section: "docs", tab: "Documentation" },
+  docs: { id: "library", section: "docs", tab: "Documentation" },
+  documentation: { id: "library", section: "docs", tab: "Documentation" },
+  standards: { id: "library", section: "standards", tab: "Standards" },
+  architecture: { id: "library", section: "architecture", tab: "Architecture" },
+  knowledge: { id: "library", section: "graph", tab: "Knowledge Graph" },
+  "knowledge graph": { id: "library", section: "graph", tab: "Knowledge Graph" },
+  graph: { id: "library", section: "graph", tab: "Knowledge Graph" },
+  search: { id: "library", section: "search", tab: "Semantic Search" },
+  "semantic search": { id: "library", section: "search", tab: "Semantic Search" },
+  // AI (legacy names "Chat", "AI Agents" and "AI Workflow" still resolve)
+  ai: { id: "ai", section: "chat", tab: "Sessions" },
+  sessions: { id: "ai", section: "chat", tab: "Sessions" },
+  chat: { id: "ai", section: "chat", tab: "Sessions" },
+  agents: { id: "ai", section: "agents", tab: "Agents" },
+  "ai agents": { id: "ai", section: "agents", tab: "Agents" },
+  automations: { id: "ai", section: "workflow", tab: "Automations" },
+  workflow: { id: "ai", section: "workflow", tab: "Automations" },
+  "ai workflow": { id: "ai", section: "workflow", tab: "Automations" },
+  // System
+  system: { id: "system", section: "settings", tab: "Settings" },
+  settings: { id: "system", section: "settings", tab: "Settings" },
+  "control center": { id: "system", section: "control-center", tab: "Control Center" },
+  git: { id: "system", section: "git", tab: "Git" },
+  sync: { id: "system", section: "sync", tab: "Sync Panel" },
+  "sync panel": { id: "system", section: "sync", tab: "Sync Panel" },
+  watcher: { id: "system", section: "watcher", tab: "Project Watcher" },
+  "project watcher": { id: "system", section: "watcher", tab: "Project Watcher" },
+  plugins: { id: "system", section: "features", tab: "Features" },
+  features: { id: "system", section: "features", tab: "Features" },
+  terminal: { id: "system", section: "terminal", tab: "Terminal" },
+  logs: { id: "system", section: "logs", tab: "Logs" },
+  "system info": { id: "system", section: "system-info", tab: "System Info" },
+};
+
+const LEGACY_ROUTE: Record<string, string> = {
+  "/today": "today",
+  "/dashboard": "dashboard",
+  "/capture": "capture",
+  "/brain": "brain",
+  "/brain/canvas": "canvas",
+  "/brain/templates": "templates",
+  "/files": "files",
+  "/work": "work",
+  "/tasks": "tasks",
+  "/specs": "specs",
+  "/sprints": "sprints",
+  "/devlogs": "devlogs",
+  "/library": "library",
+  "/docs": "docs",
+  "/standards": "standards",
+  "/architecture": "architecture",
+  "/knowledge": "knowledge",
+  "/brain/graph": "graph",
+  "/search": "search",
+  "/ai": "ai",
+  "/chat": "chat",
+  "/agents": "agents",
+  "/workflow": "workflow",
+  "/system": "system",
+  "/settings": "settings",
+  "/control-center": "control center",
+  "/git": "git",
+  "/sync": "sync",
+  "/watcher": "watcher",
+  "/plugins": "plugins",
+  "/tools/terminal": "terminal",
+  "/tools/logs": "logs",
+  "/tools/system": "system info",
+};
+
+function destinationFor(nameOrRoute: string): Destination {
+  const key = nameOrRoute.trim().replace(/\/+$/, "");
+  const named = DESTINATIONS[key.toLowerCase()] ?? (LEGACY_ROUTE[key] ? DESTINATIONS[LEGACY_ROUTE[key]] : undefined);
+  if (!named) {
+    throw new Error(
+      `navigateTo: unknown destination "${nameOrRoute}". Add it to DESTINATIONS in _harness.ts ` +
+        `(the shell has six surfaces — see src/lib/navigation/surfaces.ts).`,
+    );
+  }
+  return named;
+}
+
+/** The tab id that hosts a legacy route or label: one tab per surface ("/brain" -> "/capture"). */
+export function surfaceRoute(nameOrRoute: string): string {
+  return SURFACES[destinationFor(nameOrRoute).id].route;
+}
+
+/**
+ * A tab/panel id is a page id and may carry a query snapshot ("/library?doc=abc").
+ * Match the exact route or a "?query" suffix — never a bare prefix, which would
+ * also catch /workflow for /work, or /brain/canvas for /brain.
+ */
+function dockUrlSelector(route: string): string {
+  return `:is([data-dock-url="${route}"],[data-dock-url^="${route}?"])`;
+}
+
+/** The active tab's panel for a surface (only the focused tab carries data-testid). */
+export function surfacePanel(page: Page, nameOrRoute: string): Locator {
+  return page.locator(`[data-testid="dock-panel"]${dockUrlSelector(surfaceRoute(nameOrRoute))}`);
+}
+
+/** The rendered surface element (`data-surface`/`data-section`), for section assertions. */
+export function surfaceView(page: Page, nameOrRoute: string): Locator {
+  return page.locator(`[data-surface="${destinationFor(nameOrRoute).id}"]`);
+}
+
+/**
+ * Navigates the 0.2 shell to the page a spec names — via the surface sidebar
+ * and then the section tab, never a bare legacy URL (the redirect would work,
+ * but the spec should exercise the shell a user actually clicks):
+ *   1. click the surface link in nav[aria-label="Surfaces"] (opens/focuses its tab);
+ *   2. click the section tab when the surface has more than one section;
+ *   3. wait until that surface renders data-section.
+ *
+ * This is URL-authoritative: reaching a section drops any selection the tab had
+ * snapshotted (?note=, ?task=…). Use focusTab() to re-focus a tab and keep it.
  */
 export async function navigateTo(page: Page, linkName: string): Promise<void> {
-  const direct = page.getByRole("link", { name: linkName, exact: true });
-  if ((await direct.count()) > 0) {
-    await direct.first().click();
-    return;
-  }
-  const groupButtons = page.locator(
-    '[aria-label="Navigation dock"] nav button, nav[aria-label="Navigation groups"] button',
-  );
-  const labels = await groupButtons.evaluateAll((els) =>
-    els
-      .map((e) => e.getAttribute("aria-label"))
-      .filter((l): l is string => Boolean(l) && l !== "Hide navigation dock"),
-  );
-  for (const label of labels) {
-    await page.getByRole("button", { name: label, exact: true }).first().click();
-    // The popup renders after the click; counting immediately races it (it
-    // passed on an idle machine and failed under load). Wait for this group's
-    // menu to show before deciding the link is not in it.
-    await page
-      .locator('[aria-label="Navigation dock"] [role="menu"]')
-      .filter({ hasText: label })
-      .first()
-      .waitFor({ state: "visible", timeout: 5_000 })
-      .catch(() => undefined);
-    const link = page.getByRole("link", { name: linkName, exact: true });
-    if ((await link.count()) > 0) {
-      await link.first().click();
-      return;
-    }
-  }
-  throw new Error(`navigateTo: no link "${linkName}" in any navigation dock group`);
+  const dest = destinationFor(linkName);
+  const link = page
+    .getByRole("navigation", { name: "Surfaces" })
+    .getByRole("link", { name: SURFACES[dest.id].label, exact: true });
+  await expect(link).toBeVisible({ timeout: 30_000 });
+
+  // One click, no retry: a dropped click is an app bug (the sidebar link carries
+  // the tab's snapshot so the URL sync never issues a superseding replace).
+  await link.click();
+  const surface = surfaceView(page, linkName);
+  await expect(surface).toBeVisible({ timeout: 30_000 });
+  const tab = surface.getByRole("tab", { name: dest.tab, exact: true });
+  if ((await tab.count()) > 0) await tab.click();
+  await expect(surface).toHaveAttribute("data-section", dest.section, { timeout: 30_000 });
+}
+
+/**
+ * Focuses the project tab that hosts a page, the way a user clicks a tab:
+ * the tab's own query snapshot (?note=, ?task=…) is preserved and mirrored back
+ * into the address bar — unlike navigateTo, which resets to the section.
+ * Fails loudly when the tab is not open: open it with navigateTo first.
+ */
+export async function focusTab(page: Page, nameOrRoute: string): Promise<void> {
+  const route = surfaceRoute(nameOrRoute);
+  const tab = page.locator(`[data-dock-tab]${dockUrlSelector(route)}`);
+  await expect(tab).toHaveCount(1, { timeout: 30_000 });
+  await tab.click();
+  await expect(page.locator(`[data-dock-tab]${dockUrlSelector(route)}[aria-selected="true"]`)).toHaveCount(1);
+  await expect(surfacePanel(page, nameOrRoute)).toBeVisible();
+}
+
+/**
+ * Resizes the packaged window's content area. The main window is created with
+ * minWidth 1000/minHeight 640 (desktop/src/main/windows/main-window.ts), so the
+ * smallest usable window is what a "narrow" check can exercise: the shell has no
+ * split panes any more, and the window is the only thing that narrows a surface.
+ */
+export async function setWindowContentSize(
+  app: ElectronApplication,
+  width: number,
+  height: number,
+): Promise<{ width: number; height: number }> {
+  return app.evaluate(({ BrowserWindow }, size) => {
+    const win = BrowserWindow.getAllWindows()[0];
+    win.unmaximize();
+    win.setContentSize(size.width, size.height);
+    const [w, h] = win.getContentSize();
+    return { width: w, height: h };
+  }, { width, height });
 }
 
 /**
@@ -265,7 +422,11 @@ export async function seedDemoProjects(page: Page): Promise<void> {
   await navigateTo(page, "Settings");
   await page.getByRole("button", { name: "Data", exact: true }).first().click();
   await expect(page.getByText("Data Management").first()).toBeVisible();
-  await page.getByRole("button", { name: /Load demo projects/i }).click();
+  const load = page.getByRole("button", { name: /Load demo projects/i });
+  await load.click();
+  // Wait for the seed to finish: it switches project and navigates when done,
+  // and doing that after the spec has started would pull the spec off its page.
+  await expect(page.getByRole("button", { name: /Loading…/ })).toHaveCount(0, { timeout: 90_000 });
   await activateProject(page, DEMO_WEB_PROJECT);
   await navigateTo(page, "Dashboard");
   await waitForShellReady(page);
@@ -281,7 +442,7 @@ export const DEMO_WEB_PROJECT = "Pulse: Realtime Team Dashboard";
  * writing rows.
  */
 export async function activateProject(page: Page, name: string): Promise<void> {
-  const switcher = page.getByRole("banner").getByRole("button").first();
+  const switcher = page.getByTestId("project-switcher");
   await expect(async () => {
     if ((await switcher.innerText()).includes(name)) return; // already active
     await switcher.click();
@@ -378,16 +539,16 @@ export function userDataDir(handle: AppHandle): string {
  */
 export async function linkFolder(page: Page, handle: AppHandle, folder: string): Promise<void> {
   // Per-profile memo, not a DB read: touching the app's IndexedDB from the spec
-  // disturbs its Dexie connection and remounts the dock (the git panel then
+  // disturbs its Dexie connection and remounts the shell (the git panel then
   // re-resolves its root mid-flow). The UI itself proves the link landed.
   const done = linkedFoldersByProfile.get(handle.profileDir) ?? new Set<string>();
   if (done.has(folder)) return;
 
   await stubFolderPicker(handle, folder);
   await navigateTo(page, "Git");
-  const panel = page.locator('[data-testid="dock-panel"][data-dock-url="/git"]');
+  const panel = surfacePanel(page, "Git");
   await expect(panel).toBeVisible({ timeout: 30_000 });
-  // The dock-panel div exists before the git view mounts; its header button is
+  // The tab panel div exists before the git view mounts; its header button is
   // the first thing GitView renders, so this is the "content is settled" wait
   // that `locator.count()` (which never waits) must not replace.
   await expect(panel.getByRole("button", { name: "Refresh" })).toBeVisible({ timeout: 30_000 });

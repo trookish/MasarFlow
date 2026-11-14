@@ -1,6 +1,6 @@
 /**
  * Test fixture: the 0.2 Studio dock's default per-project state (four split
- * workspaces). Used to prove 0.3 migrates old persisted layouts into one
+ * workspaces). Used to prove 0.2 migrates old persisted layouts into one
  * linear tab strip. Trees are built fresh per
  * call so consumers never share node objects.
  *

@@ -41,12 +41,25 @@ describe("workspace tabs", () => {
 
     const state = normalizeWorkspaceTabs(legacy);
 
-    expect(workspaceTabIds(state)).toEqual(["/today?view=dashboard", "/ask", "/system"]);
-    expect(state.workspaces.Workspace.params["/ask?thread=thread-1"]).toBe("thread=thread-1");
+    expect(workspaceTabIds(state)).toEqual(["/today?view=dashboard", "/ai", "/system"]);
+    expect(state.workspaces.Workspace.params["/ai?thread=thread-1"]).toBe("thread=thread-1");
     expect(state.floaters).toEqual([]);
     expect(state.collapsedPanels).toEqual([]);
     expect(state.maximizedPanelId).toBeNull();
     expect(state.workspaces.Workspace.tree.type).toBe("tabs");
+  });
+
+  it("migrates a stored tab from the renamed /ask surface to /ai, section and selection kept", () => {
+    const stored = defaultWorkspaceTabsState();
+    const ws = stored.workspaces.Workspace;
+    ws.tree = { ...ws.tree, pages: ["/today", "/ask?view=agents"], activePage: "/ask?view=agents" } as typeof ws.tree;
+    ws.params = { "/ask?view=agents": "view=agents&agent=a1" };
+
+    const state = normalizeWorkspaceTabs(stored);
+
+    expect(workspaceTabIds(state)).toEqual(["/today", "/ai?view=agents"]);
+    expect(state.workspaces.Workspace.tree).toMatchObject({ activePage: "/ai?view=agents" });
+    expect(state.workspaces.Workspace.params["/ai?view=agents"]).toBe("view=agents&agent=a1");
   });
 
   it("keeps the active page when it was in a legacy split", () => {
@@ -63,17 +76,18 @@ describe("workspace tabs", () => {
   });
 
   it("recognizes the six surfaces as project tabs", () => {
-    expect(getPageDef("/ask")).toMatchObject({ label: "Ask" });
-    expect(getPageDef("/ask?view=agents")).toMatchObject({ label: "Ask" });
+    expect(getPageDef("/ai")).toMatchObject({ label: "AI" });
+    expect(getPageDef("/ai?view=agents")).toMatchObject({ label: "AI" });
+    expect(getPageDef("/ask")).toBeNull();
     expect(isKnownPage("/system")).toBe(true);
   });
 
   it("cycles in both directions and wraps at the ends", () => {
-    const tabs = ["/today", "/work", "/ask"];
+    const tabs = ["/today", "/work", "/ai"];
 
     expect(adjacentTabId(tabs, "/today", 1)).toBe("/work");
-    expect(adjacentTabId(tabs, "/today", -1)).toBe("/ask");
-    expect(adjacentTabId(tabs, "/ask", 1)).toBe("/today");
+    expect(adjacentTabId(tabs, "/today", -1)).toBe("/ai");
+    expect(adjacentTabId(tabs, "/ai", 1)).toBe("/today");
     expect(adjacentTabId(tabs, "/missing", 1)).toBe("/today");
   });
 });

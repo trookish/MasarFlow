@@ -74,7 +74,7 @@ describe("importBackup", () => {
   });
 });
 
-describe("backup v2 (0.3)", () => {
+describe("backup v2 (data version 3)", () => {
   it("refuses the whole file when one row is invalid, naming the table and row", async () => {
     const file = parseBackup(await seedAndExport(), db);
     (file.tables.notes[0] as Record<string, unknown>).title = 42;
@@ -95,7 +95,7 @@ describe("backup v2 (0.3)", () => {
 
   it("reports connections whose key was redacted", async () => {
     await db.aiConnections.add({ id: "c1", label: "OpenRouter", providerId: "openrouter", apiKey: "k", baseUrl: "", createdAt: 1, updatedAt: 1 });
-    const file = parseBackup(serializeBackup(await exportBackup(db, "0.3.0.0")), db);
+    const file = parseBackup(serializeBackup(await exportBackup(db, "0.2.0.0")), db);
     expect(file.dataVersion).toBe(3);
     const summary = await importBackup(db, file, "replace");
     expect(summary.redactedConnections).toEqual([{ id: "c1", name: "OpenRouter" }]);

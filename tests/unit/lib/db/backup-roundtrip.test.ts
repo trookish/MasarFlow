@@ -14,7 +14,7 @@ describe("backup round trip (P3 gate)", () => {
   it("restores the demo project exactly and the data doctor finds nothing", async () => {
     await seedDemoProject();
     const before = Object.fromEntries(await Promise.all(db.tables.map(async (t) => [t.name, await t.count()] as const)));
-    const text = serializeBackup(await exportBackup(db, "0.3.0.0"));
+    const text = serializeBackup(await exportBackup(db, "0.2.0.0"));
 
     await Promise.all(db.tables.map((t) => t.clear()));
     await importBackup(db, parseBackup(text, db), "replace");

@@ -30,7 +30,7 @@ describe("shouldShowWizard", () => {
   it("does not nag a user who already has projects (imported data, demo seed)", () => {
     expect(shouldShowWizard(ctx({ projectCount: 3 }))).toBe(false);
   });
-  it("stays out of the browser build unless explicitly forced", () => {
+  it("stays closed without the desktop bridge unless explicitly forced", () => {
     expect(shouldShowWizard(ctx({ desktop: false }))).toBe(false);
     expect(shouldShowWizard(ctx({ desktop: false, forced: true }))).toBe(true);
   });

@@ -11,6 +11,7 @@ import {
   packagedExe,
   readTable,
   REPO_ROOT,
+  surfacePanel,
 } from "./_harness";
 import { startStubProvider, stopAllStubs } from "./_stub-provider";
 
@@ -40,18 +41,6 @@ function shot(page: import("@playwright/test").Page, name: string): Promise<Buff
  */
 function visibleText(page: import("@playwright/test").Page, text: string | RegExp) {
   return page.getByText(text).filter({ visible: true }).first();
-}
-
-/**
- * Closes a dock group via its tab's hover-revealed Close button. The journey
- * opens a group per route; five squeezed groups starve the chat's sidebar and
- * conversation column to zero width, so spent groups are closed to give the
- * chat its dock width back before UI there is asserted.
- */
-async function closeGroup(page: import("@playwright/test").Page, label: string): Promise<void> {
-  await page.getByRole("tab", { name: label }).hover();
-  await page.getByRole("button", { name: `Close ${label}` }).click();
-  await expect(page.getByRole("tab", { name: label })).toHaveCount(0, { timeout: 10_000 });
 }
 
 test.afterAll(async () => {
@@ -100,18 +89,16 @@ test("/journey: install-free onboarding survives a restart", async () => {
     // duplicates under load (3 from one click); it now carries a one-shot
     // ?new=<nonce> and planning.spec covers it, so this journey keeps the
     // board path. The board button opens the
-    // task-detail dialog directly; the title saves on blur, then the dialog
-    // has to be closed — its backdrop covers the dock, so the next navigateTo
-    // cannot click a group button.
+    // task editor in the Inspector directly; the title saves on blur.
     await navigateTo(page, "Task Boards");
-    const tasksPanel = page.locator('[data-testid="dock-panel"][data-dock-url="/tasks"]');
+    const tasksPanel = surfacePanel(page, "Task Boards");
     await tasksPanel.getByRole("button", { name: "New task" }).click();
     const taskTitleInput = page.getByPlaceholder("Task title");
     await taskTitleInput.fill(taskTitle);
     await taskTitleInput.press("Tab");
     await shot(page, "04-task.png");
-    await page.getByRole("dialog").getByRole("button", { name: "Done" }).click();
-    await expect(page.getByRole("dialog")).toHaveCount(0, { timeout: 15_000 });
+    await page.getByTestId("task-editor").getByRole("button", { name: "Close" }).click();
+    await expect(page.getByTestId("task-editor")).toHaveCount(0, { timeout: 15_000 });
     // The row behind the dialog now carries the saved title (blur patched it).
     await expect(visibleText(page, taskTitle)).toBeVisible({ timeout: 15_000 });
 
@@ -162,12 +149,6 @@ test("/journey: install-free onboarding survives a restart", async () => {
         )
         .toBe(true);
     }).toPass({ timeout: 90_000, intervals: [1_000, 2_000, 4_000] });
-    // Close the panels this journey no longer needs so the chat group gets
-    // the dock width back — its sidebar row and conversation column are
-    // clipped to zero width at the five-group layout.
-    await closeGroup(page, "AI Agents");
-    await closeGroup(page, "Brain");
-    await closeGroup(page, "Task Boards");
     // Name the thread so the restart can find it by a unique title.
     await page.getByRole("button", { name: "Rename chat" }).first().click();
     await page.keyboard.press("Control+a");
@@ -200,10 +181,6 @@ test("/journey: install-free onboarding survives a restart", async () => {
     await navigateTo(page2, "Task Boards");
     await expect(visibleText(page2, taskTitle)).toBeVisible({ timeout: 15_000 });
 
-    // Brain and Task Boards reopened for the checks above; close them again
-    // so the chat group is wide enough for the thread row and the reply.
-    await closeGroup(page2, "Brain");
-    await closeGroup(page2, "Task Boards");
     await navigateTo(page2, "Chat");
     const threadRow = page2.getByRole("button", { name: chatTitle });
     await expect(threadRow).toBeVisible({ timeout: 15_000 });

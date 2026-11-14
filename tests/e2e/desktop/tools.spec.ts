@@ -22,6 +22,7 @@ import {
   launchApp,
   linkFolder,
   navigateTo,
+  surfacePanel,
   userDataDir,
   waitForShellReady,
   type AppHandle,
@@ -109,9 +110,9 @@ test(TERMINAL_RUN_TITLE, async ({ desktop }) => {
   expect(live[0].cwd.replace(/\//g, "\\").toLowerCase()).toBe(folder.replace(/\//g, "\\").toLowerCase());
   expect(live[0].status).toBe("running");
 
-  // Panel switches must not lose the session or its scrollback.
+  // Switching surfaces must not lose the session or its scrollback.
   await navigateTo(page, "Dashboard");
-  await expect(page.locator('[data-testid="dock-panel"][data-dock-url="/dashboard"]')).toBeVisible();
+  await expect(surfacePanel(page, "Dashboard")).toBeVisible();
   await navigateTo(page, "Terminal");
   await expect(page.locator(SURFACE)).toContainText("MSF_E2E_TERM_OK", { timeout: 20_000 });
   expect(await sessions(desktop)).toHaveLength(1);
@@ -210,10 +211,10 @@ test(LOGS_TITLE, async ({ desktop }) => {
   );
 
   await picker.selectOption("server.log");
-  // Scope to the Logs panel: other dock panels (e.g. the terminal's "Refresh
-  // sessions") also expose a button whose name contains "Refresh".
-  await page
-    .locator('[data-testid="dock-panel"][data-dock-url="/tools/logs"]')
+  // Scope to the Logs section of the System surface: other sections (e.g. the
+  // terminal's "Refresh sessions") also expose a button whose name contains
+  // "Refresh".
+  await surfacePanel(page, "Logs")
     .getByRole("button", { name: "Refresh" })
     .click();
   await expect(page.getByText(sentinelOk)).toBeVisible({ timeout: 20_000 });
@@ -260,6 +261,6 @@ test(SYSTEM_TITLE, async ({ desktop }) => {
   await expect(localData).toContainText(/\d/);
 
   // Read-only: nothing on this route accepts input.
-  const panel = page.locator('[data-testid="dock-panel"][data-dock-url="/tools/system"]');
+  const panel = surfacePanel(page, "System Info");
   await expect(panel.locator("input, textarea, select, [contenteditable='true']")).toHaveCount(0);
 });

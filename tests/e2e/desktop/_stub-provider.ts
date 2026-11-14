@@ -14,6 +14,13 @@
  *
  * The reply is deterministic: `STUB-REPLY <last user message>`, streamed as
  * OpenAI SSE chunks with a stop finish_reason.
+ *
+ * Tool-call turns: a user message starting `STUB-TOOLS ok` makes the first
+ * response ask for two read-only tool calls (list_entities, search_workspace);
+ * `STUB-TOOLS fail` adds a third that fails (read_entity on a missing note).
+ * Once the tool results come back the stub answers with the usual
+ * `STUB-REPLY <last user message>`, so a spec gets a grouped tool-call turn
+ * with no model involved.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -41,6 +48,26 @@ export interface StubProvider {
 /** Every stub that is still listening, so afterAll can close them all. */
 const live = new Set<Server>();
 
+/** Tool calls the stub asks for, keyed by the `STUB-TOOLS <mode>` marker. */
+function stubToolCalls(messages: unknown): { name: string; args: object }[] {
+  if (!Array.isArray(messages) || messages.length === 0) return [];
+  const last = messages[messages.length - 1] as { role?: string } | null;
+  if (!last || last.role !== "user") return [];
+  const text = lastUserText(messages);
+  const calls: { name: string; args: object }[] = [];
+  if (/^STUB-TOOLS (ok|fail)\b/.test(text)) {
+    calls.push({ name: "list_entities", args: { kind: "task" } });
+    calls.push({ name: "search_workspace", args: { query: "Pulse" } });
+  }
+  if (/^STUB-TOOLS fail\b/.test(text)) {
+    calls.push({
+      name: "read_entity",
+      args: { kind: "note", id: "stub-missing-note" },
+    });
+  }
+  return calls;
+}
+
 /** The last `role: "user"` message's text — what the stub echoes back. */
 function lastUserText(messages: unknown): string {
   if (!Array.isArray(messages)) return "";
@@ -59,7 +86,13 @@ function lastUserText(messages: unknown): string {
   return "";
 }
 
-export async function startStubProvider(): Promise<StubProvider> {
+export interface StubOptions {
+  /** Models answered with HTTP 429 (a rate-limited connection, for fallback specs). */
+  rateLimited?: string[];
+}
+
+export async function startStubProvider(opts: StubOptions = {}): Promise<StubProvider> {
+  const rateLimited = new Set(opts.rateLimited ?? []);
   const calls: StubCall[] = [];
   const server = createServer((req, res) => {
     const chunks: Buffer[] = [];
@@ -86,6 +119,12 @@ export async function startStubProvider(): Promise<StubProvider> {
         return;
       }
 
+      if (typeof body.model === "string" && rateLimited.has(body.model)) {
+        res.writeHead(429, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: { message: "429 rate limit" } }));
+        return;
+      }
+
       res.writeHead(200, {
         "content-type": "text/event-stream; charset=utf-8",
         "cache-control": "no-store",
@@ -93,6 +132,7 @@ export async function startStubProvider(): Promise<StubProvider> {
       });
       const reply = `STUB-REPLY ${lastUserText(body.messages)}`.trim();
       const id = `chatcmpl-stub-${calls.length}`;
+      const toolCalls = stubToolCalls(body.messages);
       const chunk = (
         delta: Record<string, unknown>,
         finish: string | null = null,
@@ -104,6 +144,24 @@ export async function startStubProvider(): Promise<StubProvider> {
           model: typeof body.model === "string" ? body.model : "stub-model",
           choices: [{ index: 0, delta, finish_reason: finish }],
         })}\n\n`;
+      if (toolCalls.length > 0) {
+        res.write(
+          chunk({
+            role: "assistant",
+            content: null,
+            tool_calls: toolCalls.map((c, index) => ({
+              index,
+              id: `call_stub_${calls.length}_${index}`,
+              type: "function",
+              function: { name: c.name, arguments: JSON.stringify(c.args) },
+            })),
+          }),
+        );
+        res.write(chunk({}, "tool_calls"));
+        res.write("data: [DONE]\n\n");
+        res.end();
+        return;
+      }
       // Two content deltas so the client's SSE parser is exercised, then stop.
       const cut = Math.ceil(reply.length / 2);
       res.write(chunk({ role: "assistant", content: reply.slice(0, cut) }));

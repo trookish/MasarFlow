@@ -1,4 +1,4 @@
-import { test, expect, writeEvidence, navigateTo } from "./_harness";
+import { test, expect, writeEvidence, navigateTo, surfacePanel } from "./_harness";
 
 /**
  * F7 / P9.T13: speech input in the packaged shell is HIDDEN, not disabled.
@@ -78,11 +78,10 @@ test("voice: the packaged shell renders no dictation control", async ({ desktop 
 
   writeEvidence("voice-probe.json", probe);
 
-  // The dock's AI group holds the /chat destination (the plan's plain
-  // `getByRole("link", { name: /Chat/i })` assumes a sidebar rail; the packaged
-  // shell defaults to the bottom floating dock — see reports/p9/00-baseline.md).
+  // The AI surface hosts /chat (legacy /chat redirects to /ai), so
+  // navigation goes through the harness rather than a bare link click.
   await navigateTo(page, "Chat");
-  await expect(page.locator('[data-testid="dock-panel"][data-dock-url="/chat"]')).toHaveCount(1);
+  await expect(surfacePanel(page, "Chat")).toHaveCount(1);
   // Open the thread the demo fixture seeds for Pulse ("Backpressure design
   // review", demo-seed.ts seedPulseChat): the mic only exists inside the
   // composer, and the empty state renders no composer — asserting "no mic"

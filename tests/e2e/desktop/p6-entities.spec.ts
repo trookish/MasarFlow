@@ -3,7 +3,14 @@
  * Every step goes through the visible interface; readTable confirms what was stored.
  */
 import { test as base } from "@playwright/test";
-import { expect, launchApp, navigateTo, readTable, type AppHandle } from "./_harness";
+import {
+  expect,
+  launchApp,
+  navigateTo,
+  readTable,
+  surfacePanel,
+  type AppHandle,
+} from "./_harness";
 
 const MODEL_TITLE = "/tasks: status drives progress and the detail sets a due date";
 const PROMOTE_TITLE = "/brain: promote a note to a task and keep the link";
@@ -21,9 +28,9 @@ const test = base.extend<object, { desktop: AppHandle }>({
 });
 
 function panel(page: AppHandle["page"], route: string) {
-  return page.locator(
-    `[data-testid="dock-panel"][data-dock-url="${route}"], [data-testid="dock-panel"][data-dock-url^="${route}?"]`,
-  );
+  // Routes here are section routes (/tasks, /specs, /brain …), which now live
+  // inside a surface; surfacePanel maps them to the hosting tab.
+  return surfacePanel(page, route);
 }
 
 interface TaskRow {
@@ -45,7 +52,7 @@ test(MODEL_TITLE, async ({ desktop }) => {
   await titleInput.fill(title);
   await page.keyboard.press("Tab");
 
-  const dialog = page.getByRole("dialog");
+  const dialog = page.getByTestId("task-editor");
   // Progress is read-only and follows status: no slider any more.
   await expect(dialog.locator('input[type="range"]')).toHaveCount(0);
   await expect(dialog.getByRole("progressbar", { name: "Task progress" })).toHaveAttribute("aria-valuenow", "0");
@@ -76,9 +83,9 @@ test(MODEL_TITLE, async ({ desktop }) => {
   const due = new Date(saved.dueDate!);
   expect([due.getFullYear(), due.getMonth(), due.getDate()]).toEqual([2031, 2, 14]);
 
-  // The app is shared across this file's tests: leave no dialog over the dock.
+  // The app is shared across this file's tests: leave no task open in the Inspector.
   await dialog.getByRole("button", { name: "Close" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("task-editor")).toHaveCount(0);
 });
 
 test(PROMOTE_TITLE, async ({ desktop }) => {
@@ -94,11 +101,12 @@ test(PROMOTE_TITLE, async ({ desktop }) => {
 
   await brain.getByTestId("note-promote").click();
   await page.getByRole("menuitem", { name: "To task" }).click();
-  await expect.poll(() => page.url(), { timeout: 20_000 }).toContain("/tasks?task=");
-  // The new task opens in its detail dialog, titled after the note.
+  await expect.poll(() => page.url(), { timeout: 20_000 }).toContain("/work");
+  await expect.poll(() => new URL(page.url()).searchParams.get("task"), { timeout: 20_000 }).toBeTruthy();
+  // The new task opens in the Inspector, titled after the note.
   await expect(page.getByPlaceholder("Task title")).toHaveValue(title, { timeout: 15_000 });
-  await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByTestId("task-editor").getByRole("button", { name: "Close" }).click();
+  await expect(page.getByTestId("task-editor")).toHaveCount(0);
 
   const task = (await readTable<TaskRow>(page, "tasks")).find((t) => t.title === title);
   expect(task).toBeTruthy();

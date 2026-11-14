@@ -50,7 +50,7 @@ writeFileSync(path.join(REPO, "README.md"), "# e2e repo\n\nsecond line\n");
 writeFileSync(path.join(REPO, "notes.txt"), "scratch\n");
 
 const BRANCH = git(["rev-parse", "--abbrev-ref", "HEAD"]);
-const PANEL = '[data-testid="dock-panel"][data-dock-url="/git"]';
+const PANEL = '[data-testid="dock-panel"]:is([data-dock-url="/system"],[data-dock-url^="/system?"])';
 
 /**
  * `git status --porcelain`, as a lookup of path -> code pair.
@@ -68,11 +68,10 @@ function porcelain(): Map<string, string> {
 /**
  * Activate a control from the keyboard.
  *
- * The floating navigation dock (`aside[aria-label="Navigation dock"]`, fixed
- * bottom-4 centred, z-40) overlays the bottom-centre strip of the workspace,
- * so when the Git pane lands in that strip a centre click on the commit
- * button is intercepted by the dock's group buttons. Keyboard activation is
- * the same control through the path a keyboard-first user takes.
+ * Kept from the old docked shell: a centre click could be intercepted by an
+ * overlay, so keyboard activation exercises the same control through the path
+ * a keyboard-first user takes. In the 0.2 tabs shell nothing overlays the
+ * content, but the path is still the honest one for these controls.
  */
 async function activate(button: Locator): Promise<void> {
   await button.press("Enter");

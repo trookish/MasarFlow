@@ -25,6 +25,7 @@ import {
   launchApp,
   navigateTo,
   readTable,
+  surfacePanel,
   type AppHandle,
 } from "./_harness";
 
@@ -49,8 +50,10 @@ const DEVLOGS_TITLE = "/devlogs: seeded entries are listed";
 const WORKFLOW_TITLE = "/workflow: automation rules render";
 const DASHBOARD_TITLE = "/dashboard: New spec and New task open the create flow";
 
-function panel(page: import("@playwright/test").Page, prefix: string) {
-  return page.locator(`[data-testid="dock-panel"][data-dock-url^="${prefix}"]`);
+function panel(page: import("@playwright/test").Page, route: string) {
+  // Section routes (/tasks, /specs, /devlogs, /dashboard …) are hosted by a
+  // surface now; surfacePanel maps each to its tab.
+  return surfacePanel(page, route);
 }
 
 test(TASK_CREATE_TITLE, async ({ desktop }) => {
@@ -69,9 +72,8 @@ test(TASK_CREATE_TITLE, async ({ desktop }) => {
   await page.keyboard.press("Tab"); // blur saves the title
   await expect(titleInput).toHaveValue(title);
 
-  // Close the detail dialog (it portals to <body>, so scope to the dialog):
-  // the new card is on the board.
-  await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+  // Close the task editor in the Inspector: the new card is on the board.
+  await page.getByTestId("task-editor").getByRole("button", { name: "Close" }).click();
   await expect(tasks.getByText(title, { exact: true })).toBeVisible({ timeout: 15_000 });
   const rows = await readTable<{ id: string; title: string; status: string }>(page, "tasks");
   const saved = rows.filter((t) => t.title === title);
@@ -91,21 +93,17 @@ test(TASK_DONE_TITLE, async ({ desktop }) => {
   await titleInput.fill(title);
   await page.keyboard.press("Tab");
 
-  // Move it to done with the detail dialog's own status control (the dialog
-  // portals to <body>, so these are page-scoped).
+  // Move it to done with the task editor's own status control in the Inspector.
   await page.getByRole("button", { name: "To do", exact: true }).click();
   await page.getByRole("menuitem", { name: "Done", exact: true }).click();
-  // The status trigger now reads "Done" — anchored via its menu semantics,
-  // because the dialog's footer button is also named "Done".
+  // The status trigger now reads "Done" — anchored via its menu semantics.
   await expect(
-    page.locator('[role="dialog"] button[aria-haspopup="menu"]', { hasText: /^Done$/ }),
+    page.getByTestId("task-editor").locator('button[aria-haspopup="menu"]', { hasText: /^Done$/ }),
   ).toBeVisible({ timeout: 15_000 });
 
-  // Close the detail dialog: its full-screen backdrop swallows the dock
-  // clicks the next step needs (the dialog portals to <body>, so the nav
-  // behind it is unreachable while it is open).
-  await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  // Close the editor so the selection does not follow into the next step.
+  await page.getByTestId("task-editor").getByRole("button", { name: "Close" }).click();
+  await expect(page.getByTestId("task-editor")).toHaveCount(0);
 
   // P5: completing a task appends a dev log entry. Scope to the panel — the
   // dashboard's live "Recent activity" card shows the same entries, and its
@@ -247,7 +245,7 @@ test(DASHBOARD_TITLE, async ({ desktop }) => {
 
   // The specs panel is focused again, a spec was really created, and its
   // editor is open on the new spec.
-  await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/specs?spec=");
+  await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/work?view=specs");
   await expect(specs.getByPlaceholder("Spec title")).toHaveValue("Untitled spec", {
     timeout: 15_000,
   });
@@ -270,7 +268,10 @@ test(DASHBOARD_TITLE, async ({ desktop }) => {
   await navigateTo(page, "Dashboard");
   await dashboard.getByRole("button", { name: "New task" }).first().click();
 
-  await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/tasks?task=");
+  await expect.poll(() => page.url(), { timeout: 15_000 }).toContain("/work");
+  await expect.poll(() => new URL(page.url()).searchParams.get("task"), {
+    timeout: 15_000,
+  }).toBeTruthy();
   await expect(page.getByPlaceholder("Task title")).toHaveValue("New task", {
     timeout: 15_000,
   });
@@ -280,8 +281,8 @@ test(DASHBOARD_TITLE, async ({ desktop }) => {
   expect((await readTable<{ id: string }>(page, "tasks")).length).toBe(tasksBefore + 1);
 
   // A second click is a new intent: exactly one more task, not zero, not two.
-  await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0, { timeout: 15_000 });
+  await page.getByTestId("task-editor").getByRole("button", { name: "Close" }).click();
+  await expect(page.getByTestId("task-editor")).toHaveCount(0, { timeout: 15_000 });
   await navigateTo(page, "Dashboard");
   await dashboard.getByRole("button", { name: "New task" }).first().click();
   await expect(page.getByPlaceholder("Task title")).toHaveValue("New task", {
@@ -300,9 +301,9 @@ test(DASHBOARD_TITLE, async ({ desktop }) => {
 // pane enough for a split separator to cover its header buttons (tracked in reports/v0.3).
 test(TRASH_TITLE, async ({ desktop }) => {
   const { page } = desktop;
-  // The dashboard test ends with a task dialog open.
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toHaveCount(0, { timeout: 10_000 });
+  // The dashboard test ends with a task open in the Inspector.
+  const openEditor = page.getByTestId("task-editor");
+  if (await openEditor.count()) await openEditor.getByRole("button", { name: "Close" }).click();
   await navigateTo(page, "Task Boards");
   const tasks = panel(page, "/tasks");
   await expect(tasks.getByRole("heading", { name: "Task Boards" })).toBeVisible({ timeout: 20_000 });
@@ -315,7 +316,7 @@ test(TRASH_TITLE, async ({ desktop }) => {
   await page.keyboard.press("Tab");
   await expect(tasks.getByText(title, { exact: true })).toBeVisible({ timeout: 15_000 });
 
-  await page.getByRole("dialog").getByRole("button", { name: "Delete task" }).click();
+  await page.getByTestId("task-editor").getByRole("button", { name: "Delete task" }).click();
   await expect(tasks.getByText(title, { exact: true })).toBeHidden({ timeout: 15_000 });
   const trashed = await readTable<{ title: string }>(page, "trash");
   expect(trashed.some((e) => e.title === title)).toBe(true);

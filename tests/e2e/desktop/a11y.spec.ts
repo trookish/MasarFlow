@@ -1,4 +1,4 @@
-import { test, expect, navigateTo, launchApp, writeEvidence } from "./_harness";
+import { test, expect, navigateTo, launchApp, surfacePanel, writeEvidence } from "./_harness";
 import {
   ALLOW_LIST,
   applyAllowList,
@@ -11,9 +11,9 @@ import {
  * P9.T19 — axe-core scans and keyboard-only journeys against the packaged app.
  *
  * Deviations from the plan's draft, all forced by the real app:
- * - the plan clicked `getByRole("link", …)`; the packaged shell defaults to the
- *   bottom floating dock (nav links live in group popups), so navigation goes
- *   through the harness's `navigateTo`;
+ * - the plan clicked `getByRole("link", …)` straight into a page; the 0.2 shell
+ *   is one sidebar of six surfaces plus a section tab bar, so navigation goes
+ *   through the harness's `navigateTo` (sidebar link → section tab);
  * - the plan's fallback "injected axe-core" path is the primary one here:
  *   @axe-core/playwright cannot run against Electron (see a11y.helpers.ts);
  * - the plan's `axe.run(undefined, …)` throws on axe-core 4.x — the helper
@@ -23,7 +23,8 @@ import {
 const ROUTES: [string, string][] = [
   // [navigateTo label, human label]
   // docs/ui-budget.md names /today, /dashboard, /tools/logs, /tools/system and
-  // the palette open; the rest cover the other shipped routes.
+  // the palette open; the rest cover the other shipped routes. Dashboard and
+  // Today are the two sections of the Today surface, so both scan distinct content.
   ["Dashboard", "Dashboard"],
   ["Brain", "Brain"],
   ["Task Boards", "Tasks"],
@@ -32,7 +33,7 @@ const ROUTES: [string, string][] = [
   ["Plugins", "Plugins"],
   ["Today", "Today"],
   ["Logs", "Tools / Logs"],
-  // The dock label is "System Info" (src/lib/commands/registry.ts TOOL_PAGES).
+  // The section label is "System Info" (src/lib/navigation/surfaces.ts).
   ["System Info", "Tools / System"],
 ];
 
@@ -55,7 +56,7 @@ test("a11y: no serious or critical axe violations in the packaged shell", async 
 
   for (const [label, human] of ROUTES) {
     await navigateTo(page, label);
-    // Let the dock panel paint and any live query settle before scanning.
+    // Let the surface paint and any live query settle before scanning.
     await page.waitForTimeout(600);
     const scan = await axeScan(page);
     const nameless = await namelessControls(page);
@@ -162,7 +163,7 @@ test("a11y: every interactive element exposes an accessible name", async ({ desk
   expect(failures, failures.join("\n")).toEqual([]);
 });
 
-test("a11y: keyboard-only journey — the palette opens a page and the dock is reachable", async ({
+test("a11y: keyboard-only journey — the palette opens a page and the shell is keyboard reachable", async ({
   desktop,
 }) => {
   const { page } = desktop;
@@ -175,7 +176,7 @@ test("a11y: keyboard-only journey — the palette opens a page and the dock is r
   await expect
     .poll(() => palette.evaluate((el) => el.contains(document.activeElement)))
     .toBe(true);
-  await palette.getByRole("combobox").fill("Task Boards");
+  await palette.getByRole("combobox").fill("Work");
   // Entity hits ("Items") render above the "Commands" group, so the page
   // command is not the initial selection: ArrowDown is how a keyboard user
   // reaches it. Walk until the selected row is the page command.
@@ -189,46 +190,32 @@ test("a11y: keyboard-only journey — the palette opens a page and the dock is r
     );
   let reachedCommand = false;
   for (let i = 0; i < 12 && !reachedCommand; i++) {
-    reachedCommand = (await selectedRow()).includes("Open Task Boards");
+    reachedCommand = (await selectedRow()).includes("Open Work");
     if (!reachedCommand) await page.keyboard.press("ArrowDown");
   }
   expect(reachedCommand, `palette selection stuck on "${await selectedRow()}"`).toBe(true);
   await page.keyboard.press("Enter");
-  await expect(page.locator('[data-testid="dock-panel"][data-dock-url="/tasks"]')).toBeVisible({
-    timeout: 15_000,
-  });
-  await expect(page.getByRole("heading", { name: "Task Boards" }).first()).toBeVisible();
+  await expect(surfacePanel(page, "Work")).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('[data-surface="work"]')).toHaveAttribute("data-section", "board");
 
-  // 2. The dock's group buttons are real buttons; Enter opens the Capture
-  //    popup, and the links inside are reachable and activatable by keyboard.
-  const capture = page.getByRole("button", { name: "Capture", exact: true });
+  // 2. The six surface links are real links in nav[aria-label="Surfaces"]; they
+  //    take focus and Enter follows them, and the section tabs inside the
+  //    surface are real role=tab links that Enter activates.
+  const surfaces = page.getByRole("navigation", { name: "Surfaces" });
+  const capture = surfaces.getByRole("link", { name: "Capture", exact: true });
   await capture.focus();
+  await expect
+    .poll(() => capture.evaluate((el) => el === document.activeElement))
+    .toBe(true);
   await page.keyboard.press("Enter");
-  const popup = page.getByRole("menu");
-  await expect(popup.getByRole("link", { name: "Brain", exact: true })).toBeVisible();
+  await expect(surfacePanel(page, "Capture")).toBeVisible({ timeout: 15_000 });
+  const captureSurface = page.locator('[data-surface="capture"]');
+  await expect(captureSurface).toHaveAttribute("data-section", "notes");
 
-  // The popup sits before the dock nav in the DOM, so Shift+Tab walks back
-  // into it. Chromium makes the popup's scroll container focusable too, so
-  // step backwards until focus is on a link inside the popup.
-  let landed = { name: "", isPopupLink: false };
-  for (let i = 0; i < 5 && !landed.isPopupLink; i++) {
-    await page.keyboard.press("Shift+Tab");
-    landed = await page.evaluate(() => {
-      const el = document.activeElement as HTMLElement | null;
-      return {
-        name: el?.textContent?.trim() ?? "",
-        isPopupLink: el?.tagName === "A" && Boolean(el.closest('[role="menu"]')),
-      };
-    });
-  }
-  expect(
-    landed.isPopupLink,
-    `Shift+Tab never reached a link in the popup (landed on "${landed.name}")`,
-  ).toBe(true);
+  const canvasTab = captureSurface.getByRole("tab", { name: "Canvas", exact: true });
+  await canvasTab.focus();
   await page.keyboard.press("Enter");
-  await expect(page.locator('[data-testid="dock-panel"][data-dock-url="/files"]')).toBeVisible({
-    timeout: 15_000,
-  });
+  await expect(captureSurface).toHaveAttribute("data-section", "canvas");
 });
 
 test("a11y: keyboard-only journey — the first-run wizard contains focus", async () => {

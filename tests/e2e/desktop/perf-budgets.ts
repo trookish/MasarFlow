@@ -13,9 +13,9 @@ export const BUDGETS = {
    * (project exists, wizard already completed), median of 3 cold launches.
    */
   coldStartToInteractiveMs: 9000,
-  /** Dock tab click → its panel active ([data-testid="dock-panel"][data-dock-url]), in-page, median of the samples. */
+  /** Tab click → that tab's panel active ([data-testid="dock-panel"][data-dock-url]), in-page, median of the samples. */
   dockTabToPanelMs: 250,
-  /** Nav link click → destination dock panel active, in-page, median of 10 samples. */
+  /** Nav link click → destination surface painted, in-page, median of 10 samples. */
   routeNavToContentMs: 700,
   /** 10 minutes idle with a project open (T21). */
   memory: { mainRssMb: 600, rendererHeapMb: 400, growth2to10MinPct: 25 },

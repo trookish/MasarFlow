@@ -12,14 +12,14 @@ export function writeAudit(name: string, data: unknown): string {
 }
 
 /**
- * Every workspace route the navigation lists, read from src/lib/nav.ts so the harness follows the
- * product instead of a copied list. Parsed as text: importing nav.ts would pull React into Node.
+ * Every page the shell can host, read from src/lib/navigation/surfaces.ts so the harness follows the
+ * product instead of a copied list. Parsed as text: importing the module would pull React into Node.
  */
 export function navRoutes(): Array<{ label: string; href: string }> {
-  const src = readFileSync(path.join(REPO_ROOT, "src", "lib", "nav.ts"), "utf8");
+  const src = readFileSync(path.join(REPO_ROOT, "src", "lib", "navigation", "surfaces.ts"), "utf8");
   const out = new Map<string, string>();
-  for (const m of src.matchAll(/label:\s*"([^"]+)",\s*href:\s*"([^"]+)"/g)) {
-    if (!out.has(m[2])) out.set(m[2], m[1]);
+  for (const m of src.matchAll(/\{\s*id:\s*"([^"]+)",\s*label:\s*"([^"]+)",\s*href:\s*"([^"]+)"/g)) {
+    if (!out.has(m[3])) out.set(m[3], m[2]);
   }
   return [...out.entries()].map(([href, label]) => ({ label, href }));
 }
@@ -31,17 +31,6 @@ export async function openRoute(page: Page, href: string): Promise<void> {
   await page.goto(`${origin}${href}`);
   await waitForShellReady(page);
   await page.waitForTimeout(400);
-}
-
-/** Switch the shell between the dock layout and the rail layout (persisted UI store). */
-export async function setDockMode(page: Page, dock: boolean): Promise<void> {
-  await page.evaluate((on) => {
-    const key = "masarflow-ui";
-    const raw = localStorage.getItem(key);
-    const parsed = raw ? (JSON.parse(raw) as { state?: Record<string, unknown> }) : { state: {} };
-    parsed.state = { ...(parsed.state ?? {}), dockEnabled: on };
-    localStorage.setItem(key, JSON.stringify(parsed));
-  }, dock);
 }
 
 /** Read every IndexedDB object store of the app database as plain rows. */

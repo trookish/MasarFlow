@@ -172,32 +172,6 @@ export interface AllowEntry {
  */
 export const ALLOW_LIST: AllowEntry[] = [
   {
-    rule: "color-contrast",
-    selector: "bg-node-system",
-    owner: "A — src/components/dashboard/** and src/components/tasks/**",
-    reason:
-      "node-status badges: text-node-system on a 15%-tinted background at 10-12px is under 4.5:1 (dashboard task list and board cards).",
-  },
-  {
-    rule: "color-contrast",
-    selector: "bg-node-research",
-    owner: "A — src/components/dashboard/** (task status badges)",
-    reason: "Same badge pattern as bg-node-system, on the dashboard task list.",
-  },
-  {
-    rule: "color-contrast",
-    selector: "text-muted-foreground/70",
-    owner: "A — src/components/brain/folder-tree.tsx",
-    reason: "The 'Folders' section label (10px, muted-foreground at 70%) is under 4.5:1.",
-  },
-  {
-    rule: "color-contrast",
-    selector: "tracking-wider text-muted-foreground/60",
-    owner: "C — src/components/settings/settings-view.tsx",
-    reason:
-      "The settings nav-section headings ('Global', 'Capture', …) are muted-foreground at 60%, under 4.5:1.",
-  },
-  {
     rule: "label",
     selector: "h-1.5 w-40",
     owner: "C — src/components/settings/settings-view.tsx",

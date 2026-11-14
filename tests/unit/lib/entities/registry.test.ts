@@ -15,7 +15,7 @@ describe("entityHref", () => {
     expect(entityHref({ kind: "note", id: "n1" })).toBe("/capture?note=n1");
     expect(entityHref({ kind: "canvas", id: "c1" })).toBe("/capture?view=canvas&canvas=c1");
     expect(entityHref({ kind: "system", id: "s1" })).toBe("/library?view=architecture&system=s1");
-    expect(entityHref({ kind: "thread", id: "t1" })).toBe("/ask?thread=t1");
+    expect(entityHref({ kind: "thread", id: "t1" })).toBe("/ai?thread=t1");
   });
   it("encodes ids", () => {
     expect(entityHref({ kind: "task", id: "a b&c" })).toBe("/work?task=a%20b%26c");

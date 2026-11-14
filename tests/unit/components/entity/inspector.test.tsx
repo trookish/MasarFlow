@@ -185,14 +185,14 @@ describe("loadEntityProperties", () => {
 });
 
 describe("askAboutEntity", () => {
-  it("opens Ask while keeping the entity in the real active context", () => {
+  it("opens AI while keeping the entity in the real active context", () => {
     resetDock("p1");
 
     askAboutEntity({ kind: "task", id: "t1" });
 
     const project = useDockStore.getState().getProject();
     expect(project).not.toBeNull();
-    expect(urlOfFocused(project!)).toBe("/ask");
+    expect(urlOfFocused(project!)).toBe("/ai");
     expect(deriveInspectorView(project, "p1").section?.id).toBe("chat");
 
     const context = deriveActiveContext(project)!;
