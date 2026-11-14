@@ -38,7 +38,12 @@ export async function getCachedAttachment(id: string): Promise<AttachmentCache |
   return { blob: att.blob, mimeType: att.mimeType, size: att.size, url };
 }
 
-export async function cacheAttachment(input: { projectId: string; relativePath: string; blob: Blob; sourceVaultPath: string | null; }): Promise<Attachment> {
+export async function cacheAttachment(input: {
+  projectId: string;
+  relativePath: string;
+  blob: Blob;
+  sourceVaultPath: string | null;
+}): Promise<Attachment> {
   const id = await md5Hex(input.relativePath);
   const att: Attachment = {
     id,
@@ -54,12 +59,17 @@ export async function cacheAttachment(input: { projectId: string; relativePath: 
   return att;
 }
 
-export async function getAttachmentByPath(projectId: string, relativePath: string): Promise<Attachment | null> {
+export async function getAttachmentByPath(
+  projectId: string,
+  relativePath: string,
+): Promise<Attachment | null> {
   const id = await md5Hex(relativePath);
   return (await getDb().attachments.get(id)) ?? null;
 }
 
-export async function getStorageUsage(projectId?: string): Promise<{ totalBytes: number; count: number }> {
+export async function getStorageUsage(
+  projectId?: string,
+): Promise<{ totalBytes: number; count: number }> {
   const all = await getDb().attachments.toArray();
   const filtered = projectId ? all.filter((a) => a.projectId === projectId) : all;
   return { totalBytes: filtered.reduce((s, a) => s + a.size, 0), count: filtered.length };

@@ -33,9 +33,19 @@ class NativeFsaBackend implements VaultBackend {
     if (!ok) return null;
     await setActiveHandle(handle);
     saveHandleToken(handle.name, handle.name);
-    await saveSettings({ mode: "obsidian", vaultName: handle.name, backend: "native-fsa", backendCapabilities: CAPS });
+    await saveSettings({
+      mode: "obsidian",
+      vaultName: handle.name,
+      backend: "native-fsa",
+      backendCapabilities: CAPS,
+    });
     this.rootName = handle.name;
-    const metas = await fsWalkVault(handle, { includePatterns: [], excludePatterns: [".obsidian", ".makemd", ".qodo", ".space", ".git", ".trash"], archiveIncluded: false, trashIncluded: true });
+    const metas = await fsWalkVault(handle, {
+      includePatterns: [],
+      excludePatterns: [".obsidian", ".makemd", ".qodo", ".space", ".git", ".trash"],
+      archiveIncluded: false,
+      trashIncluded: true,
+    });
     return { rootName: handle.name, backend: "native-fsa", fileCount: metas.length };
   }
 
@@ -57,13 +67,49 @@ class NativeFsaBackend implements VaultBackend {
   async walk(): Promise<VaultFileMeta[]> {
     const handle = await getActiveHandle();
     if (!handle) return [];
-    return await fsWalkVault(handle, { includePatterns: [], excludePatterns: [".obsidian", ".makemd", ".qodo", ".space", ".git", ".trash"], archiveIncluded: false, trashIncluded: true });
+    return await fsWalkVault(handle, {
+      includePatterns: [],
+      excludePatterns: [".obsidian", ".makemd", ".qodo", ".space", ".git", ".trash"],
+      archiveIncluded: false,
+      trashIncluded: true,
+    });
   }
 
   async reauthenticate(): Promise<boolean> {
     const handle = await getActiveHandle();
     if (!handle) return false;
     return await fsVerifyPermission(handle, true);
+  }
+
+  async reconnect(): Promise<VaultSession | null> {
+    const handle = await getActiveHandle();
+    if (!handle) return null;
+    const ok = await fsVerifyPermission(handle, true);
+    if (!ok) return null;
+    this.rootName = handle.name;
+    saveHandleToken(handle.name, handle.name);
+    await saveSettings({
+      mode: "obsidian",
+      vaultName: handle.name,
+      backend: "native-fsa",
+      backendCapabilities: CAPS,
+    });
+    return { rootName: handle.name, backend: "native-fsa", fileCount: -1 };
+  }
+
+  async verifyStored(): Promise<"granted" | "prompt" | "missing"> {
+    const handle = await getActiveHandle();
+    if (!handle) return "missing";
+    const h = handle as unknown as {
+      queryPermission?: (o: { mode: string }) => Promise<PermissionState>;
+    };
+    if (!h.queryPermission) return "missing";
+    try {
+      const state = await h.queryPermission({ mode: "readwrite" });
+      return state === "granted" ? "granted" : "prompt";
+    } catch {
+      return "missing";
+    }
   }
 }
 

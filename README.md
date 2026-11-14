@@ -1,115 +1,63 @@
 # MasarFlow
 
-> **Every feature has a path.**
+MasarFlow is an AI-native development workflow platform tailored for seamless collaboration between software engineers, technical designers, and autonomous agents. It acts as the "Command Center" for the development lifecycle, bringing project management, documentation, version control, and real-time development monitoring under one unified interface.
 
-AI-native development workflow platform. The central intelligence layer of a software project, where ideas evolve into knowledge, knowledge into specifications, specifications into implementation, and implementation into permanent project memory.
+## 🚀 Features
 
-## Philosophy
+- **Project Health Dashboard**: View live status, task progress, and recent development logs.
+- **Context Engine**: MasarFlow actively builds high-quality, weighted "context" (comprised of memories, standards, and active specifications) to ground your AI queries in real-world constraints.
+- **Unity Live Integration**: Real-time asset watching using Server-Sent Events (SSE) ensures that modifications in Unity are immediately reflected in your workflow.
+- **GitHub Commit Sync**: Securely proxy and fetch commits from GitHub repositories to trace code lineage back to active technical specifications.
+- **Agent Integration**: Run the platform interactively with autonomous agents powered by the Vercel AI SDK. Agents can stream responses and auto-execute database actions (like writing dev logs or marking tasks as done).
+- **Offline First**: All state is managed locally via IndexedDB using Dexie.js for lightning-fast responsiveness and full offline support.
 
+## 🛠 Tech Stack
+
+- **Framework**: Next.js 15 (App Router, Turbopack)
+- **Language**: React 19, TypeScript (Strict Mode)
+- **Styling**: Tailwind CSS v4, shadcn/ui new-york v4
+- **State**: Zustand v5, Dexie.js (IndexedDB)
+- **Testing**: Vitest, Playwright
+- **Others**: framer-motion, lucide-react, sonner, cmdk
+
+## 📦 Getting Started
+
+### Prerequisites
+- Node.js 20+
+- npm 10+
+
+### Installation
+```bash
+# Clone the repository
+git clone <your-repo>
+cd MasarFlow
+
+# Install dependencies
+npm install
 ```
-Idea → Knowledge → Specification → Context Retrieval → Planning
-     → Architecture Analysis → Implementation → Documentation
-     → Reflection → Persistent Memory
+
+### Running the App
+```bash
+# Start the development server with Turbopack
+npm run dev
+
+# The app will be available at http://localhost:3000
 ```
 
-## Stack
+## 🧪 Testing
 
-- **Next.js 15** (App Router, React 19, Turbopack)
-- **TypeScript** (strict)
-- **Tailwind CSS v4** (OKLCH tokens, `@theme inline`)
-- **shadcn/ui** (new-york v4) on **Radix Primitives**
-- **Motion** (formerly Framer Motion) for animations
-- **Zustand v5** for client state
-- **Dexie.js (IndexedDB)** for offline-first persistence
-- **cmdk** for the command palette
-- **Lucide** icons, **Inter** + **JetBrains Mono** fonts
-- **MiniSearch** for global search
-
-## Getting Started
+The platform includes comprehensive unit testing via Vitest and End-to-End (E2E) testing via Playwright.
 
 ```bash
-npm install
-npm run dev
+# Run unit tests
+npm run test
+
+# Run End-to-End UI tests
+npm run e2e
 ```
 
-Open <http://localhost:3000>.
+## 🛡️ Security
+The application is hardened with comprehensive Content Security Policies (CSP) configured at the framework level (`next.config.ts`) and enforces strict React Accessibility (`eslint-plugin-jsx-a11y`).
 
-### Scripts
-
-| Command | What it does |
-|---|---|
-| `npm run dev` | Start dev server (Turbopack) |
-| `npm run build` | Production build |
-| `npm run start` | Run production build |
-| `npm run lint` | ESLint |
-| `npm run typecheck` | TypeScript check |
-| `npm run format` | Prettier write |
-| `npm run seed:reset` | Clear IndexedDB seed data |
-
-## Project Structure
-
-```
-src/
-  app/                  # Next.js App Router routes
-    (workspace)/        # Authenticated 3-pane shell
-      layout.tsx
-      page.tsx          # Dashboard
-      brain/            # Notes
-      specs/            # Specifications
-      standards/        # Personal standards
-      architecture/     # Architecture
-      knowledge-graph/  # Cross-module graph
-      tasks/            # Task system
-      agents/           # AI agents
-      docs/             # Documentation
-      dev-logs/         # Timeline
-      search/           # Global search
-      settings/         # Preferences
-  components/
-    ui/                 # shadcn/ui primitives
-    shell/              # 3-pane shell, nav, top bar, right rail, status bar
-    motion/             # Reusable motion wrappers
-    common/             # Shared composed components
-  lib/
-    db/                 # Dexie schema, repos, seed
-    stores/             # Zustand slices
-    ai/                 # Simulated + optional real LLM
-    hooks/              # Custom hooks
-    utils.ts            # cn(), formatters
-  styles/
-    globals.css         # Tokens, theme
-```
-
-## Keyboard
-
-| Key | Action |
-|---|---|
-| `⌘K` / `Ctrl+K` | Command palette |
-| `⌘P` / `Ctrl+P` | Project switcher |
-| `⌘/` / `Ctrl+/` | Global search |
-| `⌘B` / `Ctrl+B` | Toggle left nav |
-| `⌘.` / `Ctrl+.` | Toggle right rail |
-| `G` then `D` | Go to Dashboard |
-| `G` then `S` | Go to Specifications |
-| `G` then `B` | Go to Brain |
-| `G` then `T` | Go to Tasks |
-| `G` then `A` | Go to Architecture |
-| `G` then `K` | Go to Knowledge Graph |
-| `G` then `L` | Go to Dev Logs |
-| `G` then `C` | Go to Commands |
-| `?` | Shortcut cheatsheet |
-
-## Roadmap
-
-| Session | Theme |
-|---|---|
-| **S1** | Foundation, shell, all modules routable, seed data |
-| **S2** | Brain, Standards, Documentation, Dev Logs (Tiptap) |
-| **S3** | Specifications, Tasks, AI Workflow, Command Palette, Search |
-| **S4** | Knowledge Graph, Architecture, AI Agents |
-| **S5** | Dashboard full, Git, Unity, Memory, Automation |
-| **S6** | Polish, keyboard, plugins, settings |
-
-## License
-
-UNLICENSED — private project.
+## 📜 Architecture Guidelines (AGENTS.md)
+Please see `AGENTS.md` for our locked technical decisions, styling philosophy, and autonomous execution rules.

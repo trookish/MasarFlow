@@ -45,7 +45,9 @@ class OpfsBackend implements VaultBackend {
     if (this.dirHandle) return this.dirHandle;
     const nav = navigator as unknown as { storage: { getDirectory: () => Promise<FsDirHandle> } };
     const opfsRoot = await nav.storage.getDirectory();
-    this.dirHandle = (await opfsRoot.getDirectoryHandle(ROOT_DIR, { create: true })) as unknown as FsDirHandle;
+    this.dirHandle = (await opfsRoot.getDirectoryHandle(ROOT_DIR, {
+      create: true,
+    })) as unknown as FsDirHandle;
     return this.dirHandle;
   }
 
@@ -71,9 +73,17 @@ class OpfsBackend implements VaultBackend {
     }
     this.rootName = picked.rootName;
     const { saveSettings } = await import("../sync-engine");
-    await saveSettings({ mode: "opfs", vaultName: picked.rootName, backend: "opfs", backendCapabilities: CAPS });
+    await saveSettings({
+      mode: "opfs",
+      vaultName: picked.rootName,
+      backend: "opfs",
+      backendCapabilities: CAPS,
+    });
     saveHandleToken(picked.rootName, picked.rootName);
-    await getDb().vaultMeta.put({ key: META_KEY, value: { rootName: picked.rootName, count, at: Date.now() } });
+    await getDb().vaultMeta.put({
+      key: META_KEY,
+      value: { rootName: picked.rootName, count, at: Date.now() },
+    });
     return { rootName: picked.rootName, backend: "opfs", fileCount: count };
   }
 
@@ -129,9 +139,10 @@ async function walkDir(dir: FsDirHandle, rel: string, out: VaultFileMeta[]) {
         relativePath: childPath,
         size: f.size,
         mtime: f.lastModified,
-        kind: child.name.toLowerCase().endsWith(".md") || child.name.toLowerCase().endsWith(".markdown")
-          ? "markdown"
-          : "other",
+        kind:
+          child.name.toLowerCase().endsWith(".md") || child.name.toLowerCase().endsWith(".markdown")
+            ? "markdown"
+            : "other",
         inTrash: false,
         isTemplate: childPath.startsWith("06. Templates") || childPath.startsWith("06. Templates/"),
       });
@@ -179,7 +190,8 @@ async function pickFolderViaWebkit(): Promise<{ rootName: string; files: File[] 
         return;
       }
       const first = files[0];
-      const rel = (first as unknown as { webkitRelativePath?: string }).webkitRelativePath || first.name;
+      const rel =
+        (first as unknown as { webkitRelativePath?: string }).webkitRelativePath || first.name;
       const rootName = rel.split("/")[0] || getSavedHandleName() || "Vault";
       document.body.removeChild(input);
       resolve({ rootName, files });

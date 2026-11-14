@@ -15,7 +15,14 @@ function detectBrave(): boolean {
 
 export function detectCapabilities(): VaultCapabilities {
   if (typeof window === "undefined" || typeof document === "undefined") {
-    return { fsa: false, webkit: false, webkitdirectory: false, opfs: false, showDirectoryPicker: false, browserName: "server" };
+    return {
+      fsa: false,
+      webkit: false,
+      webkitdirectory: false,
+      opfs: false,
+      showDirectoryPicker: false,
+      browserName: "server",
+    };
   }
   const ua = navigator.userAgent;
   const isFirefox = /Firefox/i.test(ua);
@@ -40,7 +47,8 @@ export function detectCapabilities(): VaultCapabilities {
   const opfs =
     typeof navigator !== "undefined" &&
     "storage" in navigator &&
-    typeof (navigator as unknown as { storage?: { getDirectory?: () => Promise<unknown> } }).storage?.getDirectory === "function";
+    typeof (navigator as unknown as { storage?: { getDirectory?: () => Promise<unknown> } }).storage
+      ?.getDirectory === "function";
   return {
     fsa,
     webkit: isSafari && webkit,

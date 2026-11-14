@@ -36,5 +36,9 @@ export function useTasksForSpec(specId: string | undefined) {
 }
 
 export function useAllPlans() {
-  return useLiveQuery(() => getDb().plans.orderBy("createdAt").reverse().toArray(), [], [] as Plan[]);
+  return useLiveQuery(
+    () => getDb().plans.orderBy("createdAt").reverse().toArray(),
+    [],
+    [] as Plan[],
+  );
 }

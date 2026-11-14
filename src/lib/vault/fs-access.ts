@@ -1,5 +1,12 @@
 import type { VaultFileMeta } from "./types";
-import { isIgnoredName, shouldSkipByExtension, detectFileKind, isInTrash, isTemplate, isNumberedFolder } from "./ignore-patterns";
+import {
+  isIgnoredName,
+  shouldSkipByExtension,
+  detectFileKind,
+  isInTrash,
+  isTemplate,
+  isNumberedFolder,
+} from "./ignore-patterns";
 
 const HANDLE_TOKEN_KEY = "masarflow.vault.handle";
 const HANDLE_NAME_KEY = "masarflow.vault.name";
@@ -8,7 +15,9 @@ export type VaultDirectoryHandle = FileSystemDirectoryHandle & { name: string };
 
 export async function pickVault(): Promise<VaultDirectoryHandle | null> {
   if (typeof window === "undefined") return null;
-  const w = window as unknown as { showDirectoryPicker?: (opts?: { mode?: string }) => Promise<FileSystemDirectoryHandle> };
+  const w = window as unknown as {
+    showDirectoryPicker?: (opts?: { mode?: string }) => Promise<FileSystemDirectoryHandle>;
+  };
   if (!w.showDirectoryPicker) return null;
   try {
     const handle = await w.showDirectoryPicker({ mode: "readwrite" });
@@ -19,9 +28,15 @@ export async function pickVault(): Promise<VaultDirectoryHandle | null> {
   }
 }
 
-export async function verifyPermission(handle: FileSystemDirectoryHandle, write = true): Promise<boolean> {
+export async function verifyPermission(
+  handle: FileSystemDirectoryHandle,
+  write = true,
+): Promise<boolean> {
   if (typeof window === "undefined") return false;
-  const h = handle as unknown as { queryPermission?: (o: { mode: string }) => Promise<PermissionState>; requestPermission?: (o: { mode: string }) => Promise<PermissionState> };
+  const h = handle as unknown as {
+    queryPermission?: (o: { mode: string }) => Promise<PermissionState>;
+    requestPermission?: (o: { mode: string }) => Promise<PermissionState>;
+  };
   const query = h.queryPermission;
   const request = h.requestPermission;
   if (!query || !request) return false;
@@ -36,7 +51,10 @@ export async function verifyPermission(handle: FileSystemDirectoryHandle, write 
   }
 }
 
-export async function readVaultFile(handle: FileSystemDirectoryHandle, path: string): Promise<File | null> {
+export async function readVaultFile(
+  handle: FileSystemDirectoryHandle,
+  path: string,
+): Promise<File | null> {
   const parts = path.split("/").filter(Boolean);
   const fileName = parts.pop();
   if (!fileName) return null;
@@ -56,7 +74,11 @@ export async function readVaultFile(handle: FileSystemDirectoryHandle, path: str
   }
 }
 
-export async function writeVaultFile(handle: FileSystemDirectoryHandle, path: string, content: string | Blob): Promise<boolean> {
+export async function writeVaultFile(
+  handle: FileSystemDirectoryHandle,
+  path: string,
+  content: string | Blob,
+): Promise<boolean> {
   const parts = path.split("/").filter(Boolean);
   const fileName = parts.pop();
   if (!fileName) return false;
@@ -73,7 +95,8 @@ export async function writeVaultFile(handle: FileSystemDirectoryHandle, path: st
     const w = fh as unknown as { createWritable: () => Promise<FileSystemWritableFileStream> };
     if (!w.createWritable) return false;
     const stream = await w.createWritable();
-    const blob = typeof content === "string" ? new Blob([content], { type: "text/markdown" }) : content;
+    const blob =
+      typeof content === "string" ? new Blob([content], { type: "text/markdown" }) : content;
     await stream.write(blob);
     await stream.close();
     return true;
@@ -82,12 +105,24 @@ export async function writeVaultFile(handle: FileSystemDirectoryHandle, path: st
   }
 }
 
-export async function walkVault(handle: FileSystemDirectoryHandle, opts: { includePatterns: string[]; excludePatterns: string[]; archiveIncluded: boolean; trashIncluded: boolean; maxDepth?: number; }): Promise<VaultFileMeta[]> {
+export async function walkVault(
+  handle: FileSystemDirectoryHandle,
+  opts: {
+    includePatterns: string[];
+    excludePatterns: string[];
+    archiveIncluded: boolean;
+    trashIncluded: boolean;
+    maxDepth?: number;
+  },
+): Promise<VaultFileMeta[]> {
   const out: VaultFileMeta[] = [];
   const maxDepth = opts.maxDepth ?? 8;
 
   const topFolders: string[] = [];
-  const handleAny = handle as unknown as { entries?: () => AsyncIterable<[string, FileSystemHandle]>; kind?: string };
+  const handleAny = handle as unknown as {
+    entries?: () => AsyncIterable<[string, FileSystemHandle]>;
+    kind?: string;
+  };
   if (!handleAny.entries) return out;
   for await (const [name] of handleAny.entries()) {
     if (isIgnoredName(name)) continue;

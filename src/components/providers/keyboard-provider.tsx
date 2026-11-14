@@ -8,12 +8,19 @@ import { emitAutomationEvent } from "@/lib/automation/engine";
 import { useAi } from "@/lib/stores/ai";
 import { useActiveProject } from "@/lib/db/repos/projects";
 import { useVault } from "@/lib/stores/vault";
-import { setOpenNewNote, setOpenNewSpec, setOpenNewTask, setOpenNewLog, setOpenNewDoc, setOpenNewStandard, useCreateDialogs } from "@/lib/stores/create-dialogs";
+import {
+  setOpenNewNote,
+  setOpenNewSpec,
+  setOpenNewTask,
+  setOpenNewLog,
+  setOpenNewDoc,
+  setOpenNewStandard,
+  useCreateDialogs,
+} from "@/lib/stores/create-dialogs";
 
-const isMac =
-  typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
-function modKey(e: KeyboardEvent): boolean {
+function _modKey(e: KeyboardEvent): boolean {
   return isMac ? e.metaKey : e.ctrlKey;
 }
 
@@ -163,7 +170,12 @@ export function KeyboardProvider({ children }: { children: React.ReactNode }) {
         case "reset-seed":
           if (projectId) {
             resetSeed().then(() => {
-              emitAutomationEvent({ id: "seed-reset-" + Date.now(), kind: "seed-reset", message: "Local seed reset", at: Date.now() });
+              emitAutomationEvent({
+                id: "seed-reset-" + Date.now(),
+                kind: "seed-reset",
+                message: "Local seed reset",
+                at: Date.now(),
+              });
             });
           }
           return;

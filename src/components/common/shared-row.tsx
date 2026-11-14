@@ -13,10 +13,10 @@ export function Row({
   onChange: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-border p-2.5">
+    <div className="border-border flex items-center justify-between gap-3 rounded-md border p-2.5">
       <div>
         <div className="text-xs font-medium">{label}</div>
-        <div className="text-[10px] text-muted-foreground">{description}</div>
+        <div className="text-muted-foreground text-[10px]">{description}</div>
       </div>
       <Switch checked={checked} onCheckedChange={onChange} />
     </div>

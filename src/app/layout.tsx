@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "@/styles/globals.css";
+import "katex/dist/katex.min.css";
 import { SeedProvider } from "@/components/providers/seed-provider";
 import { KeyboardProvider } from "@/components/providers/keyboard-provider";
 import { ThemeApplier } from "@/components/providers/theme-provider";
 import { VaultProvider } from "@/components/providers/vault-provider";
+import { DbErrorHandler } from "@/components/providers/db-error-handler";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -37,14 +39,18 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${jetbrains.variable} dark`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${inter.variable} ${jetbrains.variable} dark`}
+    >
       <body className="font-sans antialiased">
         <ThemeApplier>
           <TooltipProvider delayDuration={250}>
             <SeedProvider>
               <KeyboardProvider>
                 <VaultProvider>
-                  {children}
+                  <DbErrorHandler>{children}</DbErrorHandler>
                   <Toaster />
                 </VaultProvider>
               </KeyboardProvider>

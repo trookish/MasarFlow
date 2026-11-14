@@ -22,12 +22,18 @@ class LegacyFallbackBackend implements VaultBackend {
     if (!picked) return null;
     this.rootName = picked.rootName;
     const { saveSettings } = await import("../sync-engine");
-    await saveSettings({ mode: "legacy-fallback", vaultName: picked.rootName, backend: "legacy-fallback", backendCapabilities: CAPS });
+    await saveSettings({
+      mode: "legacy-fallback",
+      vaultName: picked.rootName,
+      backend: "legacy-fallback",
+      backendCapabilities: CAPS,
+    });
     saveHandleToken(picked.rootName, picked.rootName);
     let count = 0;
     for (const f of picked.files) {
       const rel = (f as unknown as { webkitRelativePath?: string }).webkitRelativePath || f.name;
-      const isMd = f.name.toLowerCase().endsWith(".md") || f.name.toLowerCase().endsWith(".markdown");
+      const isMd =
+        f.name.toLowerCase().endsWith(".md") || f.name.toLowerCase().endsWith(".markdown");
       const id = await md5Hex("legacy:" + rel);
       const att: Attachment = {
         id,
@@ -42,7 +48,10 @@ class LegacyFallbackBackend implements VaultBackend {
       await getDb().attachments.put(att);
       count++;
     }
-    await getDb().vaultMeta.put({ key: "legacy.pick", value: { rootName: picked.rootName, count, at: Date.now() } });
+    await getDb().vaultMeta.put({
+      key: "legacy.pick",
+      value: { rootName: picked.rootName, count, at: Date.now() },
+    });
     return { rootName: picked.rootName, backend: "legacy-fallback", fileCount: count };
   }
 
@@ -83,14 +92,24 @@ class LegacyFallbackBackend implements VaultBackend {
   async walk(): Promise<VaultFileMeta[]> {
     const all = await getDb().attachments.toArray();
     return all
-      .filter((a) => a.relativePath && a.relativePath.includes("/") || a.relativePath.endsWith(".md") || a.relativePath.endsWith(".markdown"))
+      .filter(
+        (a) =>
+          (a.relativePath && a.relativePath.includes("/")) ||
+          a.relativePath.endsWith(".md") ||
+          a.relativePath.endsWith(".markdown"),
+      )
       .map((a) => ({
         relativePath: a.relativePath,
         size: a.size,
         mtime: a.cachedAt,
-        kind: a.relativePath.toLowerCase().endsWith(".md") || a.relativePath.toLowerCase().endsWith(".markdown") ? ("markdown" as const) : ("other" as const),
+        kind:
+          a.relativePath.toLowerCase().endsWith(".md") ||
+          a.relativePath.toLowerCase().endsWith(".markdown")
+            ? ("markdown" as const)
+            : ("other" as const),
         inTrash: a.relativePath.split("/").includes(".trash"),
-        isTemplate: a.relativePath.startsWith("06. Templates") || a.relativePath.startsWith("06. Templates/"),
+        isTemplate:
+          a.relativePath.startsWith("06. Templates") || a.relativePath.startsWith("06. Templates/"),
       }));
   }
 }
@@ -110,7 +129,8 @@ async function pickFolderViaWebkit(): Promise<{ rootName: string; files: File[] 
         return;
       }
       const first = files[0];
-      const rel = (first as unknown as { webkitRelativePath?: string }).webkitRelativePath || first.name;
+      const rel =
+        (first as unknown as { webkitRelativePath?: string }).webkitRelativePath || first.name;
       const rootName = rel.split("/")[0] || "Vault";
       document.body.removeChild(input);
       resolve({ rootName, files });

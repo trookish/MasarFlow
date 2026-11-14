@@ -32,6 +32,15 @@ export function getCachedKind(): VaultBackendKind | null {
   return cachedKind;
 }
 
+export async function warmBackendCache(kind: VaultBackendKind): Promise<VaultBackend> {
+  if (cachedBackend && cachedKind === kind) return cachedBackend;
+  const mod: { create: () => VaultBackend } = await import(`./${kindToModule(kind)}`);
+  const b = mod.create();
+  cachedBackend = b;
+  cachedKind = kind;
+  return b;
+}
+
 function kindToModule(k: VaultBackendKind): string {
   if (k === "native-fsa") return "native-fsa";
   if (k === "opfs") return "opfs";

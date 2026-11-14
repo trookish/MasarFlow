@@ -27,11 +27,18 @@ export const useAi = create<AiState>()(
       setStreamingSpeed: (streamingSpeed) => set({ streamingSpeed }),
       apiKey: "",
       setApiKey: (apiKey) => set({ apiKey }),
-      cycleProvider: () => set((s) => {
-        const order: AgentProvider[] = ["simulated", "openai", "anthropic", "google", "openrouter"];
-        const i = order.indexOf(s.provider);
-        return { provider: order[(i + 1) % order.length] };
-      }),
+      cycleProvider: () =>
+        set((s) => {
+          const order: AgentProvider[] = [
+            "simulated",
+            "openai",
+            "anthropic",
+            "google",
+            "openrouter",
+          ];
+          const i = order.indexOf(s.provider);
+          return { provider: order[(i + 1) % order.length] };
+        }),
     }),
     { name: "masarflow.ai" },
   ),

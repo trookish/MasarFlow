@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  masarflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: masarflow
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      # Optional LLM provider configuration
+      # - OPENAI_API_KEY=
+      # - ANTHROPIC_API_KEY=
+      # - GOOGLE_GENERATIVE_AI_API_KEY=

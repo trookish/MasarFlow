@@ -1,5 +1,10 @@
 import type { Task } from "../db/schema";
-import { parseFrontmatter, stripFrontmatter, extractTitleFromBody, serializeFrontmatter } from "./frontmatter";
+import {
+  parseFrontmatter,
+  stripFrontmatter,
+  extractTitleFromBody,
+  serializeFrontmatter,
+} from "./frontmatter";
 
 export interface VaultTaskInput {
   projectId: string;
@@ -57,7 +62,7 @@ export function vaultTaskToBrain(input: VaultTaskInput): VaultTaskOutput {
   const filename = input.relativePath.split("/").pop() ?? "";
   const baseTitle = filename.replace(/\.md$/i, "");
   const title = (fm.raw.title as string) ?? extractTitleFromBody(body, baseTitle);
-  const status = fm.status ? normalizeStatus(fm.status) : input.defaultStatus ?? "backlog";
+  const status = fm.status ? normalizeStatus(fm.status) : (input.defaultStatus ?? "backlog");
   const priority = fm.priority ? normalizePriority(fm.priority) : "medium";
   const completed = !!fm.completedDate || status === "done";
   const id = "task_" + input.projectId + "_" + baseTitle.replace(/\s+/g, "_").toLowerCase();
@@ -70,6 +75,7 @@ export function vaultTaskToBrain(input: VaultTaskInput): VaultTaskOutput {
     priority,
     specId: null,
     parentTaskId: null,
+    sprintId: null,
     assignee: "human",
     dependencies: [],
     progress: completed ? 100 : 0,
@@ -95,6 +101,24 @@ export function brainTaskToVault(task: Task): string {
   fm.dateModified = task.updatedAt;
   const header = serializeFrontmatter(fm).trimEnd();
   const body = (task.description ?? "").trim();
-  if (body) return header + String.fromCharCode(10) + String.fromCharCode(10) + "# " + task.title + String.fromCharCode(10) + String.fromCharCode(10) + body + String.fromCharCode(10);
-  return header + String.fromCharCode(10) + String.fromCharCode(10) + "# " + task.title + String.fromCharCode(10);
+  if (body)
+    return (
+      header +
+      String.fromCharCode(10) +
+      String.fromCharCode(10) +
+      "# " +
+      task.title +
+      String.fromCharCode(10) +
+      String.fromCharCode(10) +
+      body +
+      String.fromCharCode(10)
+    );
+  return (
+    header +
+    String.fromCharCode(10) +
+    String.fromCharCode(10) +
+    "# " +
+    task.title +
+    String.fromCharCode(10)
+  );
 }

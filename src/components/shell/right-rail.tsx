@@ -1,11 +1,22 @@
 "use client";
 import * as React from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Sparkles, Link2, GitBranch, Boxes, Lightbulb, ArrowRight, ScrollText, RefreshCw, FolderOpen, Trash2 } from "lucide-react";
+import {
+  Sparkles,
+  Link2,
+  GitBranch,
+  Boxes,
+  Lightbulb,
+  ArrowRight,
+  ScrollText,
+  RefreshCw,
+  FolderOpen,
+  Trash2,
+} from "lucide-react";
 import { useUi } from "@/lib/stores/ui";
 import { useActiveProject } from "@/lib/db/repos/projects";
 import { usePathname } from "next/navigation";
-import { useMemories, useTasks, useSystems, useArchGraph, useDevLogs } from "@/lib/db/repos/misc";
+import { useMemories, useTasks, useDevLogs } from "@/lib/db/repos/misc";
 import { useVault } from "@/lib/stores/vault";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getDb } from "@/lib/db/schema";
@@ -26,31 +37,36 @@ function AiSuggestionsPanel() {
   const project = useActiveProject();
   const memories = useMemories(project?.id);
   const topMemories = React.useMemo(
-    () => memories?.slice().sort((a, b) => b.weight - a.weight).slice(0, 3) ?? [],
+    () =>
+      memories
+        ?.slice()
+        .sort((a, b) => b.weight - a.weight)
+        .slice(0, 3) ?? [],
     [memories],
   );
 
   return (
     <div className="space-y-2">
       {topMemories.length === 0 && (
-        <div className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">
+        <div className="border-border text-muted-foreground rounded-md border border-dashed p-3 text-xs">
           AI will surface memory hints here as the project grows.
         </div>
       )}
       {topMemories.map((m) => (
-        <div
-          key={m.id}
-          className="rounded-md border border-border bg-surface-2 p-2.5 text-xs"
-        >
+        <div key={m.id} className="border-border bg-surface-2 rounded-md border p-2.5 text-xs">
           <div className="mb-1 flex items-center gap-1.5">
-            <Badge variant={m.kind === "decision" ? "info" : m.kind === "lesson" ? "warning" : "secondary"}>
+            <Badge
+              variant={
+                m.kind === "decision" ? "info" : m.kind === "lesson" ? "warning" : "secondary"
+              }
+            >
               {m.kind}
             </Badge>
-            <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+            <span className="text-muted-foreground ml-auto font-mono text-[10px]">
               {Math.round(m.weight * 100)}%
             </span>
           </div>
-          <p className="text-pretty text-foreground/90">{m.content}</p>
+          <p className="text-foreground/90 text-pretty">{m.content}</p>
         </div>
       ))}
     </div>
@@ -65,16 +81,16 @@ function ContextPanel() {
   return (
     <div className="space-y-1.5">
       {inProgress.length === 0 ? (
-        <div className="text-xs text-muted-foreground">Nothing in progress.</div>
+        <div className="text-muted-foreground text-xs">Nothing in progress.</div>
       ) : (
         inProgress.map((t) => (
           <div
             key={t.id}
-            className="flex items-center gap-2 rounded-md border border-border bg-surface-2 p-2 text-xs"
+            className="border-border bg-surface-2 flex items-center gap-2 rounded-md border p-2 text-xs"
           >
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--info)]" />
             <span className="flex-1 truncate">{t.title}</span>
-            <span className="font-mono text-[10px] text-muted-foreground">{t.progress}%</span>
+            <span className="text-muted-foreground font-mono text-[10px]">{t.progress}%</span>
           </div>
         ))
       )}
@@ -93,9 +109,9 @@ function ArchitectureImpactPanel() {
       {items.map((i) => (
         <div
           key={i.label}
-          className="flex items-center gap-2 rounded-md border border-border bg-surface-2 p-2 text-xs"
+          className="border-border bg-surface-2 flex items-center gap-2 rounded-md border p-2 text-xs"
         >
-          <Boxes className="h-3.5 w-3.5 text-muted-foreground" />
+          <Boxes className="text-muted-foreground h-3.5 w-3.5" />
           <span className="flex-1 truncate">{i.label}</span>
           <Badge variant={i.impact === "moderate" ? "warning" : "ghost"}>{i.impact}</Badge>
         </div>
@@ -115,7 +131,7 @@ function MemoryReferencesPanel() {
       {items.map((s) => (
         <div
           key={s}
-          className="flex items-center gap-2 rounded-md px-1.5 py-1 text-xs text-muted-foreground hover:bg-accent/40"
+          className="text-muted-foreground hover:bg-accent/40 flex items-center gap-2 rounded-md px-1.5 py-1 text-xs"
         >
           <Link2 className="h-3 w-3" />
           <span className="truncate">{s}</span>
@@ -170,45 +186,90 @@ function VaultPanel() {
   const vaultName = useVault((s) => s.vaultName);
   const status = useVault((s) => s.status);
   const lastFullSync = useVault((s) => s.lastFullSync);
+  const connectionHealth = useVault((s) => s.connectionHealth);
   const runSync = useVault((s) => s.runSync);
   const connect = useVault((s) => s.connect);
+  const reconnect = useVault((s) => s.reconnect);
   const repick = useVault((s) => s.repick);
   const projectId = useLiveQuery(async () => (await getDb().projects.toArray())[0]?.id, []);
-  const trashCount = useLiveQuery(async () => {
-    if (!projectId) return 0;
-    const all = await getDb().syncFiles.where({ projectId }).toArray();
-    return all.filter((f) => f.inTrash || f.status === "deleted-local" || f.status === "deleted-remote").length;
-  }, [projectId], 0);
+  const trashCount = useLiveQuery(
+    async () => {
+      if (!projectId) return 0;
+      const all = await getDb().syncFiles.where({ projectId }).toArray();
+      return all.filter(
+        (f) => f.inTrash || f.status === "deleted-local" || f.status === "deleted-remote",
+      ).length;
+    },
+    [projectId],
+    0,
+  );
+  const needsReauth = connectionHealth === "needs-reauth";
+  const isVaultMode =
+    settings.mode === "obsidian" ||
+    settings.mode === "opfs" ||
+    settings.mode === "legacy-fallback";
   return (
     <div className="space-y-2">
-      <div className="rounded-md border border-border bg-surface-2 p-2">
+      <div className="border-border bg-surface-2 rounded-md border p-2">
         <div className="flex items-center gap-1.5 text-[11px]">
           <FolderOpen className="h-3 w-3" />
           <span className="font-medium">{vaultName || "Local notes"}</span>
-          <span className="ml-auto text-[10px] text-muted-foreground capitalize">{(settings.backend || settings.mode).replace("-", " ")}</span>
+          <span className="text-muted-foreground ml-auto text-[10px] capitalize">
+            {needsReauth
+              ? "needs reconnect"
+              : (settings.backend || settings.mode).replace("-", " ")}
+          </span>
         </div>
-        <div className="mt-1 text-[10px] text-muted-foreground">
+        <div className="text-muted-foreground mt-1 text-[10px]">
           {lastFullSync ? "Synced " + formatRelativeTime(lastFullSync) : "Not yet synced"}
         </div>
         <div className="mt-1.5 flex items-center gap-1">
-          {settings.mode === "obsidian" || settings.mode === "opfs" || settings.mode === "legacy-fallback" ? (
+          {isVaultMode ? (
             <>
-              <Button size="sm" variant="soft" className="h-6 text-[10px]" disabled={status === "syncing"} onClick={() => runSync()}>
-                <RefreshCw className={"h-3 w-3 " + (status === "syncing" ? "animate-spin" : "")} />Sync
-              </Button>
+              {needsReauth ? (
+                <Button
+                  size="sm"
+                  variant="soft"
+                  className="h-6 text-[10px]"
+                  onClick={() => reconnect()}
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  Reconnect
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="soft"
+                  className="h-6 text-[10px]"
+                  disabled={status === "syncing"}
+                  onClick={() => runSync()}
+                >
+                  <RefreshCw className={"h-3 w-3 " + (status === "syncing" ? "animate-spin" : "")} />
+                  Sync
+                </Button>
+              )}
               {settings.mode === "legacy-fallback" && (
-                <Button size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => repick()}>Re-pick</Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-[10px]"
+                  onClick={() => repick()}
+                >
+                  Re-pick
+                </Button>
               )}
             </>
           ) : (
             <Button size="sm" variant="soft" className="h-6 text-[10px]" onClick={() => connect()}>
-              <FolderOpen className="h-3 w-3" />Connect
+              <FolderOpen className="h-3 w-3" />
+              Connect
             </Button>
           )}
         </div>
       </div>
-      <div className="flex items-center gap-1.5 rounded-md border border-border/60 bg-card/40 p-2 text-[10px]">
-        <Trash2 className="h-3 w-3" />Trash: {trashCount}
+      <div className="border-border/60 bg-card/40 flex items-center gap-1.5 rounded-md border p-2 text-[10px]">
+        <Trash2 className="h-3 w-3" />
+        Trash: {trashCount}
       </div>
     </div>
   );
@@ -217,20 +278,33 @@ function VaultPanel() {
 function RecentDevPanel() {
   const project = useActiveProject();
   const devLogs = useDevLogs(project?.id);
-  const recentDev = devLogs?.slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 4) ?? [];
+  const recentDev =
+    devLogs
+      ?.slice()
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 4) ?? [];
   return (
     <div className="space-y-1.5">
       {recentDev.length === 0 ? (
-        <div className="text-xs text-muted-foreground">No dev logs yet.</div>
+        <div className="text-muted-foreground text-xs">No dev logs yet.</div>
       ) : (
         recentDev.map((d) => (
-          <div key={d.id} className="rounded-md border border-border/60 bg-surface-2 p-2 text-[11px]">
+          <div
+            key={d.id}
+            className="border-border/60 bg-surface-2 rounded-md border p-2 text-[11px]"
+          >
             <div className="flex items-center gap-1.5">
-              <Badge variant="outline" className="text-[9px] capitalize">{d.kind}</Badge>
-              <span className="ml-auto text-[10px] text-muted-foreground">{formatRelativeTime(d.createdAt)}</span>
+              <Badge variant="outline" className="text-[9px] capitalize">
+                {d.kind}
+              </Badge>
+              <span className="text-muted-foreground ml-auto text-[10px]">
+                {formatRelativeTime(d.createdAt)}
+              </span>
             </div>
-            <div className="mt-1 text-pretty leading-snug">{d.title}</div>
-            {d.body && <div className="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground">{d.body}</div>}
+            <div className="mt-1 leading-snug text-pretty">{d.title}</div>
+            {d.body && (
+              <div className="text-muted-foreground mt-0.5 line-clamp-2 text-[10px]">{d.body}</div>
+            )}
           </div>
         ))
       )}
@@ -252,10 +326,10 @@ export function RightRail() {
           animate={{ width: 320, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
           transition={{ type: "spring", stiffness: 320, damping: 32 }}
-          className="relative z-10 hidden h-full shrink-0 overflow-hidden border-l border-border bg-background lg:flex lg:flex-col"
+          className="border-border bg-background relative z-10 hidden h-full shrink-0 overflow-hidden border-l lg:flex lg:flex-col"
         >
-          <div className="flex h-12 items-center justify-between border-b border-border px-4">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="border-border flex h-12 items-center justify-between border-b px-4">
+            <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
               Context
             </span>
           </div>
@@ -265,7 +339,7 @@ export function RightRail() {
                 <section key={p.id} className={cn(idx > 0 && "")}>
                   <header className="mb-2 flex items-center gap-2">
                     <span className="text-muted-foreground">{p.icon}</span>
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <h3 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                       {p.title}
                     </h3>
                   </header>

@@ -1,4 +1,22 @@
-import { LayoutDashboard, Brain, FileText, ShieldCheck, Network, Share2, ListTodo, Bot, Workflow, BookOpen, ScrollText, Search, Settings, Box, Puzzle, RefreshCw, type LucideIcon } from "lucide-react"
+import {
+  LayoutDashboard,
+  Brain,
+  FileText,
+  ShieldCheck,
+  Network,
+  Share2,
+  ListTodo,
+  Bot,
+  Workflow,
+  BookOpen,
+  ScrollText,
+  Search,
+  Settings,
+  RefreshCw,
+  Box,
+  Puzzle,
+  type LucideIcon,
+} from "lucide-react";
 
 export interface NavItem {
   id: string;
@@ -73,8 +91,22 @@ export const NAV_ITEMS: NavItem[] = [
     description: "Work, dependencies, progress",
     group: "intelligence",
   },
-  { id: "agents", label: "AI Agents", href: "/agents", icon: Bot, description: "Specialized collaborators", group: "intelligence" },
-  { id: "workflow", label: "AI Workflow", href: "/workflow", icon: Workflow, description: "16-step pipeline", group: "intelligence" },
+  {
+    id: "agents",
+    label: "AI Agents",
+    href: "/agents",
+    icon: Bot,
+    description: "Specialized collaborators",
+    group: "intelligence",
+  },
+  {
+    id: "workflow",
+    label: "AI Workflow",
+    href: "/workflow",
+    icon: Workflow,
+    description: "16-step pipeline",
+    group: "intelligence",
+  },
   {
     id: "docs",
     label: "Documentation",
@@ -101,6 +133,14 @@ export const NAV_ITEMS: NavItem[] = [
     group: "system",
   },
   {
+    id: "unity",
+    label: "Unity Watcher",
+    href: "/unity",
+    icon: Box,
+    description: "Unity project asset sync & logs",
+    group: "system",
+  },
+  {
     id: "search",
     label: "Search",
     href: "/search",
@@ -109,10 +149,20 @@ export const NAV_ITEMS: NavItem[] = [
     group: "system",
   },
   {
+    id: "plugins",
+    label: "Plugins",
+    href: "/plugins",
+    icon: Puzzle,
+    shortcut: "G P",
+    description: "Sandboxed third-party integrations",
+    group: "system",
+  },
+  {
     id: "settings",
     label: "Settings",
     href: "/settings",
     icon: Settings,
+    shortcut: "G ,",
     description: "Theme, keybindings, integrations",
     group: "system",
   },

@@ -5,9 +5,13 @@ const HANDLE_KEY = "masarflow.vault.handle.active";
 export async function setActiveHandle(handle: FileSystemDirectoryHandle | null): Promise<void> {
   if (typeof window === "undefined") return;
   if (handle) {
-    try { await putHandle("vault", handle); } catch {}
+    try {
+      await putHandle("vault", handle);
+    } catch {}
   } else {
-    try { await deleteHandle("vault"); } catch {}
+    try {
+      await deleteHandle("vault");
+    } catch {}
   }
   window.localStorage.setItem(HANDLE_KEY, handle ? "1" : "0");
 }
@@ -32,8 +36,14 @@ function putHandle(key: string, value: FileSystemDirectoryHandle): Promise<void>
       const tx = db.transaction("handles", "readwrite");
       const store = tx.objectStore("handles");
       const put = store.put(value, key);
-      put.onsuccess = () => { db.close(); resolve(); };
-      put.onerror = () => { db.close(); reject(put.error); };
+      put.onsuccess = () => {
+        db.close();
+        resolve();
+      };
+      put.onerror = () => {
+        db.close();
+        reject(put.error);
+      };
     };
   });
 }
@@ -47,8 +57,14 @@ function deleteHandle(key: string): Promise<void> {
       const db = req.result;
       const tx = db.transaction("handles", "readwrite");
       const del = tx.objectStore("handles").delete(key);
-      del.onsuccess = () => { db.close(); resolve(); };
-      del.onerror = () => { db.close(); reject(del.error); };
+      del.onsuccess = () => {
+        db.close();
+        resolve();
+      };
+      del.onerror = () => {
+        db.close();
+        reject(del.error);
+      };
     };
   });
 }
@@ -62,8 +78,14 @@ function getHandle(key: string): Promise<FileSystemDirectoryHandle | null> {
       const db = req.result;
       const tx = db.transaction("handles", "readonly");
       const get = tx.objectStore("handles").get(key);
-      get.onsuccess = () => { db.close(); resolve((get.result as FileSystemDirectoryHandle) ?? null); };
-      get.onerror = () => { db.close(); reject(get.error); };
+      get.onsuccess = () => {
+        db.close();
+        resolve((get.result as FileSystemDirectoryHandle) ?? null);
+      };
+      get.onerror = () => {
+        db.close();
+        reject(get.error);
+      };
     };
   });
 }

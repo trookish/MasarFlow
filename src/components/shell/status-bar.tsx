@@ -25,7 +25,7 @@ export function StatusBar() {
           animate={{ height: 28, opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="relative z-10 flex h-7 shrink-0 items-center gap-3 overflow-hidden border-t border-border bg-surface px-3 text-[11px] text-muted-foreground"
+          className="border-border bg-surface text-muted-foreground relative z-10 flex h-7 shrink-0 items-center gap-3 overflow-hidden border-t px-3 text-[11px]"
         >
           <div className="flex items-center gap-1.5">
             <CircleDot className="h-3 w-3 text-[color:var(--success)]" />
@@ -47,7 +47,7 @@ export function StatusBar() {
             <span className="font-mono">main</span>
           </div>
           <div className="ml-auto flex items-center gap-1.5">
-            <Activity className="h-3 w-3 animate-pulse-soft text-[color:var(--info)]" />
+            <Activity className="animate-pulse-soft h-3 w-3 text-[color:var(--info)]" />
             <span>memory index fresh</span>
           </div>
         </motion.footer>
@@ -57,5 +57,5 @@ export function StatusBar() {
 }
 
 function Sep() {
-  return <span className={cn("h-3 w-px bg-border")} />;
+  return <span className={cn("bg-border h-3 w-px")} />;
 }

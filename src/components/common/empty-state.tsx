@@ -30,15 +30,15 @@ export function EmptyState({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       className={cn(
-        "grid place-items-center rounded-xl border border-dashed border-border bg-surface/30 p-10 text-center",
+        "border-border bg-surface/30 grid place-items-center rounded-xl border border-dashed p-10 text-center",
         className,
       )}
     >
-      <div className="mb-3 grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-accent to-accent/30 text-foreground">
+      <div className="from-accent to-accent/30 text-foreground mb-3 grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br">
         <Icon className="h-5 w-5" />
       </div>
       <h3 className="text-base font-semibold">{title}</h3>
-      <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
+      <p className="text-muted-foreground mt-1 max-w-sm text-sm">{description}</p>
       {actionLabel && onAction && (
         <Button onClick={onAction} className="mt-4" size="sm">
           {actionLabel}

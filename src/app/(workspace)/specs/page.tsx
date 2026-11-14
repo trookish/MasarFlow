@@ -11,7 +11,7 @@ import { SpecStatusBadge } from "@/components/common/badges";
 import { SpecEditorDialog } from "@/components/common/spec-editor-dialog";
 import { useActiveProject } from "@/lib/db/repos/projects";
 import { useSpecs, usePlanForSpec, useTasksForSpec } from "@/lib/db/repos/specs";
-import { type Spec, type SpecStatus } from "@/lib/db/schema";
+import { type Spec } from "@/lib/db/schema";
 import { formatRelativeTime, pluralize, cn } from "@/lib/utils";
 
 type FilterId = "all" | "draft" | "review" | "active" | "shipped";
@@ -28,7 +28,7 @@ export default function SpecsPage() {
   const project = useActiveProject();
   const specs = useSpecs(project?.id);
   const [filter, setFilter] = React.useState<FilterId>("all");
-  const [editorOpen, setEditorOpen] = React.useState(false);
+  const [editorOpenState, setEditorOpenState] = React.useState(false);
   const [editing, setEditing] = React.useState<Spec | undefined>(undefined);
 
   const filtered = React.useMemo(() => {
@@ -56,25 +56,22 @@ export default function SpecsPage() {
 
   const onNew = () => {
     setEditing(undefined);
-    setEditorOpen(true);
+    setEditorOpenState(true);
   };
 
   const onEdit = (e: React.MouseEvent, s: Spec) => {
     e.preventDefault();
     e.stopPropagation();
     setEditing(s);
-    setEditorOpen(true);
+    setEditorOpenState(true);
   };
 
   const openFlag = useCreateDialogs((s) => s.spec);
-  React.useEffect(() => {
-    if (openFlag) {
-      setOpenNewSpec(false);
-      setEditing(undefined);
-      setEditorOpen(true);
-    }
-  }, [openFlag]);
-
+  const editorOpen = editorOpenState || openFlag;
+  const setEditorOpen = (v: boolean) => {
+    setEditorOpenState(v);
+    if (!v) setOpenNewSpec(false);
+  };
 
   return (
     <div className="pb-10">
@@ -90,15 +87,17 @@ export default function SpecsPage() {
         }
       />
 
-      <div className="border-b border-border px-6">
-        <div className="flex items-center gap-1 py-2 overflow-x-auto">
+      <div className="border-border border-b px-6">
+        <div className="flex items-center gap-1 overflow-x-auto py-2">
           {FILTER_TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setFilter(t.id)}
               className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap",
-                filter === t.id ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/40",
+                "rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors",
+                filter === t.id
+                  ? "bg-accent text-foreground"
+                  : "text-muted-foreground hover:bg-accent/40",
               )}
             >
               {t.label}
@@ -113,8 +112,12 @@ export default function SpecsPage() {
           <SpecRow key={s.id} spec={s} onEdit={onEdit} />
         ))}
         {filtered.length === 0 && (
-          <div className="rounded-lg border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-            No specs match this filter. <button onClick={onNew} className="text-primary hover:underline">Create one</button>.
+          <div className="border-border text-muted-foreground rounded-lg border border-dashed p-10 text-center text-sm">
+            No specs match this filter.{" "}
+            <button onClick={onNew} className="text-primary hover:underline">
+              Create one
+            </button>
+            .
           </div>
         )}
       </div>
@@ -134,31 +137,46 @@ function SpecRow({ spec, onEdit }: { spec: Spec; onEdit: (e: React.MouseEvent, s
   const tasks = useTasksForSpec(spec.id);
   const doneTasks = tasks?.filter((t) => t.status === "done").length ?? 0;
   return (
-    <div className="group relative rounded-lg border border-border bg-card transition-all hover:border-border/80">
+    <div className="group border-border bg-card hover:border-border/80 relative rounded-lg border transition-all">
       <Link href={`/specs/${spec.id}`} className="block p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[10px] text-muted-foreground">{spec.number}</span>
+          <span className="text-muted-foreground font-mono text-[10px]">{spec.number}</span>
           <SpecStatusBadge status={spec.status} />
           {plan && plan.status === "awaiting_approval" && (
-            <Badge variant="warning" className="gap-1"><Sparkles className="h-3 w-3" />Plan awaiting approval</Badge>
+            <Badge variant="warning" className="gap-1">
+              <Sparkles className="h-3 w-3" />
+              Plan awaiting approval
+            </Badge>
           )}
           {plan && plan.status === "approved" && (
-            <Badge variant="info" className="gap-1"><GitBranch className="h-3 w-3" />Plan approved</Badge>
+            <Badge variant="info" className="gap-1">
+              <GitBranch className="h-3 w-3" />
+              Plan approved
+            </Badge>
           )}
-          <span className="ml-auto text-[10px] text-muted-foreground">Updated {formatRelativeTime(spec.updatedAt)}</span>
+          <span className="text-muted-foreground ml-auto text-[10px]">
+            Updated {formatRelativeTime(spec.updatedAt)}
+          </span>
         </div>
         <h3 className="mt-1.5 text-base font-semibold tracking-tight">{spec.title}</h3>
-        <p className="mt-1 line-clamp-2 max-w-3xl text-sm text-muted-foreground text-pretty">{spec.purpose}</p>
+        <p className="text-muted-foreground mt-1 line-clamp-2 max-w-3xl text-sm text-pretty">
+          {spec.purpose}
+        </p>
 
         <div className="mt-3 flex flex-wrap items-center gap-4 text-xs">
           <div className="flex min-w-[200px] flex-1 items-center gap-2">
             <span className="text-muted-foreground">Implementation</span>
-            <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
-              <div className="h-full bg-primary" style={{ width: `${spec.implementationProgress}%` }} />
+            <div className="bg-muted h-1 flex-1 overflow-hidden rounded-full">
+              <div
+                className="bg-primary h-full"
+                style={{ width: `${spec.implementationProgress}%` }}
+              />
             </div>
-            <span className="font-mono text-[10px] text-muted-foreground">{spec.implementationProgress}%</span>
+            <span className="text-muted-foreground font-mono text-[10px]">
+              {spec.implementationProgress}%
+            </span>
           </div>
-          <div className="flex items-center gap-1.5 text-muted-foreground">
+          <div className="text-muted-foreground flex items-center gap-1.5">
             <ListTodo className="h-3.5 w-3.5" />
             {pluralize(doneTasks, "task")} done · {tasks?.length ?? 0} total
           </div>
@@ -166,7 +184,7 @@ function SpecRow({ spec, onEdit }: { spec: Spec; onEdit: (e: React.MouseEvent, s
       </Link>
       <button
         onClick={(e) => onEdit(e, spec)}
-        className="absolute right-2 top-2 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
+        className="text-muted-foreground hover:bg-accent hover:text-foreground absolute top-2 right-2 rounded p-1 opacity-0 transition-opacity group-hover:opacity-100"
         aria-label="Edit spec"
       >
         <Pencil className="h-3.5 w-3.5" />

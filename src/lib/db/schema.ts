@@ -43,6 +43,19 @@ export const noteSchema = z.object({
 });
 export type Note = z.infer<typeof noteSchema>;
 
+export const noteTemplateSchema = z.object({
+  id: idSchema,
+  projectId: idSchema,
+  type: z.enum(NOTE_TYPES),
+  name: z.string(),
+  title: z.string().default(""),
+  body: z.string().default(""),
+  isDefault: z.boolean().default(false),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+export type NoteTemplate = z.infer<typeof noteTemplateSchema>;
+
 export const SPEC_STATUS = ["draft", "review", "approved", "implementing", "shipped"] as const;
 export type SpecStatus = (typeof SPEC_STATUS)[number];
 
@@ -111,7 +124,18 @@ export const taskSchema = z.object({
   priority: z.enum(TASK_PRIORITY),
   specId: z.string().nullable().default(null),
   parentTaskId: z.string().nullable().default(null),
-  assignee: z.enum(["human", "ai", "architect", "programmer", "reviewer", "tester", "documenter", "designer", "optimizer"]),
+  sprintId: z.string().nullable().default(null),
+  assignee: z.enum([
+    "human",
+    "ai",
+    "architect",
+    "programmer",
+    "reviewer",
+    "tester",
+    "documenter",
+    "designer",
+    "optimizer",
+  ]),
   dependencies: z.array(z.string()).default([]),
   progress: z.number().min(0).max(100).default(0),
   tags: z.array(z.string()).default([]),
@@ -119,6 +143,22 @@ export const taskSchema = z.object({
   updatedAt: z.number(),
 });
 export type Task = z.infer<typeof taskSchema>;
+
+export const SPRINT_STATUS = ["planning", "active", "completed", "cancelled"] as const;
+export type SprintStatus = (typeof SPRINT_STATUS)[number];
+
+export const sprintSchema = z.object({
+  id: idSchema,
+  projectId: idSchema,
+  name: z.string(),
+  goal: z.string().default(""),
+  status: z.enum(SPRINT_STATUS),
+  startDate: z.number().nullable().default(null),
+  endDate: z.number().nullable().default(null),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+export type Sprint = z.infer<typeof sprintSchema>;
 
 export const systemSchema = z.object({
   id: idSchema,
@@ -137,6 +177,8 @@ export const archNodeSchema = z.object({
   systemId: idSchema.nullable(),
   type: z.enum(["service", "class", "scene", "prefab", "module", "script", "so"]),
   name: z.string(),
+  x: z.number().nullable().optional().default(null),
+  y: z.number().nullable().optional().default(null),
 });
 export type ArchNode = z.infer<typeof archNodeSchema>;
 
@@ -206,6 +248,27 @@ export const agentSchema = z.object({
 });
 export type Agent = z.infer<typeof agentSchema>;
 
+export const agentRunSchema = z.object({
+  id: idSchema,
+  projectId: idSchema,
+  agentId: idSchema,
+  target: z.string(),
+  status: z.enum(["running", "completed", "error"]),
+  durationMs: z.number().default(0),
+  startedAt: z.number(),
+  updatedAt: z.number(),
+});
+export type AgentRun = z.infer<typeof agentRunSchema>;
+
+export const agentStepSchema = z.object({
+  id: idSchema,
+  runId: idSchema,
+  kind: z.enum(["think", "read", "write", "tool", "done", "error"]),
+  text: z.string(),
+  order: z.number(),
+});
+export type AgentStep = z.infer<typeof agentStepSchema>;
+
 export const commitSchema = z.object({
   id: idSchema,
   projectId: idSchema,
@@ -256,6 +319,47 @@ export const folderSchema = z.object({
 });
 export type Folder = z.infer<typeof folderSchema>;
 
+export const CANVAS_NODE_TYPES = ["note", "text", "image", "link"] as const;
+export type CanvasNodeType = (typeof CANVAS_NODE_TYPES)[number];
+
+export const canvasSchema = z.object({
+  id: idSchema,
+  projectId: idSchema,
+  name: z.string(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+export type Canvas = z.infer<typeof canvasSchema>;
+
+export const canvasNodeSchema = z.object({
+  id: idSchema,
+  canvasId: idSchema,
+  projectId: idSchema,
+  type: z.enum(CANVAS_NODE_TYPES),
+  x: z.number().default(0),
+  y: z.number().default(0),
+  width: z.number().default(240),
+  height: z.number().nullable().default(null),
+  content: z.string().default(""),
+  noteId: z.string().nullable().default(null),
+  url: z.string().nullable().default(null),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+export type CanvasNode = z.infer<typeof canvasNodeSchema>;
+
+export const canvasEdgeSchema = z.object({
+  id: idSchema,
+  canvasId: idSchema,
+  source: idSchema,
+  target: idSchema,
+  sourceHandle: z.string().nullable().default(null),
+  targetHandle: z.string().nullable().default(null),
+  label: z.string().nullable().default(null),
+  createdAt: z.number(),
+});
+export type CanvasEdge = z.infer<typeof canvasEdgeSchema>;
+
 export const planSchema = z.object({
   id: idSchema,
   specId: idSchema,
@@ -277,7 +381,16 @@ export const syncFileSchema = z.object({
   projectId: idSchema,
   relativePath: z.string(),
   side: z.enum(["remote", "local", "both"]),
-  status: z.enum(["synced", "local-newer", "remote-newer", "conflict", "deleted-local", "deleted-remote", "ignored", "trash"]),
+  status: z.enum([
+    "synced",
+    "local-newer",
+    "remote-newer",
+    "conflict",
+    "deleted-local",
+    "deleted-remote",
+    "ignored",
+    "trash",
+  ]),
   mtime: z.number(),
   hash: z.string(),
   noteId: z.string().nullable().default(null),
@@ -310,9 +423,11 @@ export type Attachment = z.infer<typeof attachmentSchema>;
 export interface MasarFlowDB extends Dexie {
   projects: Table<Project, string>;
   notes: Table<Note, string>;
+  noteTemplates: Table<NoteTemplate, string>;
   specs: Table<Spec, string>;
   standards: Table<Standard, string>;
   tasks: Table<Task, string>;
+  sprints: Table<Sprint, string>;
   systems: Table<System, string>;
   archNodes: Table<ArchNode, string>;
   archEdges: Table<ArchEdge, string>;
@@ -325,10 +440,15 @@ export interface MasarFlowDB extends Dexie {
   tags: Table<Tag, string>;
   folders: Table<Folder, string>;
   plans: Table<Plan, string>;
+  canvases: Table<Canvas, string>;
+  canvasNodes: Table<CanvasNode, string>;
+  canvasEdges: Table<CanvasEdge, string>;
   meta: Table<{ key: string; value: string | number }, string>;
   syncFiles: Table<SyncFile, string>;
   vaultMeta: Table<VaultMeta, string>;
   attachments: Table<Attachment, string>;
+  agentRuns: Table<AgentRun, string>;
+  agentSteps: Table<AgentStep, string>;
 }
 
 let dbInstance: MasarFlowDB | null = null;
@@ -381,6 +501,117 @@ export function getDb(): MasarFlowDB {
     tags: "id, name",
     folders: "id, projectId, parentId, name",
     plans: "id, specId, status, createdAt",
+    meta: "key",
+    syncFiles: "id, projectId, status, lastSyncedAt, relativePath",
+    vaultMeta: "key",
+    attachments: "id, projectId, relativePath, cachedAt",
+  });
+  db.version(3).stores({
+    projects: "id, slug, updatedAt",
+    notes: "id, projectId, type, updatedAt, *tags, folderId",
+    noteTemplates: "id, projectId, type, isDefault",
+    specs: "id, projectId, status, number, updatedAt",
+    standards: "id, projectId, category, updatedAt",
+    tasks: "id, projectId, status, priority, specId, updatedAt, *dependencies, *tags",
+    systems: "id, projectId, name",
+    archNodes: "id, projectId, systemId, type",
+    archEdges: "id, source, target, kind",
+    docs: "id, projectId, kind, updatedAt",
+    devLogs: "id, projectId, kind, createdAt",
+    agents: "id, role, status",
+    commits: "id, projectId, date, hash",
+    memories: "id, projectId, kind, *tags, weight, lastRecallAt",
+    links: "id, sourceType, sourceId, targetType, targetId, kind",
+    tags: "id, name",
+    folders: "id, projectId, parentId, name",
+    plans: "id, specId, status, createdAt",
+    canvases: "id, projectId, updatedAt",
+    canvasNodes: "id, canvasId, projectId, type",
+    meta: "key",
+    syncFiles: "id, projectId, status, lastSyncedAt, relativePath",
+    vaultMeta: "key",
+    attachments: "id, projectId, relativePath, cachedAt",
+  });
+  db.version(4).stores({
+    projects: "id, slug, updatedAt",
+    notes: "id, projectId, type, updatedAt, *tags, folderId",
+    noteTemplates: "id, projectId, type, isDefault",
+    specs: "id, projectId, status, number, updatedAt",
+    standards: "id, projectId, category, updatedAt",
+    tasks: "id, projectId, status, priority, specId, updatedAt, *dependencies, *tags",
+    systems: "id, projectId, name",
+    archNodes: "id, projectId, systemId, type",
+    archEdges: "id, source, target, kind",
+    docs: "id, projectId, kind, updatedAt",
+    devLogs: "id, projectId, kind, createdAt",
+    agents: "id, role, status",
+    commits: "id, projectId, date, hash",
+    memories: "id, projectId, kind, *tags, weight, lastRecallAt",
+    links: "id, sourceType, sourceId, targetType, targetId, kind",
+    tags: "id, name",
+    folders: "id, projectId, parentId, name",
+    plans: "id, specId, status, createdAt",
+    canvases: "id, projectId, updatedAt",
+    canvasNodes: "id, canvasId, projectId, type",
+    canvasEdges: "id, canvasId, source, target",
+    meta: "key",
+    syncFiles: "id, projectId, status, lastSyncedAt, relativePath",
+    vaultMeta: "key",
+    attachments: "id, projectId, relativePath, cachedAt",
+  });
+  db.version(5).stores({
+    projects: "id, slug, updatedAt",
+    notes: "id, projectId, type, updatedAt, *tags, folderId",
+    noteTemplates: "id, projectId, type, isDefault",
+    specs: "id, projectId, status, number, updatedAt",
+    standards: "id, projectId, category, updatedAt",
+    tasks: "id, projectId, sprintId, status, priority, specId, updatedAt, *dependencies, *tags",
+    sprints: "id, projectId, status, updatedAt",
+    systems: "id, projectId, name",
+    archNodes: "id, projectId, systemId, type",
+    archEdges: "id, source, target, kind",
+    docs: "id, projectId, kind, updatedAt",
+    devLogs: "id, projectId, kind, createdAt",
+    agents: "id, role, status",
+    commits: "id, projectId, date, hash",
+    memories: "id, projectId, kind, *tags, weight, lastRecallAt",
+    links: "id, sourceType, sourceId, targetType, targetId, kind",
+    tags: "id, name",
+    folders: "id, projectId, parentId, name",
+    plans: "id, specId, status, createdAt",
+    canvases: "id, projectId, updatedAt",
+    canvasNodes: "id, canvasId, projectId, type",
+    canvasEdges: "id, canvasId, source, target",
+    meta: "key",
+    syncFiles: "id, projectId, status, lastSyncedAt, relativePath",
+    vaultMeta: "key",
+    attachments: "id, projectId, relativePath, cachedAt",
+  });
+  db.version(6).stores({
+    projects: "id, slug, updatedAt",
+    notes: "id, projectId, type, updatedAt, *tags, folderId",
+    noteTemplates: "id, projectId, type, isDefault",
+    specs: "id, projectId, status, number, updatedAt",
+    standards: "id, projectId, category, updatedAt",
+    tasks: "id, projectId, sprintId, status, priority, specId, updatedAt, *dependencies, *tags",
+    sprints: "id, projectId, status, updatedAt",
+    systems: "id, projectId, name",
+    archNodes: "id, projectId, systemId, type",
+    archEdges: "id, source, target, kind",
+    docs: "id, projectId, kind, updatedAt",
+    devLogs: "id, projectId, kind, createdAt",
+    agents: "id, role, status",
+    agentRuns: "id, projectId, agentId, status, startedAt",
+    agentSteps: "id, runId, order",
+    commits: "id, projectId, date, hash",
+    memories: "id, projectId, kind, *tags, weight, lastRecallAt",
+    links: "id, sourceType, sourceId, targetType, targetId, kind",
+    tags: "id, name",
+    folders: "id, projectId, parentId, name",
+    plans: "id, specId, status, createdAt",
+    canvases: "id, projectId, updatedAt",
+    canvasNodes: "id, canvasId, projectId, type",
+    canvasEdges: "id, canvasId, source, target",
     meta: "key",
     syncFiles: "id, projectId, status, lastSyncedAt, relativePath",
     vaultMeta: "key",

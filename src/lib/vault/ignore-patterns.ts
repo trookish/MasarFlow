@@ -1,4 +1,12 @@
-const ALWAYS_IGNORE_DIRS = new Set([".obsidian", ".makemd", ".qodo", ".space", ".git", ".trash", "node_modules"]);
+const ALWAYS_IGNORE_DIRS = new Set([
+  ".obsidian",
+  ".makemd",
+  ".qodo",
+  ".space",
+  ".git",
+  ".trash",
+  "node_modules",
+]);
 const ALWAYS_IGNORE_FILES = new Set([".DS_Store", "Thumbs.db"]);
 
 export function isIgnoredName(name: string): boolean {
@@ -20,7 +28,13 @@ export function detectFileKind(name: string): "markdown" | "canvas" | "attachmen
   const lower = name.toLowerCase();
   if (lower.endsWith(".md") || lower.endsWith(".markdown")) return "markdown";
   if (lower.endsWith(".canvas") || lower.endsWith(".excalidraw")) return "canvas";
-  if (IMAGE_EXT.test(lower) || VIDEO_EXT.test(lower) || AUDIO_EXT.test(lower) || lower.endsWith(".pdf")) return "attachment";
+  if (
+    IMAGE_EXT.test(lower) ||
+    VIDEO_EXT.test(lower) ||
+    AUDIO_EXT.test(lower) ||
+    lower.endsWith(".pdf")
+  )
+    return "attachment";
   return "other";
 }
 
@@ -51,13 +65,31 @@ export function detectMimeType(name: string): string {
   return "application/octet-stream";
 }
 
-export function isImage(name: string): boolean { return IMAGE_EXT.test(name.toLowerCase()); }
-export function isVideo(name: string): boolean { return VIDEO_EXT.test(name.toLowerCase()); }
-export function isAudio(name: string): boolean { return AUDIO_EXT.test(name.toLowerCase()); }
-export function isPdf(name: string): boolean { return name.toLowerCase().endsWith(".pdf"); }
-export function isTextish(name: string): boolean { return /\.(txt|md|markdown|json|csv)$/i.test(name); }
-export function isDownloadable(name: string): boolean { return DOC_EXT.test(name.toLowerCase()); }
+export function isImage(name: string): boolean {
+  return IMAGE_EXT.test(name.toLowerCase());
+}
+export function isVideo(name: string): boolean {
+  return VIDEO_EXT.test(name.toLowerCase());
+}
+export function isAudio(name: string): boolean {
+  return AUDIO_EXT.test(name.toLowerCase());
+}
+export function isPdf(name: string): boolean {
+  return name.toLowerCase().endsWith(".pdf");
+}
+export function isTextish(name: string): boolean {
+  return /\.(txt|md|markdown|json|csv)$/i.test(name);
+}
+export function isDownloadable(name: string): boolean {
+  return DOC_EXT.test(name.toLowerCase());
+}
 
-export function isNumberedFolder(name: string): boolean { return /^\d{2}\.\s+/.test(name); }
-export function isInTrash(relativePath: string): boolean { return relativePath.replace(/\\/g, "/").split("/").includes(".trash"); }
-export function isTemplate(relativePath: string): boolean { return /^06\.\s*Templates(\b|\/)/i.test(relativePath.replace(/\\/g, "/")); }
+export function isNumberedFolder(name: string): boolean {
+  return /^\d{2}\.\s+/.test(name);
+}
+export function isInTrash(relativePath: string): boolean {
+  return relativePath.replace(/\\/g, "/").split("/").includes(".trash");
+}
+export function isTemplate(relativePath: string): boolean {
+  return /^06\.\s*Templates(\b|\/)/i.test(relativePath.replace(/\\/g, "/"));
+}

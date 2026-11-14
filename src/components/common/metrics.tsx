@@ -33,7 +33,7 @@ export function MetricRing({
           cy={size / 2}
           r={radius}
           strokeWidth={stroke}
-          className={cn("fill-none stroke-border", trackClassName)}
+          className={cn("stroke-border fill-none", trackClassName)}
         />
         <circle
           cx={size / 2}
@@ -42,7 +42,7 @@ export function MetricRing({
           strokeWidth={stroke}
           strokeDasharray={`${dash} ${circumference - dash}`}
           strokeLinecap="round"
-          className={cn("fill-none stroke-primary", indicatorClassName)}
+          className={cn("stroke-primary fill-none", indicatorClassName)}
         />
       </svg>
       <span className="absolute text-xs font-semibold tabular-nums">{value}</span>
@@ -59,7 +59,9 @@ export function TrendBadge({ delta, className }: { delta: number; className?: st
         ? "text-[color:var(--danger)]"
         : "text-muted-foreground";
   return (
-    <span className={cn("inline-flex items-center gap-0.5 text-[10px] font-medium", color, className)}>
+    <span
+      className={cn("inline-flex items-center gap-0.5 text-[10px] font-medium", color, className)}
+    >
       <Icon className="h-3 w-3" />
       {Math.abs(delta)}%
     </span>

@@ -14,7 +14,7 @@ import type {
   Tag,
 } from "../schema";
 
-export { useTasks } from "./tasks";
+export { useTasks, useTask } from "./tasks";
 
 export const useStandards = (projectId: string | undefined) =>
   useLiveQuery(
@@ -66,8 +66,23 @@ export const useMemories = (projectId: string | undefined) =>
     [] as Memory[],
   );
 
-export const useAgents = () =>
-  useLiveQuery(() => getDb().agents.toArray(), [], [] as Agent[]);
+export const useAgents = () => useLiveQuery(() => getDb().agents.toArray(), [], [] as Agent[]);
+
+export const useAgentRuns = (agentId: string | undefined) =>
+  useLiveQuery(
+    async () => {
+      if (!agentId) return [];
+      const runs = await getDb().agentRuns.where("agentId").equals(agentId).reverse().sortBy("startedAt");
+      const result = [];
+      for (const r of runs) {
+        const steps = await getDb().agentSteps.where("runId").equals(r.id).sortBy("order");
+        result.push({ ...r, steps });
+      }
+      return result;
+    },
+    [agentId],
+    []
+  );
 
 export const useSystems = (projectId: string | undefined) =>
   useLiveQuery(
@@ -106,3 +121,14 @@ export const useFolders = (projectId: string | undefined) =>
   );
 
 export const useTags = () => useLiveQuery(() => getDb().tags.toArray(), [], [] as Tag[]);
+
+export const useLinks = (projectId: string | undefined) =>
+  useLiveQuery(
+    () => {
+      // Links don't have projectId directly, but let's just return all links for now
+      // since the DB is per-workspace in MasarFlow
+      return getDb().links.toArray();
+    },
+    [projectId],
+    []
+  );

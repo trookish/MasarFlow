@@ -1,15 +1,14 @@
 "use client";
 import * as React from "react";
-import { Settings as SettingsIcon, Palette, Type, Bot, Keyboard, Database, Download, Upload, FileJson } from "lucide-react";
+import { Settings as SettingsIcon, Keyboard, Database, Download, Upload } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useUi, ACCENTS, type AccentColor, type Density, type FontChoice } from "@/lib/stores/ui";
 import { useAi, type AgentProvider } from "@/lib/stores/ai";
-import { useVault } from "@/lib/stores/vault";
+import { useGithub } from "@/lib/stores/github";
 import { ACCENT_OPTIONS } from "@/components/providers/theme-provider";
 import { cn } from "@/lib/utils";
 import { resetSeed } from "@/lib/db/seed";
@@ -18,7 +17,15 @@ import { VaultSettingsBlock } from "@/components/common/vault-settings-block";
 import { Row } from "@/components/common/shared-row";
 import { toast } from "sonner";
 
-function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
   return (
     <Card>
       <CardHeader>
@@ -33,6 +40,7 @@ function Section({ title, description, children }: { title: string; description:
 export default function SettingsPage() {
   const ui = useUi();
   const ai = useAi();
+  const github = useGithub();
   const [transferOpen, setTransferOpen] = React.useState<"export" | "import" | "both" | null>(null);
 
   return (
@@ -59,7 +67,7 @@ export default function SettingsPage() {
                 )}
               >
                 <div className="font-medium capitalize">{t}</div>
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-muted-foreground text-[10px]">
                   {t === "dark" && "Default for MasarFlow"}
                   {t === "light" && "Bright, high contrast"}
                   {t === "system" && "Follow OS preference"}
@@ -103,7 +111,7 @@ export default function SettingsPage() {
                 )}
               >
                 <div className="font-medium capitalize">{f}</div>
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-muted-foreground text-[10px]">
                   {f === "inter" && "Default"}
                   {f === "geist" && "Modern sans"}
                   {f === "system" && "OS native"}
@@ -124,7 +132,7 @@ export default function SettingsPage() {
                 )}
               >
                 <div className="font-medium capitalize">{d}</div>
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-muted-foreground text-[10px]">
                   {d === "comfortable" && "Spacious"}
                   {d === "compact" && "Dense"}
                 </div>
@@ -133,7 +141,10 @@ export default function SettingsPage() {
           </div>
         </Section>
 
-        <Section title="Vault" description="Obsidian vault sync (Mode A) or built-in local notes (Mode B).">
+        <Section
+          title="Vault"
+          description="Obsidian vault sync (Mode A) or built-in local notes (Mode B)."
+        >
           <VaultSettingsBlock />
         </Section>
 
@@ -158,7 +169,10 @@ export default function SettingsPage() {
           />
         </Section>
 
-        <Section title="AI provider" description="Simulated by default. Plug in a real LLM with your own key (stored locally).">
+        <Section
+          title="AI provider"
+          description="Simulated by default. Plug in a real LLM with your own key (stored locally)."
+        >
           <div className="grid grid-cols-2 gap-2">
             {(["simulated", "openai", "anthropic", "google", "openrouter"] as const).map((p) => (
               <button
@@ -172,7 +186,7 @@ export default function SettingsPage() {
                 )}
               >
                 <div className="font-medium capitalize">{p}</div>
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-muted-foreground text-[10px]">
                   {p === "simulated" && "Default — no key needed"}
                   {p !== "simulated" && "Bring your own key"}
                 </div>
@@ -186,10 +200,19 @@ export default function SettingsPage() {
             onChange={() => ai.setShowReasoning(!ai.showReasoning)}
           />
           {ai.provider !== "simulated" && (
-            <div className="rounded-md border border-border p-2.5">
+            <div className="border-border rounded-md border p-2.5">
               <div className="text-xs font-medium">API key for {ai.provider}</div>
-              <div className="mt-0.5 text-[10px] text-muted-foreground">Stored only in your browser. Never sent to a server.</div>
-              <Input type="password" autoComplete="off" value={ai.apiKey} onChange={(e) => ai.setApiKey(e.target.value)} placeholder="sk-..." className="mt-2 font-mono text-xs" />
+              <div className="text-muted-foreground mt-0.5 text-[10px]">
+                Stored only in your browser. Never sent to a server.
+              </div>
+              <Input
+                type="password"
+                autoComplete="off"
+                value={ai.apiKey}
+                onChange={(e) => ai.setApiKey(e.target.value)}
+                placeholder="sk-..."
+                className="mt-2 font-mono text-xs"
+              />
             </div>
           )}
           <div className="grid grid-cols-3 gap-2">
@@ -210,10 +233,54 @@ export default function SettingsPage() {
           </div>
         </Section>
 
+        <Section
+          title="GitHub Integration"
+          description="Sync commits from a specific repository into the workspace."
+        >
+          <div className="border-border rounded-md border p-2.5">
+            <div className="text-xs font-medium">Personal Access Token</div>
+            <div className="text-muted-foreground mt-0.5 text-[10px]">
+              Needed for private repos or higher rate limits.
+            </div>
+            <Input
+              type="password"
+              autoComplete="off"
+              value={github.pat}
+              onChange={(e) => github.setPat(e.target.value)}
+              placeholder="ghp_..."
+              className="mt-2 font-mono text-xs"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <div>
+              <div className="text-xs font-medium mb-1">Owner</div>
+              <Input
+                value={github.repoOwner}
+                onChange={(e) => github.setRepoOwner(e.target.value)}
+                placeholder="e.g. microsoft"
+                className="font-mono text-xs"
+              />
+            </div>
+            <div>
+              <div className="text-xs font-medium mb-1">Repository</div>
+              <Input
+                value={github.repoName}
+                onChange={(e) => github.setRepoName(e.target.value)}
+                placeholder="e.g. typescript"
+                className="font-mono text-xs"
+              />
+            </div>
+          </div>
+        </Section>
+
         <Section title="Data" description="Your data lives in this browser. Export anytime.">
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="soft" size="sm" onClick={() => setTransferOpen("export")}><Download className="h-3.5 w-3.5" /> Export JSON</Button>
-            <Button variant="soft" size="sm" onClick={() => setTransferOpen("import")}><Upload className="h-3.5 w-3.5" /> Import JSON</Button>
+            <Button variant="soft" size="sm" onClick={() => setTransferOpen("export")}>
+              <Download className="h-3.5 w-3.5" /> Export JSON
+            </Button>
+            <Button variant="soft" size="sm" onClick={() => setTransferOpen("import")}>
+              <Upload className="h-3.5 w-3.5" /> Import JSON
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -237,7 +304,10 @@ export default function SettingsPage() {
           </Button>
         </Section>
 
-        <Section title="Preview" description="Live sample with your current theme, font, and density.">
+        <Section
+          title="Preview"
+          description="Live sample with your current theme, font, and density."
+        >
           <PreviewTile />
           <Row
             label="Reduced motion"
@@ -247,7 +317,13 @@ export default function SettingsPage() {
           />
         </Section>
       </div>
-      <DataTransferDialog open={transferOpen !== null} onOpenChange={(o) => { if (!o) setTransferOpen(null); }} mode={transferOpen ?? "both"} />
+      <DataTransferDialog
+        open={transferOpen !== null}
+        onOpenChange={(o) => {
+          if (!o) setTransferOpen(null);
+        }}
+        mode={transferOpen ?? "both"}
+      />
     </div>
   );
 }
@@ -257,19 +333,40 @@ function PreviewTile() {
   const font = useUi((s) => s.font);
   const density = useUi((s) => s.density);
   return (
-    <div className="rounded-md border border-border bg-surface p-3" style={{ fontFamily: font === "inter" ? "var(--font-sans)" : font === "geist" ? "var(--font-display)" : "system-ui" }}>
+    <div
+      className="border-border bg-surface rounded-md border p-3"
+      style={{
+        fontFamily:
+          font === "inter"
+            ? "var(--font-sans)"
+            : font === "geist"
+              ? "var(--font-display)"
+              : "system-ui",
+      }}
+    >
       <div className="flex items-center gap-2">
-        <span className="h-2.5 w-2.5 rounded-full bg-primary" />
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">MasarFlow</span>
-        <Badge variant="ghost" className="ml-auto capitalize">{accent}</Badge>
+        <span className="bg-primary h-2.5 w-2.5 rounded-full" />
+        <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+          MasarFlow
+        </span>
+        <Badge variant="ghost" className="ml-auto capitalize">
+          {accent}
+        </Badge>
       </div>
-      <div className={density === "compact" ? "mt-2 text-sm" : "mt-3 text-base"}>The quick brown fox.</div>
+      <div className={density === "compact" ? "mt-2 text-sm" : "mt-3 text-base"}>
+        The quick brown fox.
+      </div>
       <div className="mt-2 flex items-center gap-1.5">
-        <span className="rounded-md bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">Primary</span>
-        <span className="rounded-md border border-border bg-card px-2 py-0.5 text-[10px]">Surface</span>
-        <span className="rounded-md border border-border px-2 py-0.5 text-[10px] text-muted-foreground">Muted</span>
+        <span className="bg-primary text-primary-foreground rounded-md px-2 py-0.5 text-[10px] font-medium">
+          Primary
+        </span>
+        <span className="border-border bg-card rounded-md border px-2 py-0.5 text-[10px]">
+          Surface
+        </span>
+        <span className="border-border text-muted-foreground rounded-md border px-2 py-0.5 text-[10px]">
+          Muted
+        </span>
       </div>
     </div>
   );
 }
-

@@ -13,19 +13,23 @@ import { ShortcutsCheatsheet } from "./shortcuts-cheatsheet";
 import { useSeedReady } from "@/components/providers/seed-provider";
 import { cn } from "@/lib/utils";
 
+import { useShortcutsHandler } from "./use-shortcuts-handler";
+
 export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const seed = useSeedReady();
 
+  useShortcutsHandler();
+
   if (!seed.ready && !seed.error) {
     return (
-      <div className="grid h-screen place-items-center bg-background">
+      <div className="bg-background grid h-screen place-items-center">
         <div className="flex flex-col items-center gap-3">
           <div className="relative h-10 w-10">
-            <div className="absolute inset-0 animate-pulse-soft rounded-full bg-primary/40 blur-xl" />
-            <div className="absolute inset-1.5 rounded-full border-2 border-primary/40 border-t-primary animate-spin" />
+            <div className="animate-pulse-soft bg-primary/40 absolute inset-0 rounded-full blur-xl" />
+            <div className="border-primary/40 border-t-primary absolute inset-1.5 animate-spin rounded-full border-2" />
           </div>
-          <p className="text-xs text-muted-foreground">Initializing project memory…</p>
+          <p className="text-muted-foreground text-xs">Initializing project memory…</p>
         </div>
       </div>
     );
@@ -33,17 +37,17 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
 
   if (seed.error) {
     return (
-      <div className="grid h-screen place-items-center bg-background p-6 text-center">
+      <div className="bg-background grid h-screen place-items-center p-6 text-center">
         <div>
-          <p className="text-sm font-medium text-foreground">Failed to initialize</p>
-          <p className="mt-1 max-w-sm text-xs text-muted-foreground">{seed.error}</p>
+          <p className="text-foreground text-sm font-medium">Failed to initialize</p>
+          <p className="text-muted-foreground mt-1 max-w-sm text-xs">{seed.error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden bg-background">
+    <div className="bg-background flex h-screen w-full flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1">
         <LeftNav />
         <div className="flex min-w-0 flex-1 flex-col">

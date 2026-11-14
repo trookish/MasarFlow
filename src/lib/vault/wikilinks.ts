@@ -22,7 +22,15 @@ export function findWikilinks(body: string): Wikilink[] {
       heading = target.slice(hashIdx + 1).trim();
       target = target.slice(0, hashIdx).trim();
     }
-    out.push({ raw: m[0], target, alias, heading, isEmbed, start: m.index, end: m.index + m[0].length });
+    out.push({
+      raw: m[0],
+      target,
+      alias,
+      heading,
+      isEmbed,
+      start: m.index,
+      end: m.index + m[0].length,
+    });
   }
   return out;
 }

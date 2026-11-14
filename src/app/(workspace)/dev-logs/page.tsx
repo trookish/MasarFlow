@@ -19,7 +19,7 @@ export default function DevLogsPage() {
   const project = useActiveProject();
   const logs = useDevLogs(project?.id);
   const commits = useCommits(project?.id);
-  const [composerOpen, setComposerOpen] = React.useState(false);
+  const [composerOpenState, setComposerOpenState] = React.useState(false);
   const [filter, setFilter] = React.useState<DevLogKind | "all">("all");
 
   const visibleLogs = (logs ?? []).filter((l) => filter === "all" || l.kind === filter);
@@ -56,13 +56,11 @@ export default function DevLogsPage() {
   };
 
   const openFlag = useCreateDialogs((s) => s.log);
-  React.useEffect(() => {
-    if (openFlag) {
-      setOpenNewLog(false);
-      setComposerOpen(true);
-    }
-  }, [openFlag]);
-
+  const composerOpen = composerOpenState || openFlag;
+  const setComposerOpen = (v: boolean) => {
+    setComposerOpenState(v);
+    if (!v) setOpenNewLog(false);
+  };
 
   return (
     <div className="pb-10">
@@ -72,18 +70,23 @@ export default function DevLogsPage() {
         title="Long-term project memory"
         description="A chronological timeline of features, refactors, decisions, lessons, failures, and successes."
         actions={
-          <Button className="gap-2" onClick={() => setComposerOpen(true)}>
+          <Button className="gap-2" onClick={() => setComposerOpenState(true)}>
             <Plus className="h-4 w-4" /> New log
           </Button>
         }
       />
 
-      <div className="border-b border-border px-6">
+      <div className="border-border border-b px-6">
         <div className="flex items-center gap-3 py-2">
-          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+          <Filter className="text-muted-foreground h-3.5 w-3.5" />
           <button
             onClick={() => setFilter("all")}
-            className={cn("rounded-md px-2.5 py-1 text-xs font-medium transition-colors", filter === "all" ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/40")}
+            className={cn(
+              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+              filter === "all"
+                ? "bg-accent text-foreground"
+                : "text-muted-foreground hover:bg-accent/40",
+            )}
           >
             All
           </button>
@@ -91,7 +94,12 @@ export default function DevLogsPage() {
             <button
               key={k}
               onClick={() => setFilter(k)}
-              className={cn("rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors", filter === k ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/40")}
+              className={cn(
+                "rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors",
+                filter === k
+                  ? "bg-accent text-foreground"
+                  : "text-muted-foreground hover:bg-accent/40",
+              )}
             >
               {k}
             </button>
@@ -102,38 +110,45 @@ export default function DevLogsPage() {
       <div className="px-6 py-5">
         <Card className="mb-4">
           <CardContent className="flex items-center gap-3 p-4">
-            <span className="grid h-8 w-8 place-items-center rounded-md bg-accent">
+            <span className="bg-accent grid h-8 w-8 place-items-center rounded-md">
               <Sparkles className="h-4 w-4 text-[color:var(--primary)]" />
             </span>
             <div className="flex-1 text-sm">
               <div className="font-medium">AI-curated</div>
               <p className="text-muted-foreground text-pretty">
-                AI agents post dev logs automatically when they make decisions or learn lessons. You can also log manually.
+                AI agents post dev logs automatically when they make decisions or learn lessons. You
+                can also log manually.
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <ol className="relative space-y-4 border-l border-border pl-6">
+        <ol className="border-border relative space-y-4 border-l pl-6">
           {items.map((it) => (
             <li key={`${it.kind}_${it.id}`} className="group relative">
               <span
                 className={cn(
-                  "absolute -left-[1.6rem] top-1.5 grid h-3 w-3 place-items-center rounded-full ring-4 ring-background",
-                  it.kind === "commit" ? "bg-[color:var(--graph-commit)]" : "bg-[color:var(--primary)]",
+                  "ring-background absolute top-1.5 -left-[1.6rem] grid h-3 w-3 place-items-center rounded-full ring-4",
+                  it.kind === "commit"
+                    ? "bg-[color:var(--graph-commit)]"
+                    : "bg-[color:var(--primary)]",
                 )}
               />
-              <div className="rounded-lg border border-border bg-card p-4">
+              <div className="border-border bg-card rounded-lg border p-4">
                 <div className="mb-1 flex items-center gap-2">
                   {it.badge}
-                  <span className="ml-auto text-[10px] text-muted-foreground">{formatRelativeTime(it.ts)}</span>
+                  <span className="text-muted-foreground ml-auto text-[10px]">
+                    {formatRelativeTime(it.ts)}
+                  </span>
                 </div>
-                <h3 className="text-sm font-semibold leading-snug">{it.title}</h3>
-                <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground text-pretty">{it.body}</p>
+                <h3 className="text-sm leading-snug font-semibold">{it.title}</h3>
+                <p className="text-muted-foreground mt-1 text-xs leading-relaxed text-pretty whitespace-pre-wrap">
+                  {it.body}
+                </p>
                 {it.kind === "log" && (
                   <button
                     onClick={() => onDelete(it.id)}
-                    className="absolute right-2 top-2 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-[color:var(--danger)] group-hover:opacity-100"
+                    className="text-muted-foreground hover:bg-accent absolute top-2 right-2 rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:text-[color:var(--danger)]"
                     aria-label="Delete log"
                   >
                     <Trash2 className="h-3 w-3" />
@@ -143,7 +158,7 @@ export default function DevLogsPage() {
             </li>
           ))}
           {items.length === 0 && (
-            <li className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            <li className="border-border text-muted-foreground rounded-lg border border-dashed p-8 text-center text-sm">
               No logs match the current filter. Click <strong>New log</strong> to add one.
             </li>
           )}

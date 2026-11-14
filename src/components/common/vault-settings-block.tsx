@@ -21,9 +21,12 @@ export function VaultSettingsBlock() {
   const runPull = useVault((s) => s.runPull);
   const runPush = useVault((s) => s.runPush);
   const connect = useVault((s) => s.connect);
+  const reconnect = useVault((s) => s.reconnect);
   const disconnect = useVault((s) => s.disconnect);
   const forget = useVault((s) => s.forget);
   const caps = useVault((s) => s.capabilities);
+  const connectionHealth = useVault((s) => s.connectionHealth);
+  const needsReauth = connectionHealth === "needs-reauth";
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -32,30 +35,68 @@ export function VaultSettingsBlock() {
         </Badge>
         {settings.mode === "obsidian" && (
           <>
-            <Button size="sm" variant="soft" disabled={status === "syncing"} onClick={() => runSync()}>
-              <RefreshCw className={"h-3 w-3 " + (status === "syncing" ? "animate-spin" : "")} />Sync
+            {needsReauth ? (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => reconnect()}
+                className="gap-1"
+              >
+                <RefreshCw className="h-3 w-3" />
+                Reconnect
+              </Button>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  variant="soft"
+                  disabled={status === "syncing"}
+                  onClick={() => runSync()}
+                >
+                  <RefreshCw className={"h-3 w-3 " + (status === "syncing" ? "animate-spin" : "")} />
+                  Sync
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => runPull()}>
+                  Pull
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => runPush()}>
+                  Push
+                </Button>
+              </>
+            )}
+            <Button size="sm" variant="outline" onClick={() => disconnect()}>
+              Disconnect
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => runPull()}>Pull</Button>
-            <Button size="sm" variant="ghost" onClick={() => runPush()}>Push</Button>
-            <Button size="sm" variant="outline" onClick={() => disconnect()}>Disconnect</Button>
-            <Button size="sm" variant="ghost" onClick={() => forget()}>Forget</Button>
+            <Button size="sm" variant="ghost" onClick={() => forget()}>
+              Forget
+            </Button>
           </>
         )}
         {settings.mode !== "obsidian" && (
-          <Button size="sm" variant="default" onClick={() => connect()} disabled={!caps.fsa && !caps.webkit}>
-            <FolderOpen className="h-3 w-3" />Connect Obsidian
+          <Button
+            size="sm"
+            variant="default"
+            onClick={() => connect()}
+            disabled={!caps.fsa && !caps.webkit}
+          >
+            <FolderOpen className="h-3 w-3" />
+            Connect Obsidian
           </Button>
         )}
       </div>
-      {(!caps.fsa && !caps.webkit) && (
+      {!caps.fsa && !caps.webkit && (
         <div className="flex items-center gap-2 rounded-md border border-[color:var(--warning)]/30 bg-[color:var(--warning)]/10 p-2 text-[11px] text-[color:var(--warning)]">
-          <ShieldAlert className="h-3 w-3" />Your browser does not support the File System Access API. Use Chrome, Edge, Arc, or Brave to link a vault.
+          <ShieldAlert className="h-3 w-3" />
+          Your browser does not support the File System Access API. Use Chrome, Edge, Arc, or Brave
+          to link a vault.
         </div>
       )}
       {lastError && (
-        <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2 text-[11px] text-destructive">
+        <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border p-2 text-[11px]">
           {lastError}
-          <button onClick={clearError} className="ml-2 underline">dismiss</button>
+          <button onClick={clearError} className="ml-2 underline">
+            dismiss
+          </button>
         </div>
       )}
       {lastResult && (
@@ -78,53 +119,77 @@ export function VaultSettingsBlock() {
         checked={settings.trashIncluded}
         onChange={() => updateSettings({ trashIncluded: !settings.trashIncluded })}
       />
-      <div className="rounded-md border border-border bg-surface-2 p-2.5">
+      <div className="border-border bg-surface-2 rounded-md border p-2.5">
         <div className="text-xs font-medium">Polling interval</div>
-        <div className="mt-0.5 text-[10px] text-muted-foreground">Auto-sync every N ms. Set to 0 to disable.</div>
+        <div className="text-muted-foreground mt-0.5 text-[10px]">
+          Auto-sync every N ms. Set to 0 to disable.
+        </div>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {[{ k: 0, l: "Off" }, { k: 30000, l: "30s" }, { k: 300000, l: "5m" }, { k: 900000, l: "15m" }, { k: 3600000, l: "1h" }].map((p) => (
+          {[
+            { k: 0, l: "Off" },
+            { k: 30000, l: "30s" },
+            { k: 300000, l: "5m" },
+            { k: 900000, l: "15m" },
+            { k: 3600000, l: "1h" },
+          ].map((p) => (
             <button
               key={p.k}
               onClick={() => updateSettings({ pollingMs: p.k })}
               className={cn(
                 "rounded-md border px-2 py-1 text-[10px] transition-colors",
-                settings.pollingMs === p.k ? "border-foreground/30 bg-accent" : "border-border hover:border-foreground/20",
+                settings.pollingMs === p.k
+                  ? "border-foreground/30 bg-accent"
+                  : "border-border hover:border-foreground/20",
               )}
-            >{p.l}</button>
+            >
+              {p.l}
+            </button>
           ))}
         </div>
       </div>
-      <div className="rounded-md border border-border bg-surface-2 p-2.5">
+      <div className="border-border bg-surface-2 rounded-md border p-2.5">
         <div className="text-xs font-medium">Attachment limits</div>
-        <div className="mt-0.5 text-[10px] text-muted-foreground">Per-file and per-vault caps. MasarFlow caches attachments locally.</div>
+        <div className="text-muted-foreground mt-0.5 text-[10px]">
+          Per-file and per-vault caps. MasarFlow caches attachments locally.
+        </div>
         <div className="mt-1.5 grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] text-muted-foreground">Max per file (MB)</label>
+            <label className="text-muted-foreground text-[10px]">Max per file (MB)</label>
             <Input
               type="number"
               min={1}
               max={500}
               value={Math.round(settings.maxAttachmentBytes / (1024 * 1024))}
-              onChange={(e) => updateSettings({ maxAttachmentBytes: Math.max(1, Number(e.target.value || 1)) * 1024 * 1024 })}
-              className="h-7 text-[10px] mt-1"
+              onChange={(e) =>
+                updateSettings({
+                  maxAttachmentBytes: Math.max(1, Number(e.target.value || 1)) * 1024 * 1024,
+                })
+              }
+              className="mt-1 h-7 text-[10px]"
             />
           </div>
           <div>
-            <label className="text-[10px] text-muted-foreground">Max total (MB)</label>
+            <label className="text-muted-foreground text-[10px]">Max total (MB)</label>
             <Input
               type="number"
               min={10}
               max={5000}
               value={Math.round(settings.maxVaultBytes / (1024 * 1024))}
-              onChange={(e) => updateSettings({ maxVaultBytes: Math.max(10, Number(e.target.value || 10)) * 1024 * 1024 })}
-              className="h-7 text-[10px] mt-1"
+              onChange={(e) =>
+                updateSettings({
+                  maxVaultBytes: Math.max(10, Number(e.target.value || 10)) * 1024 * 1024,
+                })
+              }
+              className="mt-1 h-7 text-[10px]"
             />
           </div>
         </div>
       </div>
-      <div className="rounded-md border border-border bg-surface-2 p-2.5">
+      <div className="border-border bg-surface-2 rounded-md border p-2.5">
         <div className="text-xs font-medium">Cache</div>
-        <div className="mt-0.5 text-[10px] text-muted-foreground">Cached attachment files live in IndexedDB.</div>
+        <div className="text-muted-foreground mt-0.5 text-[10px]">
+          Cached attachment files live in IndexedDB.
+        </div>
         <ClearCacheButton />
       </div>
     </div>
@@ -133,8 +198,8 @@ export function VaultSettingsBlock() {
 
 function Stat({ label, v }: { label: string; v: number }) {
   return (
-    <div className="rounded-md border border-border bg-surface-2 px-2 py-1">
-      <div className="text-[10px] text-muted-foreground">{label}</div>
+    <div className="border-border bg-surface-2 rounded-md border px-2 py-1">
+      <div className="text-muted-foreground text-[10px]">{label}</div>
       <div className="text-sm font-medium tabular-nums">{v}</div>
     </div>
   );
@@ -149,7 +214,9 @@ function ClearCacheButton() {
   return (
     <div className="mt-1.5 flex items-center gap-2 text-[10px]">
       <span className="text-muted-foreground">
-        {usage ? usage.count + " files - " + (usage.totalBytes / (1024 * 1024)).toFixed(1) + " MB" : "..."}
+        {usage
+          ? usage.count + " files - " + (usage.totalBytes / (1024 * 1024)).toFixed(1) + " MB"
+          : "..."}
       </span>
       <Button
         size="sm"
@@ -161,12 +228,18 @@ function ClearCacheButton() {
           const n = await clearAttachmentCache();
           setClearing(false);
           setUsage({ totalBytes: 0, count: 0 });
-          if (typeof window !== "undefined" && (window as unknown as { toast?: { success: (s: string) => void } }).toast) {
-            (window as unknown as { toast: { success: (s: string) => void } }).toast.success("Cleared " + n + " cached files");
+          if (
+            typeof window !== "undefined" &&
+            (window as unknown as { toast?: { success: (s: string) => void } }).toast
+          ) {
+            (window as unknown as { toast: { success: (s: string) => void } }).toast.success(
+              "Cleared " + n + " cached files",
+            );
           }
         }}
       >
-        <Trash2 className="h-3 w-3" />Clear
+        <Trash2 className="h-3 w-3" />
+        Clear
       </Button>
     </div>
   );

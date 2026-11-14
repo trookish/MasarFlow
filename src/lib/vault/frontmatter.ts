@@ -1,7 +1,7 @@
 import matter from "gray-matter";
 import type { ParsedFrontmatter } from "./types";
 import type { NoteType, TaskStatus, TaskPriority } from "../db/schema";
-import { NOTE_TYPES, SPEC_STATUS, TASK_STATUS, TASK_PRIORITY } from "../db/schema";
+import { NOTE_TYPES, TASK_STATUS, TASK_PRIORITY } from "../db/schema";
 
 const KNOWN_KEYS = new Set([
   "type",
@@ -20,7 +20,11 @@ const KNOWN_KEYS = new Set([
 
 function toStringArray(v: unknown): string[] {
   if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter(Boolean);
-  if (typeof v === "string") return v.split(",").map((s) => s.trim()).filter(Boolean);
+  if (typeof v === "string")
+    return v
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
   return [];
 }
 
@@ -58,7 +62,18 @@ export function parseFrontmatter(body: string): ParsedFrontmatter {
   try {
     parsed = matter(body);
   } catch {
-    return { type: null, tags: [], aliases: [], status: null, priority: null, scheduled: null, completedDate: null, dateCreated: null, dateModified: null, raw: {} };
+    return {
+      type: null,
+      tags: [],
+      aliases: [],
+      status: null,
+      priority: null,
+      scheduled: null,
+      completedDate: null,
+      dateCreated: null,
+      dateModified: null,
+      raw: {},
+    };
   }
   const data = parsed.data as Record<string, unknown>;
   const raw: Record<string, unknown> = {};

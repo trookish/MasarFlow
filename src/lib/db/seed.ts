@@ -2,6 +2,7 @@ import { getDb, resetDbInstance } from "./schema";
 import type {
   Project,
   Note,
+  NoteTemplate,
   Spec,
   Standard,
   Task,
@@ -17,10 +18,12 @@ import type {
   Tag,
   Folder,
   Plan,
+  Canvas,
+  CanvasNode,
 } from "./schema";
 import { uid } from "@/lib/utils";
 
-const SEED_VERSION = 2;
+const SEED_VERSION = 3;
 const SEED_KEY = "seed_version";
 
 function daysAgo(n: number): number {
@@ -40,6 +43,7 @@ export function buildSeed(): {
   folders: Folder[];
   tags: Tag[];
   notes: Note[];
+  noteTemplates: NoteTemplate[];
   standards: Standard[];
   specs: Spec[];
   plans: Plan[];
@@ -53,6 +57,8 @@ export function buildSeed(): {
   commits: Commit[];
   memories: Memory[];
   links: Link[];
+  canvases: Canvas[];
+  canvasNodes: CanvasNode[];
 } {
   const projectId = "proj_aurora_rising";
   const project: Project = {
@@ -122,7 +128,10 @@ export function buildSeed(): {
       projectId,
       type: "idea",
       title: "Memory-bound Echoes",
-      body: `What if NPCs remember *how* you treated them, not just *that* you did?\n\nSketch: each NPC has an ` + "`EchoLedger`" + ` that stores weighted impressions. When you return, dialogue branches based on accumulated weight.\n\nConnects to: [[Dialogue System]], [[Reputation]].`,
+      body:
+        `What if NPCs remember *how* you treated them, not just *that* you did?\n\nSketch: each NPC has an ` +
+        "`EchoLedger`" +
+        ` that stores weighted impressions. When you return, dialogue branches based on accumulated weight.\n\nConnects to: [[Dialogue System]], [[Reputation]].`,
       tags: ["story", "ai"],
       folderId: null,
     },
@@ -146,7 +155,16 @@ export function buildSeed(): {
       projectId,
       type: "mechanic",
       title: "Traversal State Machine",
-      body: `States: ` + "`Grounded`" + ` → ` + "`Climbing`" + ` → ` + "`Mantle`" + ` → ` + "`Grounded`" + `.\n\nEach transition is a small [[Command]]. The dispatcher (see ADR-007) handles evaluation, the input system sends intents, the state machine decides.`,
+      body:
+        `States: ` +
+        "`Grounded`" +
+        ` → ` +
+        "`Climbing`" +
+        ` → ` +
+        "`Mantle`" +
+        ` → ` +
+        "`Grounded`" +
+        `.\n\nEach transition is a small [[Command]]. The dispatcher (see ADR-007) handles evaluation, the input system sends intents, the state machine decides.`,
       tags: ["combat"],
       folderId: "fld_mechanics",
     },
@@ -192,6 +210,64 @@ export function buildSeed(): {
     ...n,
   }));
 
+  const noteTemplates: NoteTemplate[] = [
+    {
+      id: "tpl_idea",
+      projectId,
+      type: "idea",
+      name: "Idea",
+      title: "",
+      body: "## Inspiration\n\n## Problem it solves\n\n## Open questions\n\n## Related\n",
+      isDefault: true,
+      createdAt: daysAgo(50),
+      updatedAt: daysAgo(50),
+    },
+    {
+      id: "tpl_system",
+      projectId,
+      type: "system",
+      name: "System",
+      title: "",
+      body: "## Overview\n\n## Responsibilities\n\n## Public API\n\n## Dependencies\n\n## Lifecycle\n",
+      isDefault: true,
+      createdAt: daysAgo(50),
+      updatedAt: daysAgo(50),
+    },
+    {
+      id: "tpl_mechanic",
+      projectId,
+      type: "mechanic",
+      name: "Mechanic",
+      title: "",
+      body: "## Goal\n\n## Inputs\n\n## Outputs\n\n## States\n\n## Feel targets\n",
+      isDefault: true,
+      createdAt: daysAgo(50),
+      updatedAt: daysAgo(50),
+    },
+    {
+      id: "tpl_research",
+      projectId,
+      type: "research",
+      name: "Research",
+      title: "",
+      body: "## Question\n\n## Candidates\n\n## Trade-offs\n\n## Recommendation\n",
+      isDefault: true,
+      createdAt: daysAgo(50),
+      updatedAt: daysAgo(50),
+    },
+    {
+      id: "tpl_decision",
+      projectId,
+      type: "decision",
+      name: "ADR",
+      title: "ADR-XXX: ",
+      body: "## Context\n\n## Decision\n\n## Consequences\n\n## Alternatives considered\n",
+      isDefault: true,
+      createdAt: daysAgo(50),
+      updatedAt: daysAgo(50),
+    },
+  ];
+
   const standards: Standard[] = [
     {
       id: "std_1",
@@ -226,7 +302,7 @@ export function buildSeed(): {
       title: "XML docs on every public symbol",
       rule: "Public types and members require `///` XML docs with summary, params, and (where useful) example. Code is the API.",
       examples: [
-        "/// <summary>Adds an item to the inventory.</summary>\n/// <param name=\"item\">Item to add.</param>",
+        '/// <summary>Adds an item to the inventory.</summary>\n/// <param name="item">Item to add.</param>',
       ],
       enforced: true,
       createdAt: daysAgo(48),
@@ -304,7 +380,8 @@ export function buildSeed(): {
       number: "RFC-015",
       title: "Memory-bound Echoes",
       status: "review",
-      purpose: "Give NPCs persistent, weighted impressions of how the player has treated them, unlocking long-form narrative consequences.",
+      purpose:
+        "Give NPCs persistent, weighted impressions of how the player has treated them, unlocking long-form narrative consequences.",
       goals: [
         "Persistent per-NPC ledger of weighted impressions",
         "Dialogue branches reflect accumulated weights",
@@ -327,14 +404,8 @@ export function buildSeed(): {
       ],
       technicalNotes:
         "Weighted impressions stored as `int` (weight) + `string` (tag) per entry. Serialized as length-prefixed binary.",
-      risks: [
-        "Memory growth across long playthroughs",
-        "Authoring complexity for writers",
-      ],
-      futureImprovements: [
-        "Cross-NPC rumor propagation",
-        "Player-facing memory journal UI",
-      ],
+      risks: ["Memory growth across long playthroughs", "Authoring complexity for writers"],
+      futureImprovements: ["Cross-NPC rumor propagation", "Player-facing memory journal UI"],
       implementationProgress: 0,
       linkedNoteIds: ["note_5", "note_6", "note_12"],
       linkedTaskIds: ["task_4", "task_5"],
@@ -344,7 +415,8 @@ export function buildSeed(): {
       number: "RFC-012",
       title: "Save System v2",
       status: "shipped",
-      purpose: "Versioned, atomic save system with per-system serializers, rollback on corruption, and migration from v1.",
+      purpose:
+        "Versioned, atomic save system with per-system serializers, rollback on corruption, and migration from v1.",
       goals: [
         "Atomic writes (write-temp + rename)",
         "Per-system serializers, no full-scene snapshots",
@@ -355,16 +427,14 @@ export function buildSeed(): {
         "Per-system ISaveable contract",
         "SaveInspector dev tool",
       ],
-      constraints: [
-        "Max save size 8MB",
-        "Save write < 250ms on Switch",
-      ],
+      constraints: ["Max save size 8MB", "Save write < 250ms on Switch"],
       dependencies: ["std_1", "std_3", "note_7"],
       acceptance: [
         "GIVEN a corrupted save, WHEN loaded, THEN the previous valid snapshot is restored",
         "GIVEN a v1 save, WHEN loaded in v2, THEN data is migrated without loss",
       ],
-      technicalNotes: "Backed by a single binary blob with a per-system header table. CRC32 for checksum.",
+      technicalNotes:
+        "Backed by a single binary blob with a per-system header table. CRC32 for checksum.",
       risks: ["Migration correctness across many sessions"],
       futureImprovements: ["Cloud save", "Encrypted saves"],
       implementationProgress: 100,
@@ -439,6 +509,7 @@ export function buildSeed(): {
       priority: "high",
       specId: "spec_1",
       parentTaskId: null,
+      sprintId: null,
       assignee: "programmer",
       dependencies: [],
       progress: 55,
@@ -447,11 +518,13 @@ export function buildSeed(): {
     {
       projectId,
       title: "Sphere-cast runtime check",
-      description: "Single sphere cast per frame against the cached manifest, classifies climbable.",
+      description:
+        "Single sphere cast per frame against the cached manifest, classifies climbable.",
       status: "todo",
       priority: "high",
       specId: "spec_1",
       parentTaskId: null,
+      sprintId: null,
       assignee: "programmer",
       dependencies: ["task_1"],
       progress: 0,
@@ -465,6 +538,7 @@ export function buildSeed(): {
       priority: "high",
       specId: "spec_1",
       parentTaskId: null,
+      sprintId: null,
       assignee: "architect",
       dependencies: ["task_2"],
       progress: 0,
@@ -478,6 +552,7 @@ export function buildSeed(): {
       priority: "medium",
       specId: "spec_2",
       parentTaskId: null,
+      sprintId: null,
       assignee: "programmer",
       dependencies: [],
       progress: 0,
@@ -491,6 +566,7 @@ export function buildSeed(): {
       priority: "medium",
       specId: "spec_2",
       parentTaskId: null,
+      sprintId: null,
       assignee: "programmer",
       dependencies: ["task_4"],
       progress: 0,
@@ -504,6 +580,7 @@ export function buildSeed(): {
       priority: "high",
       specId: "spec_3",
       parentTaskId: null,
+      sprintId: null,
       assignee: "programmer",
       dependencies: [],
       progress: 100,
@@ -512,11 +589,13 @@ export function buildSeed(): {
     {
       projectId,
       title: "Atomic write + rollback",
-      description: "Write to temp file, fsync, atomic rename. Roll back to last good snapshot on corruption.",
+      description:
+        "Write to temp file, fsync, atomic rename. Roll back to last good snapshot on corruption.",
       status: "done",
       priority: "high",
       specId: "spec_3",
       parentTaskId: null,
+      sprintId: null,
       assignee: "programmer",
       dependencies: [],
       progress: 100,
@@ -530,6 +609,7 @@ export function buildSeed(): {
       priority: "low",
       specId: "spec_3",
       parentTaskId: null,
+      sprintId: null,
       assignee: "designer",
       dependencies: ["task_7"],
       progress: 80,
@@ -545,37 +625,72 @@ export function buildSeed(): {
   }));
 
   const systemDefs: Array<Omit<System, "id">> = [
-    { projectId, name: "Traversal", kind: "gameplay", description: "Movement and traversal state machine.", dependsOn: ["InputSystem", "Animator"], exposes: ["OnStateChanged", "RequestTransition"] },
-    { projectId, name: "Inventory", kind: "gameplay", description: "Grid-based item storage.", dependsOn: ["SaveSystem", "UIDataBinding"], exposes: ["OnItemAdded", "OnItemRemoved"] },
-    { projectId, name: "Dialogue", kind: "narrative", description: "Yarn-based dialogue with memory hooks.", dependsOn: ["SaveSystem", "Reputation"], exposes: ["OnLineStart", "OnLineEnd"] },
-    { projectId, name: "SaveSystem", kind: "platform", description: "Versioned, atomic save format.", dependsOn: [], exposes: ["Save", "Load", "Migrate"] },
-    { projectId, name: "Reputation", kind: "narrative", description: "Faction reputation tracker.", dependsOn: ["SaveSystem"], exposes: ["OnThresholdCrossed"] },
+    {
+      projectId,
+      name: "Traversal",
+      kind: "gameplay",
+      description: "Movement and traversal state machine.",
+      dependsOn: ["InputSystem", "Animator"],
+      exposes: ["OnStateChanged", "RequestTransition"],
+    },
+    {
+      projectId,
+      name: "Inventory",
+      kind: "gameplay",
+      description: "Grid-based item storage.",
+      dependsOn: ["SaveSystem", "UIDataBinding"],
+      exposes: ["OnItemAdded", "OnItemRemoved"],
+    },
+    {
+      projectId,
+      name: "Dialogue",
+      kind: "narrative",
+      description: "Yarn-based dialogue with memory hooks.",
+      dependsOn: ["SaveSystem", "Reputation"],
+      exposes: ["OnLineStart", "OnLineEnd"],
+    },
+    {
+      projectId,
+      name: "SaveSystem",
+      kind: "platform",
+      description: "Versioned, atomic save format.",
+      dependsOn: [],
+      exposes: ["Save", "Load", "Migrate"],
+    },
+    {
+      projectId,
+      name: "Reputation",
+      kind: "narrative",
+      description: "Faction reputation tracker.",
+      dependsOn: ["SaveSystem"],
+      exposes: ["OnThresholdCrossed"],
+    },
   ];
   const systems: System[] = systemDefs.map((s, i) => ({ id: `sys_${i + 1}`, ...s }));
 
   const archNodes: ArchNode[] = [
-    { id: "an_1", projectId, systemId: "sys_1", type: "service", name: "Traversal.Service" },
-    { id: "an_2", projectId, systemId: "sys_1", type: "module", name: "Traversal.Dispatcher" },
-    { id: "an_3", projectId, systemId: "sys_1", type: "class", name: "ClimbState" },
-    { id: "an_4", projectId, systemId: "sys_1", type: "class", name: "MantleState" },
-    { id: "an_5", projectId, systemId: "sys_1", type: "class", name: "GroundedState" },
-    { id: "an_6", projectId, systemId: "sys_1", type: "class", name: "SurfaceManifest" },
-    { id: "an_7", projectId, systemId: "sys_1", type: "so", name: "SurfaceDefinition" },
-    { id: "an_8", projectId, systemId: "sys_2", type: "module", name: "Inventory.Grid" },
-    { id: "an_9", projectId, systemId: "sys_2", type: "so", name: "ItemDefinition" },
-    { id: "an_10", projectId, systemId: "sys_3", type: "service", name: "Dialogue.Service" },
-    { id: "an_11", projectId, systemId: "sys_3", type: "module", name: "Dialogue.Runner" },
-    { id: "an_12", projectId, systemId: "sys_3", type: "class", name: "EchoLedger" },
-    { id: "an_13", projectId, systemId: "sys_3", type: "class", name: "DialogueNode" },
-    { id: "an_14", projectId, systemId: "sys_4", type: "service", name: "SaveSystem.Service" },
-    { id: "an_15", projectId, systemId: "sys_4", type: "module", name: "SaveSystem.Manager" },
-    { id: "an_16", projectId, systemId: "sys_4", type: "class", name: "SaveSerializer" },
-    { id: "an_17", projectId, systemId: "sys_5", type: "service", name: "Reputation.Service" },
-    { id: "an_18", projectId, systemId: "sys_5", type: "class", name: "Faction" },
-    { id: "an_19", projectId, systemId: null, type: "scene", name: "Scene_Cliffside" },
-    { id: "an_20", projectId, systemId: null, type: "prefab", name: "Prefab_SurfaceVolume" },
-    { id: "an_21", projectId, systemId: null, type: "prefab", name: "Prefab_NPC_Echo" },
-    { id: "an_22", projectId, systemId: null, type: "scene", name: "Scene_Hollow" },
+    { id: "an_1", projectId, systemId: "sys_1", type: "service", name: "Traversal.Service", x: null, y: null },
+    { id: "an_2", projectId, systemId: "sys_1", type: "module", name: "Traversal.Dispatcher", x: null, y: null },
+    { id: "an_3", projectId, systemId: "sys_1", type: "class", name: "ClimbState", x: null, y: null },
+    { id: "an_4", projectId, systemId: "sys_1", type: "class", name: "MantleState", x: null, y: null },
+    { id: "an_5", projectId, systemId: "sys_1", type: "class", name: "GroundedState", x: null, y: null },
+    { id: "an_6", projectId, systemId: "sys_1", type: "class", name: "SurfaceManifest", x: null, y: null },
+    { id: "an_7", projectId, systemId: "sys_1", type: "so", name: "SurfaceDefinition", x: null, y: null },
+    { id: "an_8", projectId, systemId: "sys_2", type: "module", name: "Inventory.Grid", x: null, y: null },
+    { id: "an_9", projectId, systemId: "sys_2", type: "so", name: "ItemDefinition", x: null, y: null },
+    { id: "an_10", projectId, systemId: "sys_3", type: "service", name: "Dialogue.Service", x: null, y: null },
+    { id: "an_11", projectId, systemId: "sys_3", type: "module", name: "Dialogue.Runner", x: null, y: null },
+    { id: "an_12", projectId, systemId: "sys_3", type: "class", name: "EchoLedger", x: null, y: null },
+    { id: "an_13", projectId, systemId: "sys_3", type: "class", name: "DialogueNode", x: null, y: null },
+    { id: "an_14", projectId, systemId: "sys_4", type: "service", name: "SaveSystem.Service", x: null, y: null },
+    { id: "an_15", projectId, systemId: "sys_4", type: "module", name: "SaveSystem.Manager", x: null, y: null },
+    { id: "an_16", projectId, systemId: "sys_4", type: "class", name: "SaveSerializer", x: null, y: null },
+    { id: "an_17", projectId, systemId: "sys_5", type: "service", name: "Reputation.Service", x: null, y: null },
+    { id: "an_18", projectId, systemId: "sys_5", type: "class", name: "Faction", x: null, y: null },
+    { id: "an_19", projectId, systemId: null, type: "scene", name: "Scene_Cliffside", x: null, y: null },
+    { id: "an_20", projectId, systemId: null, type: "prefab", name: "Prefab_SurfaceVolume", x: null, y: null },
+    { id: "an_21", projectId, systemId: null, type: "prefab", name: "Prefab_NPC_Echo", x: null, y: null },
+    { id: "an_22", projectId, systemId: null, type: "scene", name: "Scene_Hollow", x: null, y: null },
   ];
   const archEdges: ArchEdge[] = [
     { id: "ae_1", source: "an_1", target: "an_2", kind: "depends" },
@@ -687,45 +802,368 @@ export function buildSeed(): {
   ];
 
   const agents: Agent[] = [
-    { id: "ag_arch", name: "Architect", role: "architect", persona: "Thinks in modules, dependencies, and lifetimes.", description: "Analyzes system design and proposes structures.", status: "idle", capabilities: ["system-design", "adr", "dependency-analysis"], lastRunAt: minutesAgo(45) },
-    { id: "ag_plan", name: "Planner", role: "planner", persona: "Decomposes features into sequenced, testable steps.", description: "Generates implementation plans from specs.", status: "idle", capabilities: ["roadmap", "estimation", "risk-analysis"], lastRunAt: hoursAgo(2) },
-    { id: "ag_prog", name: "Programmer", role: "programmer", persona: "Reads context, writes code that follows the project's standards.", description: "Implements changes inside an approved plan.", status: "idle", capabilities: ["implement", "refactor", "test"], lastRunAt: hoursAgo(8) },
-    { id: "ag_rev", name: "Reviewer", role: "reviewer", persona: "Catches what the others miss.", description: "Reviews diffs and design decisions.", status: "idle", capabilities: ["code-review", "design-review", "standards"], lastRunAt: null },
-    { id: "ag_opt", name: "Optimizer", role: "optimizer", persona: "Measures twice, cuts once.", description: "Profiles, allocates, and refactors for performance.", status: "idle", capabilities: ["profile", "memory", "perf"], lastRunAt: daysAgo(4) },
-    { id: "ag_test", name: "Tester", role: "tester", persona: "Adversarial by default.", description: "Generates and runs tests against the spec's acceptance criteria.", status: "idle", capabilities: ["unit", "integration", "fuzz"], lastRunAt: null },
-    { id: "ag_doc", name: "Documenter", role: "documenter", persona: "Says what the code does in the language of the reader.", description: "Maintains system, API, and architecture docs.", status: "idle", capabilities: ["docs", "api-ref", "tutorial"], lastRunAt: hoursAgo(3) },
-    { id: "ag_des", name: "Designer", role: "designer", persona: "Wears the player's shoes.", description: "Advocates for feel, clarity, and onboarding.", status: "idle", capabilities: ["ux", "narrative", "tutorial"], lastRunAt: null },
+    {
+      id: "ag_arch",
+      name: "Architect",
+      role: "architect",
+      persona: "Thinks in modules, dependencies, and lifetimes.",
+      description: "Analyzes system design and proposes structures.",
+      status: "idle",
+      capabilities: ["system-design", "adr", "dependency-analysis"],
+      lastRunAt: minutesAgo(45),
+    },
+    {
+      id: "ag_plan",
+      name: "Planner",
+      role: "planner",
+      persona: "Decomposes features into sequenced, testable steps.",
+      description: "Generates implementation plans from specs.",
+      status: "idle",
+      capabilities: ["roadmap", "estimation", "risk-analysis"],
+      lastRunAt: hoursAgo(2),
+    },
+    {
+      id: "ag_prog",
+      name: "Programmer",
+      role: "programmer",
+      persona: "Reads context, writes code that follows the project's standards.",
+      description: "Implements changes inside an approved plan.",
+      status: "idle",
+      capabilities: ["implement", "refactor", "test"],
+      lastRunAt: hoursAgo(8),
+    },
+    {
+      id: "ag_rev",
+      name: "Reviewer",
+      role: "reviewer",
+      persona: "Catches what the others miss.",
+      description: "Reviews diffs and design decisions.",
+      status: "idle",
+      capabilities: ["code-review", "design-review", "standards"],
+      lastRunAt: null,
+    },
+    {
+      id: "ag_opt",
+      name: "Optimizer",
+      role: "optimizer",
+      persona: "Measures twice, cuts once.",
+      description: "Profiles, allocates, and refactors for performance.",
+      status: "idle",
+      capabilities: ["profile", "memory", "perf"],
+      lastRunAt: daysAgo(4),
+    },
+    {
+      id: "ag_test",
+      name: "Tester",
+      role: "tester",
+      persona: "Adversarial by default.",
+      description: "Generates and runs tests against the spec's acceptance criteria.",
+      status: "idle",
+      capabilities: ["unit", "integration", "fuzz"],
+      lastRunAt: null,
+    },
+    {
+      id: "ag_doc",
+      name: "Documenter",
+      role: "documenter",
+      persona: "Says what the code does in the language of the reader.",
+      description: "Maintains system, API, and architecture docs.",
+      status: "idle",
+      capabilities: ["docs", "api-ref", "tutorial"],
+      lastRunAt: hoursAgo(3),
+    },
+    {
+      id: "ag_des",
+      name: "Designer",
+      role: "designer",
+      persona: "Wears the player's shoes.",
+      description: "Advocates for feel, clarity, and onboarding.",
+      status: "idle",
+      capabilities: ["ux", "narrative", "tutorial"],
+      lastRunAt: null,
+    },
   ];
 
   const commits: Commit[] = [
-    { id: "c_1", projectId, hash: "a1f3b2e", message: "feat(traversal): add ClimbState scaffold", author: "Tariq R.", date: hoursAgo(28), files: ["Assets/Scripts/Traversal/ClimbState.cs", "Assets/Scripts/Traversal/Dispatcher.cs"], aiSummary: "Introduces ClimbState wired into the dispatcher. No behavior yet — sets up the integration point." },
-    { id: "c_2", projectId, hash: "7c4d9ab", message: "perf(audio): sparse culling passes profile gate", author: "Mira S.", date: hoursAgo(14), files: ["Assets/Scripts/Audio/CullingService.cs"], aiSummary: "Culls sounds beyond distance + obstruction threshold. 38% audio CPU reduction in stress test." },
-    { id: "c_3", projectId, hash: "3e88f10", message: "feat(save): ship v2 with v1 migration", author: "Tariq R.", date: daysAgo(3), files: ["Assets/Scripts/Save/*.cs"], aiSummary: "Atomic writes, per-system serializers, v1 → v2 migration. 6x faster load on Switch." },
-    { id: "c_4", projectId, hash: "9b21c0d", message: "docs(arch): update dispatcher overview", author: "Tariq R.", date: hoursAgo(6), files: ["docs/arch/dispatcher.md"], aiSummary: "Refreshes the dispatcher diagram and adds ClimbState to the state list." },
-    { id: "c_5", projectId, hash: "5a73ee2", message: "chore(standards): add no-alloc-in-update rule", author: "Mira S.", date: daysAgo(5), files: ["docs/standards/perf.md"], aiSummary: null },
+    {
+      id: "c_1",
+      projectId,
+      hash: "a1f3b2e",
+      message: "feat(traversal): add ClimbState scaffold",
+      author: "Tariq R.",
+      date: hoursAgo(28),
+      files: ["Assets/Scripts/Traversal/ClimbState.cs", "Assets/Scripts/Traversal/Dispatcher.cs"],
+      aiSummary:
+        "Introduces ClimbState wired into the dispatcher. No behavior yet — sets up the integration point.",
+    },
+    {
+      id: "c_2",
+      projectId,
+      hash: "7c4d9ab",
+      message: "perf(audio): sparse culling passes profile gate",
+      author: "Mira S.",
+      date: hoursAgo(14),
+      files: ["Assets/Scripts/Audio/CullingService.cs"],
+      aiSummary:
+        "Culls sounds beyond distance + obstruction threshold. 38% audio CPU reduction in stress test.",
+    },
+    {
+      id: "c_3",
+      projectId,
+      hash: "3e88f10",
+      message: "feat(save): ship v2 with v1 migration",
+      author: "Tariq R.",
+      date: daysAgo(3),
+      files: ["Assets/Scripts/Save/*.cs"],
+      aiSummary:
+        "Atomic writes, per-system serializers, v1 → v2 migration. 6x faster load on Switch.",
+    },
+    {
+      id: "c_4",
+      projectId,
+      hash: "9b21c0d",
+      message: "docs(arch): update dispatcher overview",
+      author: "Tariq R.",
+      date: hoursAgo(6),
+      files: ["docs/arch/dispatcher.md"],
+      aiSummary: "Refreshes the dispatcher diagram and adds ClimbState to the state list.",
+    },
+    {
+      id: "c_5",
+      projectId,
+      hash: "5a73ee2",
+      message: "chore(standards): add no-alloc-in-update rule",
+      author: "Mira S.",
+      date: daysAgo(5),
+      files: ["docs/standards/perf.md"],
+      aiSummary: null,
+    },
   ];
 
   const memories: Memory[] = [
-    { id: "mem_1", projectId, kind: "pattern", content: "For traversal states, prefer ScriptableObject state definitions with a small dispatcher (ADR-007).", tags: ["arch", "traversal"], weight: 0.9, createdAt: daysAgo(30), lastRecallAt: hoursAgo(2) },
-    { id: "mem_2", projectId, kind: "preference", content: "Designer-friendly inspector beats raw code for state authoring.", tags: ["designer", "arch"], weight: 0.8, createdAt: daysAgo(28), lastRecallAt: hoursAgo(2) },
-    { id: "mem_3", projectId, kind: "lesson", content: "Baked surface data is worth the editor time — 4x perf and better designer UX.", tags: ["perf", "traversal"], weight: 0.7, createdAt: daysAgo(6), lastRecallAt: hoursAgo(1) },
-    { id: "mem_4", projectId, kind: "decision", content: "Per-system serializers, not whole-scene snapshots. Cheaper and safer.", tags: ["save", "arch"], weight: 0.85, createdAt: daysAgo(20), lastRecallAt: daysAgo(1) },
-    { id: "mem_5", projectId, kind: "fact", content: "Switch needs >2 frame input buffering for tight-feeling controls.", tags: ["perf", "platform"], weight: 0.6, createdAt: daysAgo(10), lastRecallAt: null },
+    {
+      id: "mem_1",
+      projectId,
+      kind: "pattern",
+      content:
+        "For traversal states, prefer ScriptableObject state definitions with a small dispatcher (ADR-007).",
+      tags: ["arch", "traversal"],
+      weight: 0.9,
+      createdAt: daysAgo(30),
+      lastRecallAt: hoursAgo(2),
+    },
+    {
+      id: "mem_2",
+      projectId,
+      kind: "preference",
+      content: "Designer-friendly inspector beats raw code for state authoring.",
+      tags: ["designer", "arch"],
+      weight: 0.8,
+      createdAt: daysAgo(28),
+      lastRecallAt: hoursAgo(2),
+    },
+    {
+      id: "mem_3",
+      projectId,
+      kind: "lesson",
+      content: "Baked surface data is worth the editor time — 4x perf and better designer UX.",
+      tags: ["perf", "traversal"],
+      weight: 0.7,
+      createdAt: daysAgo(6),
+      lastRecallAt: hoursAgo(1),
+    },
+    {
+      id: "mem_4",
+      projectId,
+      kind: "decision",
+      content: "Per-system serializers, not whole-scene snapshots. Cheaper and safer.",
+      tags: ["save", "arch"],
+      weight: 0.85,
+      createdAt: daysAgo(20),
+      lastRecallAt: daysAgo(1),
+    },
+    {
+      id: "mem_5",
+      projectId,
+      kind: "fact",
+      content: "Switch needs >2 frame input buffering for tight-feeling controls.",
+      tags: ["perf", "platform"],
+      weight: 0.6,
+      createdAt: daysAgo(10),
+      lastRecallAt: null,
+    },
   ];
 
   const links: Link[] = [
-    { id: uid("lnk"), sourceType: "spec", sourceId: "spec_1", targetType: "note", targetId: "note_2", kind: "references" },
-    { id: uid("lnk"), sourceType: "spec", sourceId: "spec_1", targetType: "note", targetId: "note_3", kind: "references" },
-    { id: uid("lnk"), sourceType: "spec", sourceId: "spec_1", targetType: "note", targetId: "note_8", kind: "references" },
-    { id: uid("lnk"), sourceType: "spec", sourceId: "spec_2", targetType: "note", targetId: "note_5", kind: "references" },
-    { id: uid("lnk"), sourceType: "spec", sourceId: "spec_2", targetType: "note", targetId: "note_6", kind: "references" },
-    { id: uid("lnk"), sourceType: "spec", sourceId: "spec_3", targetType: "note", targetId: "note_7", kind: "references" },
-    { id: uid("lnk"), sourceType: "task", sourceId: "task_2", targetType: "task", targetId: "task_1", kind: "depends" },
-    { id: uid("lnk"), sourceType: "task", sourceId: "task_3", targetType: "task", targetId: "task_2", kind: "depends" },
-    { id: uid("lnk"), sourceType: "task", sourceId: "task_5", targetType: "task", targetId: "task_4", kind: "depends" },
-    { id: uid("lnk"), sourceType: "task", sourceId: "task_8", targetType: "task", targetId: "task_7", kind: "depends" },
-    { id: uid("lnk"), sourceType: "doc", sourceId: "doc_2", targetType: "note", targetId: "note_8", kind: "references" },
-    { id: uid("lnk"), sourceType: "doc", sourceId: "doc_1", targetType: "spec", targetId: "spec_3", kind: "references" },
+    {
+      id: uid("lnk"),
+      sourceType: "spec",
+      sourceId: "spec_1",
+      targetType: "note",
+      targetId: "note_2",
+      kind: "references",
+    },
+    {
+      id: uid("lnk"),
+      sourceType: "spec",
+      sourceId: "spec_1",
+      targetType: "note",
+      targetId: "note_3",
+      kind: "references",
+    },
+    {
+      id: uid("lnk"),
+      sourceType: "spec",
+      sourceId: "spec_1",
+      targetType: "note",
+      targetId: "note_8",
+      kind: "references",
+    },
+    {
+      id: uid("lnk"),
+      sourceType: "spec",
+      sourceId: "spec_2",
+      targetType: "note",
+      targetId: "note_5",
+      kind: "references",
+    },
+    {
+      id: uid("lnk"),
+      sourceType: "spec",
+      sourceId: "spec_2",
+      targetType: "note",
+      targetId: "note_6",
+      kind: "references",
+    },
+    {
+      id: uid("lnk"),
+      sourceType: "spec",
+      sourceId: "spec_3",
+      targetType: "note",
+      targetId: "note_7",
+      kind: "references",
+    },
+    {
+      id: uid("lnk"),
+      sourceType: "task",
+      sourceId: "task_2",
+      targetType: "task",
+      targetId: "task_1",
+      kind: "depends",
+    },
+    {
+      id: uid("lnk"),
+      sourceType: "task",
+      sourceId: "task_3",
+      targetType: "task",
+      targetId: "task_2",
+      kind: "depends",
+    },
+    {
+      id: uid("lnk"),
+      sourceType: "task",
+      sourceId: "task_5",
+      targetType: "task",
+      targetId: "task_4",
+      kind: "depends",
+    },
+    {
+      id: uid("lnk"),
+      sourceType: "task",
+      sourceId: "task_8",
+      targetType: "task",
+      targetId: "task_7",
+      kind: "depends",
+    },
+    {
+      id: uid("lnk"),
+      sourceType: "doc",
+      sourceId: "doc_2",
+      targetType: "note",
+      targetId: "note_8",
+      kind: "references",
+    },
+    {
+      id: uid("lnk"),
+      sourceType: "doc",
+      sourceId: "doc_1",
+      targetType: "spec",
+      targetId: "spec_3",
+      kind: "references",
+    },
+  ];
+
+  const canvases: Canvas[] = [
+    {
+      id: "cv_1",
+      projectId,
+      name: "Traversal Design Board",
+      createdAt: daysAgo(20),
+      updatedAt: hoursAgo(2),
+    },
+  ];
+
+  const canvasNodes: CanvasNode[] = [
+    {
+      id: "cnode_1",
+      canvasId: "cv_1",
+      projectId,
+      type: "note",
+      x: -320,
+      y: -80,
+      width: 260,
+      height: null,
+      content: "",
+      noteId: "note_2",
+      url: null,
+      createdAt: daysAgo(20),
+      updatedAt: daysAgo(20),
+    },
+    {
+      id: "cnode_2",
+      canvasId: "cv_1",
+      projectId,
+      type: "note",
+      x: 40,
+      y: -80,
+      width: 260,
+      height: null,
+      content: "",
+      noteId: "note_3",
+      url: null,
+      createdAt: daysAgo(20),
+      updatedAt: daysAgo(20),
+    },
+    {
+      id: "cnode_3",
+      canvasId: "cv_1",
+      projectId,
+      type: "text",
+      x: -120,
+      y: -220,
+      width: 200,
+      height: 80,
+      content: "Climbing mechanic design space",
+      noteId: null,
+      url: null,
+      createdAt: daysAgo(20),
+      updatedAt: daysAgo(20),
+    },
+    {
+      id: "cnode_4",
+      canvasId: "cv_1",
+      projectId,
+      type: "note",
+      x: 400,
+      y: -80,
+      width: 260,
+      height: null,
+      content: "",
+      noteId: "note_8",
+      url: null,
+      createdAt: daysAgo(20),
+      updatedAt: daysAgo(20),
+    },
   ];
 
   return {
@@ -733,6 +1171,7 @@ export function buildSeed(): {
     folders,
     tags,
     notes,
+    noteTemplates,
     standards,
     specs,
     plans,
@@ -746,6 +1185,8 @@ export function buildSeed(): {
     commits,
     memories,
     links,
+    canvases,
+    canvasNodes,
   };
 }
 
@@ -763,6 +1204,7 @@ export async function ensureSeed(): Promise<{ seeded: boolean }> {
       db.folders,
       db.tags,
       db.notes,
+      db.noteTemplates,
       db.standards,
       db.specs,
       db.plans,
@@ -776,6 +1218,8 @@ export async function ensureSeed(): Promise<{ seeded: boolean }> {
       db.commits,
       db.memories,
       db.links,
+      db.canvases,
+      db.canvasNodes,
       db.meta,
     ],
     async () => {
@@ -784,6 +1228,7 @@ export async function ensureSeed(): Promise<{ seeded: boolean }> {
         db.folders.clear(),
         db.tags.clear(),
         db.notes.clear(),
+        db.noteTemplates.clear(),
         db.standards.clear(),
         db.specs.clear(),
         db.plans.clear(),
@@ -797,12 +1242,15 @@ export async function ensureSeed(): Promise<{ seeded: boolean }> {
         db.commits.clear(),
         db.memories.clear(),
         db.links.clear(),
+        db.canvases.clear(),
+        db.canvasNodes.clear(),
       ]);
       await Promise.all([
         db.projects.bulkPut(seed.projects),
         db.folders.bulkPut(seed.folders),
         db.tags.bulkPut(seed.tags),
         db.notes.bulkPut(seed.notes),
+        db.noteTemplates.bulkPut(seed.noteTemplates),
         db.standards.bulkPut(seed.standards),
         db.specs.bulkPut(seed.specs),
         db.plans.bulkPut(seed.plans),
@@ -816,6 +1264,8 @@ export async function ensureSeed(): Promise<{ seeded: boolean }> {
         db.commits.bulkPut(seed.commits),
         db.memories.bulkPut(seed.memories),
         db.links.bulkPut(seed.links),
+        db.canvases.bulkPut(seed.canvases),
+        db.canvasNodes.bulkPut(seed.canvasNodes),
       ]);
       await db.meta.put({ key: SEED_KEY, value: SEED_VERSION });
     },

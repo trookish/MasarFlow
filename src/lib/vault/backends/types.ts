@@ -1,4 +1,9 @@
-import type { VaultBackendKind, VaultBackendCapabilities, VaultSession, VaultWriteResult } from "../types";
+import type {
+  VaultBackendKind,
+  VaultBackendCapabilities,
+  VaultSession,
+  VaultWriteResult,
+} from "../types";
 import type { VaultFileMeta } from "../types";
 
 export interface VaultBackend {
@@ -10,6 +15,8 @@ export interface VaultBackend {
   write(relativePath: string, body: string): Promise<VaultWriteResult>;
   walk(): Promise<VaultFileMeta[]>;
   reauthenticate?(): Promise<boolean>;
+  reconnect?(): Promise<VaultSession | null>;
+  verifyStored?(): Promise<"granted" | "prompt" | "missing">;
   close?(): Promise<void>;
 }
 

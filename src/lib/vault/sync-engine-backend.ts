@@ -1,14 +1,13 @@
 "use client";
 import { getDb, type SyncFile, type Project } from "../db/schema";
-import { md5Hex, deriveExcerpt } from "./markdown-adapter";
+import { md5Hex } from "./markdown-adapter";
 import { isTaskNote, vaultTaskToBrain } from "./tasks-adapter";
 import { cacheAttachment, findEmbedTargets } from "./attachments";
 import { isTemplate } from "./ignore-patterns";
 import { emitAutomationEvent } from "../automation/engine";
 import { exportVaultZip, downloadZip, type ZipEntry } from "./zip-export";
-import { getBackend } from "./backends/strategy";
 import type { VaultBackend } from "./backends/types";
-import { DEFAULT_VAULT_SETTINGS, type VaultSettings, type VaultFileMeta } from "./types";
+import { DEFAULT_VAULT_SETTINGS, type VaultSettings } from "./types";
 
 export interface BackendSyncResult {
   scanned: number;
@@ -35,7 +34,14 @@ export async function runPullWithBackend(
 ): Promise<BackendSyncResult> {
   const settings = await getSettings();
   const result: BackendSyncResult = {
-    scanned: 0, created: 0, updated: 0, deleted: 0, conflicts: 0, attachments: 0, errors: [], writeMethod: backend.capabilities.inPlaceWrites ? "in-place" : "download",
+    scanned: 0,
+    created: 0,
+    updated: 0,
+    deleted: 0,
+    conflicts: 0,
+    attachments: 0,
+    errors: [],
+    writeMethod: backend.capabilities.inPlaceWrites ? "in-place" : "download",
   };
   onProgress?.({ phase: "walk", current: 0, total: 0 });
   const files = await backend.walk();
@@ -47,37 +53,90 @@ export async function runPullWithBackend(
   for (const e of existing) existingByPath.set(e.relativePath, e);
   for (let i = 0; i < markdowns.length; i++) {
     const meta = markdowns[i];
-    onProgress?.({ phase: "read", current: i + 1, total: markdowns.length, file: meta.relativePath });
+    onProgress?.({
+      phase: "read",
+      current: i + 1,
+      total: markdowns.length,
+      file: meta.relativePath,
+    });
     try {
       const text = await backend.read(meta.relativePath);
       if (text == null) continue;
       const hash = await md5Hex(text);
       const prev = existingByPath.get(meta.relativePath);
       if (prev && prev.hash === hash) {
-        await getDb().syncFiles.update(prev.id, { status: meta.inTrash ? "trash" : "synced", mtime: meta.mtime, lastSyncedAt: Date.now() });
+        await getDb().syncFiles.update(prev.id, {
+          status: meta.inTrash ? "trash" : "synced",
+          mtime: meta.mtime,
+          lastSyncedAt: Date.now(),
+        });
         continue;
       }
       const isTask = isTaskNote(text);
       const isTpl = isTemplate(meta.relativePath);
       if (isTask) {
-        const { task } = vaultTaskToBrain({ projectId: project.id, body: text, relativePath: meta.relativePath, mtime: meta.mtime });
+        const { task } = vaultTaskToBrain({
+          projectId: project.id,
+          body: text,
+          relativePath: meta.relativePath,
+          mtime: meta.mtime,
+        });
         await getDb().tasks.put(task);
         const id = "sync_" + project.id + "_" + meta.relativePath.replace(/[^a-zA-Z0-9]/g, "_");
-        const status: SyncFile["status"] = meta.inTrash ? "trash" : (prev ? "remote-newer" : "synced");
+        const status: SyncFile["status"] = meta.inTrash
+          ? "trash"
+          : prev
+            ? "remote-newer"
+            : "synced";
         await getDb().syncFiles.put({
-          id, projectId: project.id, relativePath: meta.relativePath, side: "remote", status, mtime: meta.mtime, hash, noteId: null, taskId: task.id, lastSyncedAt: Date.now(), isTemplate: isTpl, inTrash: meta.inTrash, size: meta.size,
+          id,
+          projectId: project.id,
+          relativePath: meta.relativePath,
+          side: "remote",
+          status,
+          mtime: meta.mtime,
+          hash,
+          noteId: null,
+          taskId: task.id,
+          lastSyncedAt: Date.now(),
+          isTemplate: isTpl,
+          inTrash: meta.inTrash,
+          size: meta.size,
         });
-        if (!prev) result.created++; else result.updated++;
+        if (!prev) result.created++;
+        else result.updated++;
       } else {
         const { vaultNoteToBrain } = await import("./markdown-adapter");
-        const { note } = vaultNoteToBrain({ projectId: project.id, body: text, relativePath: meta.relativePath, mtime: meta.mtime });
+        const { note } = vaultNoteToBrain({
+          projectId: project.id,
+          body: text,
+          relativePath: meta.relativePath,
+          mtime: meta.mtime,
+        });
         await getDb().notes.put(note);
         const id = "sync_" + project.id + "_" + meta.relativePath.replace(/[^a-zA-Z0-9]/g, "_");
-        const status: SyncFile["status"] = meta.inTrash ? "trash" : (prev ? "remote-newer" : "synced");
+        const status: SyncFile["status"] = meta.inTrash
+          ? "trash"
+          : prev
+            ? "remote-newer"
+            : "synced";
         await getDb().syncFiles.put({
-          id, projectId: project.id, relativePath: meta.relativePath, side: "remote", status, mtime: meta.mtime, hash, noteId: note.id, taskId: null, lastSyncedAt: Date.now(), isTemplate: isTpl, inTrash: meta.inTrash, size: meta.size,
+          id,
+          projectId: project.id,
+          relativePath: meta.relativePath,
+          side: "remote",
+          status,
+          mtime: meta.mtime,
+          hash,
+          noteId: note.id,
+          taskId: null,
+          lastSyncedAt: Date.now(),
+          isTemplate: isTpl,
+          inTrash: meta.inTrash,
+          size: meta.size,
         });
-        if (!prev) result.created++; else result.updated++;
+        if (!prev) result.created++;
+        else result.updated++;
       }
       for (const emb of findEmbedTargets(text)) {
         try {
@@ -85,7 +144,12 @@ export async function runPullWithBackend(
           if (embText != null) {
             const blob = new Blob([embText], { type: "text/plain" });
             if (blob.size <= settings.maxAttachmentBytes) {
-              await cacheAttachment({ projectId: project.id, relativePath: emb, blob, sourceVaultPath: emb });
+              await cacheAttachment({
+                projectId: project.id,
+                relativePath: emb,
+                blob,
+                sourceVaultPath: emb,
+              });
               result.attachments++;
             }
           }
@@ -114,7 +178,14 @@ export async function runPushWithBackend(
   const { brainNoteToVault } = await import("./markdown-adapter");
   const { brainTaskToVault } = await import("./tasks-adapter");
   const result: BackendSyncResult = {
-    scanned: 0, created: 0, updated: 0, deleted: 0, conflicts: 0, attachments: 0, errors: [], writeMethod: backend.capabilities.inPlaceWrites ? "in-place" : "download",
+    scanned: 0,
+    created: 0,
+    updated: 0,
+    deleted: 0,
+    conflicts: 0,
+    attachments: 0,
+    errors: [],
+    writeMethod: backend.capabilities.inPlaceWrites ? "in-place" : "download",
   };
   const all = await getDb().syncFiles.where({ projectId: project.id }).toArray();
   const pending = all.filter((f) => f.status === "local-newer");
@@ -126,10 +197,20 @@ export async function runPushWithBackend(
       try {
         if (sf.taskId) {
           const t = await getDb().tasks.get(sf.taskId);
-          if (t) entries.push({ path: sf.relativePath, content: brainTaskToVault(t), mtime: Date.now() });
+          if (t)
+            entries.push({
+              path: sf.relativePath,
+              content: brainTaskToVault(t),
+              mtime: Date.now(),
+            });
         } else if (sf.noteId) {
           const n = await getDb().notes.get(sf.noteId);
-          if (n) entries.push({ path: sf.relativePath, content: brainNoteToVault(n), mtime: Date.now() });
+          if (n)
+            entries.push({
+              path: sf.relativePath,
+              content: brainNoteToVault(n),
+              mtime: Date.now(),
+            });
         }
       } catch (e) {
         result.errors.push(sf.relativePath + ": " + (e as Error).message);
@@ -138,14 +219,20 @@ export async function runPushWithBackend(
     if (entries.length > 0) {
       try {
         const blob = await exportVaultZip(entries);
-        const fileName = (backend.rootName || "vault") + "-" + new Date().toISOString().slice(0, 10) + ".zip";
+        const fileName =
+          (backend.rootName || "vault") + "-" + new Date().toISOString().slice(0, 10) + ".zip";
         downloadZip(blob, fileName);
         result.writeMethod = "download";
         for (const sf of pending) {
           const entry = entries.find((e) => e.path === sf.relativePath);
           if (entry) {
             const hash = await md5Hex(entry.content);
-            await getDb().syncFiles.update(sf.id, { status: "synced", hash, mtime: Date.now(), lastSyncedAt: Date.now() });
+            await getDb().syncFiles.update(sf.id, {
+              status: "synced",
+              hash,
+              mtime: Date.now(),
+              lastSyncedAt: Date.now(),
+            });
             result.updated++;
           }
         }
@@ -177,7 +264,12 @@ export async function runPushWithBackend(
       const r = await backend.write(sf.relativePath, body);
       if (r.ok) {
         const hash = await md5Hex(body);
-        await getDb().syncFiles.update(sf.id, { status: "synced", hash, mtime: Date.now(), lastSyncedAt: Date.now() });
+        await getDb().syncFiles.update(sf.id, {
+          status: "synced",
+          hash,
+          mtime: Date.now(),
+          lastSyncedAt: Date.now(),
+        });
         result.updated++;
       } else {
         result.errors.push("Write failed: " + sf.relativePath);

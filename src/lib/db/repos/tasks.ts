@@ -13,6 +13,14 @@ export function useTasks(projectId: string | undefined) {
   );
 }
 
+export function useTask(id: string | undefined) {
+  return useLiveQuery(
+    async () => (id ? await getDb().tasks.get(id) : undefined),
+    [id],
+    undefined
+  );
+}
+
 export async function upsertTask(t: Task) {
   await getDb().tasks.put(t);
 }

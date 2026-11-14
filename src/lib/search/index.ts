@@ -1,7 +1,16 @@
 import MiniSearch from "minisearch";
 import { getDb } from "../db/schema";
 
-export type SearchHitKind = "note" | "spec" | "task" | "doc" | "devlog" | "standard" | "agent" | "commit" | "system";
+export type SearchHitKind =
+  | "note"
+  | "spec"
+  | "task"
+  | "doc"
+  | "devlog"
+  | "standard"
+  | "agent"
+  | "commit"
+  | "system";
 
 export interface SearchHit {
   id: string;
@@ -44,15 +53,87 @@ export async function buildSearchIndex(): Promise<MiniSearch<IndexedDoc>> {
   ]);
 
   const docs2: IndexedDoc[] = [
-    ...notes.map((n) => ({ id: n.id, type: "note" as const, title: n.title, subtitle: n.type, body: `${n.excerpt}\n${n.body}`, href: `/brain/${n.id}`, tags: n.tags })),
-    ...specs.map((s) => ({ id: s.id, type: "spec" as const, title: `${s.number} - ${s.title}`, subtitle: s.status, body: `${s.purpose}\n${s.goals.join("\n")}\n${s.acceptance.join("\n")}\n${s.technicalNotes}`, href: `/specs/${s.id}`, tags: [] })),
-    ...tasks.map((t) => ({ id: t.id, type: "task" as const, title: t.title, subtitle: `${t.status} - ${t.priority}`, body: t.description, href: "/tasks", tags: t.tags })),
-    ...docs.map((d) => ({ id: d.id, type: "doc" as const, title: d.title, subtitle: d.kind, body: d.body, href: `/docs/${d.id}`, tags: [] })),
-    ...logs.map((l) => ({ id: l.id, type: "devlog" as const, title: l.title, subtitle: l.kind, body: l.body, href: "/dev-logs", tags: [] })),
-    ...standards.map((s) => ({ id: s.id, type: "standard" as const, title: s.title, subtitle: s.category, body: `${s.rule}\n${s.examples.join("\n")}`, href: "/standards", tags: [] })),
-    ...agents.map((a) => ({ id: a.id, type: "agent" as const, title: a.name, subtitle: a.role, body: `${a.description}\n${a.persona}\n${a.capabilities.join(", ")}`, href: "/agents", tags: a.capabilities })),
-    ...commits.map((c) => ({ id: c.id, type: "commit" as const, title: c.message, subtitle: c.hash, body: `${c.aiSummary ?? ""}\n${c.files.join("\n")}`, href: "/dev-logs", tags: [] })),
-    ...systems.map((s) => ({ id: s.id, type: "system" as const, title: s.name, subtitle: s.kind, body: `${s.description}\nDepends on: ${s.dependsOn.join(", ")}\nExposes: ${s.exposes.join(", ")}`, href: "/architecture", tags: [] })),
+    ...notes.map((n) => ({
+      id: n.id,
+      type: "note" as const,
+      title: n.title,
+      subtitle: n.type,
+      body: `${n.excerpt}\n${n.body}`,
+      href: `/brain/${n.id}`,
+      tags: n.tags,
+    })),
+    ...specs.map((s) => ({
+      id: s.id,
+      type: "spec" as const,
+      title: `${s.number} - ${s.title}`,
+      subtitle: s.status,
+      body: `${s.purpose}\n${s.goals.join("\n")}\n${s.acceptance.join("\n")}\n${s.technicalNotes}`,
+      href: `/specs/${s.id}`,
+      tags: [],
+    })),
+    ...tasks.map((t) => ({
+      id: t.id,
+      type: "task" as const,
+      title: t.title,
+      subtitle: `${t.status} - ${t.priority}`,
+      body: t.description,
+      href: "/tasks",
+      tags: t.tags,
+    })),
+    ...docs.map((d) => ({
+      id: d.id,
+      type: "doc" as const,
+      title: d.title,
+      subtitle: d.kind,
+      body: d.body,
+      href: `/docs/${d.id}`,
+      tags: [],
+    })),
+    ...logs.map((l) => ({
+      id: l.id,
+      type: "devlog" as const,
+      title: l.title,
+      subtitle: l.kind,
+      body: l.body,
+      href: "/dev-logs",
+      tags: [],
+    })),
+    ...standards.map((s) => ({
+      id: s.id,
+      type: "standard" as const,
+      title: s.title,
+      subtitle: s.category,
+      body: `${s.rule}\n${s.examples.join("\n")}`,
+      href: "/standards",
+      tags: [],
+    })),
+    ...agents.map((a) => ({
+      id: a.id,
+      type: "agent" as const,
+      title: a.name,
+      subtitle: a.role,
+      body: `${a.description}\n${a.persona}\n${a.capabilities.join(", ")}`,
+      href: "/agents",
+      tags: a.capabilities,
+    })),
+    ...commits.map((c) => ({
+      id: c.id,
+      type: "commit" as const,
+      title: c.message,
+      subtitle: c.hash,
+      body: `${c.aiSummary ?? ""}\n${c.files.join("\n")}`,
+      href: "/dev-logs",
+      tags: [],
+    })),
+    ...systems.map((s) => ({
+      id: s.id,
+      type: "system" as const,
+      title: s.name,
+      subtitle: s.kind,
+      body: `${s.description}\nDepends on: ${s.dependsOn.join(", ")}\nExposes: ${s.exposes.join(", ")}`,
+      href: "/architecture",
+      tags: [],
+    })),
   ];
 
   const index = new MiniSearch<IndexedDoc>({

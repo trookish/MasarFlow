@@ -14,26 +14,29 @@ import {
   Tag as TagIcon,
   CheckCircle2,
   Pencil,
+  Brain,
+  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/common/empty-state";
-import { useNote } from "@/lib/db/repos/notes";
+import { EntityNotFound } from "@/components/common/entity-not-found";
+import { PageSkeleton } from "@/components/common/page-skeleton";
+import { useNote, useNotes } from "@/lib/db/repos/notes";
 import { useActiveProject } from "@/lib/db/repos/projects";
-import { useFolders, useTags } from "@/lib/db/repos/misc";
+import { useFolders, useTags, useStandards } from "@/lib/db/repos/misc";
 import { getDb, NOTE_TYPES, type Note, type NoteType } from "@/lib/db/schema";
+import { checkNoteAgainstStandards } from "@/lib/standards/enforcer";
+import { ViolationsPanel } from "@/components/standards/violations-panel";
 import { findBacklinks, slugify, extractTagsFromText } from "@/lib/markdown/links";
 import { markdownToHtml } from "@/lib/markdown/render";
-import { formatRelativeTime } from "@/lib/utils";
-import { Brain } from "lucide-react";
-import { useNotes } from "@/lib/db/repos/notes";
-import { cn } from "@/lib/utils";
+import { formatRelativeTime, cn } from "@/lib/utils";
 import Link from "next/link";
 import { toast } from "sonner";
 import { AttachmentViewer } from "@/components/vault/attachment-viewer";
 import { findEmbedTargets } from "@/lib/vault/attachments";
+import { NoteGraph } from "@/components/brain/note-graph";
 
 const RichEditor = dynamic(
   () => import("@/components/editor/rich-editor").then((m) => m.RichEditor),
@@ -43,32 +46,68 @@ const RichEditor = dynamic(
 type SaveState = "idle" | "dirty" | "saving" | "saved";
 
 export function NoteEditor({ noteId }: { noteId: string }) {
-  const router = useRouter();
   const note = useNote(noteId);
   const project = useActiveProject();
   const allNotes = useNotes(project?.id);
   const folders = useFolders(note?.projectId);
   const existingTags = useTags();
-  const [draft, setDraft] = React.useState<Note | null>(null);
+
+  if (note === undefined || !project) {
+    return <PageSkeleton />;
+  }
+
+  if (!note) {
+    return (
+      <EntityNotFound
+        icon={Brain}
+        title="Note not found"
+        description="The note you're looking for doesn't exist or has been deleted."
+        backHref="/brain"
+        backLabel="Back to Brain"
+      />
+    );
+  }
+
+  return (
+    <NoteEditorForm
+      key={noteId}
+      note={note}
+      allNotes={allNotes}
+      folders={folders ?? []}
+      existingTags={existingTags}
+    />
+  );
+}
+
+function NoteEditorForm({
+  note,
+  allNotes,
+  folders,
+  existingTags,
+}: {
+  note: Note;
+  allNotes: Note[] | undefined;
+  folders: Array<{ id: string; name: string; icon: string | null }>;
+  existingTags: Array<{ id: string; name: string }> | undefined;
+}) {
+  const router = useRouter();
+  const [draft, setDraft] = React.useState<Note>(note);
   const [saveState, setSaveState] = React.useState<SaveState>("idle");
   const [view, setView] = React.useState<"edit" | "preview">("edit");
   const [tagInput, setTagInput] = React.useState("");
+  const standards = useStandards(note.projectId);
+
+  const update = (patch: Partial<Note>) => {
+    setDraft((prev) => ({ ...prev, ...patch }));
+    setSaveState("dirty");
+  };
 
   React.useEffect(() => {
-    if (note && !draft) setDraft(note);
-  }, [note, draft]);
-
-  React.useEffect(() => {
-    if (!draft) return;
+    if (saveState !== "dirty") return;
     const t = setTimeout(async () => {
-      if (saveState !== "dirty") return;
       setSaveState("saving");
       try {
-        await getDb().notes.put({
-          ...draft,
-          updatedAt: Date.now(),
-          excerpt: deriveExcerpt(draft.body),
-        });
+        await persistNote(draft);
         setSaveState("saved");
         setTimeout(() => setSaveState("idle"), 900);
       } catch (e) {
@@ -80,74 +119,47 @@ export function NoteEditor({ noteId }: { noteId: string }) {
   }, [draft, saveState]);
 
   React.useEffect(() => {
-    const h = () => { if (draft) update(draft); };
+    const h = () => persistNote(draft);
     window.addEventListener("masarflow:request-save", h);
     return () => window.removeEventListener("masarflow:request-save", h);
   }, [draft]);
 
-  const update = (patch: Partial<Note>) => {
-    if (!draft) return;
-    setDraft({ ...draft, ...patch });
-    setSaveState("dirty");
-  };
-
   const addTag = (raw: string) => {
     const t = raw.trim().toLowerCase().replace(/^#/, "");
     if (!t) return;
-    if (!draft) return;
     if (draft.tags.includes(t)) return;
     update({ tags: [...draft.tags, t] });
   };
 
   const removeTag = (t: string) => {
-    if (!draft) return;
     update({ tags: draft.tags.filter((x) => x !== t) });
   };
 
   const onBodyChange = (body: string) => {
-    if (!draft) return;
     const merged = Array.from(new Set([...draft.tags, ...extractTagsFromText(body)]));
     update({ body, tags: merged });
   };
 
   const backlinks = React.useMemo(() => {
-    if (!draft || !allNotes) return [];
+    if (!allNotes) return [];
     return findBacklinks(draft.title, allNotes);
-  }, [draft?.title, draft, allNotes]);
+  }, [draft.title, allNotes]);
+
+  const noteViolations = React.useMemo(() => {
+    if (!standards) return [];
+    return checkNoteAgainstStandards(draft, standards);
+  }, [draft, standards]);
 
   const onDelete = async () => {
-    if (!draft) return;
     if (!window.confirm(`Delete "${draft.title}"? This cannot be undone.`)) return;
     await getDb().notes.delete(draft.id);
     toast.success("Note deleted");
     router.push("/brain");
   };
 
-  if (note === undefined || !draft) {
-    return (
-      <div className="p-6">
-        <Skeleton className="h-12 w-64" />
-        <Skeleton className="mt-4 h-96 w-full" />
-      </div>
-    );
-  }
-
-  if (!note) {
-    return (
-      <div className="p-6">
-        <EmptyState
-          icon={Brain}
-          title="Note not found"
-          description="The note you're looking for doesn't exist or has been deleted."
-          actionLabel="Back to Brain"
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="pb-10">
-      <div className="sticky top-0 z-20 flex items-center justify-between gap-2 border-b border-border bg-background/85 px-6 py-2.5 backdrop-blur">
+      <div className="border-border bg-background/85 sticky top-0 z-20 flex items-center justify-between gap-2 border-b px-6 py-2.5 backdrop-blur">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/brain" className="gap-1.5">
             <ArrowLeft className="h-3.5 w-3.5" /> Back to Brain
@@ -155,7 +167,7 @@ export function NoteEditor({ noteId }: { noteId: string }) {
         </Button>
         <div className="flex items-center gap-2">
           <SaveIndicator state={saveState} />
-          <div className="flex items-center rounded-md border border-border bg-surface-2 p-0.5 text-xs">
+          <div className="border-border bg-surface-2 flex items-center rounded-md border p-0.5 text-xs">
             <button
               onClick={() => setView("edit")}
               className={cn(
@@ -175,7 +187,12 @@ export function NoteEditor({ noteId }: { noteId: string }) {
               <Sparkles className="mr-1 inline-block h-3 w-3" /> Preview
             </button>
           </div>
-          <Button variant="outline" size="sm" onClick={onDelete} className="gap-1.5 text-[color:var(--danger)]">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onDelete}
+            className="gap-1.5 text-[color:var(--danger)]"
+          >
             <Trash2 className="h-3.5 w-3.5" /> Delete
           </Button>
         </div>
@@ -188,16 +205,16 @@ export function NoteEditor({ noteId }: { noteId: string }) {
               value={draft.title}
               onChange={(e) => update({ title: e.target.value })}
               placeholder="Untitled note"
-              className="w-full bg-transparent text-3xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/50"
+              className="placeholder:text-muted-foreground/50 w-full bg-transparent text-3xl font-semibold tracking-tight outline-none"
             />
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <TypeSelector value={draft.type} onChange={(t) => update({ type: t })} />
               <FolderSelector
-                folders={folders ?? []}
+                folders={folders}
                 value={draft.folderId}
                 onChange={(id) => update({ folderId: id })}
               />
-              <span className="inline-flex items-center gap-1 text-muted-foreground">
+              <span className="text-muted-foreground inline-flex items-center gap-1">
                 <Clock className="h-3 w-3" /> {formatRelativeTime(draft.updatedAt)}
               </span>
             </div>
@@ -209,7 +226,7 @@ export function NoteEditor({ noteId }: { noteId: string }) {
             <Card>
               <CardContent className="p-6">
                 <div
-                  className="prose prose-sm max-w-none dark:prose-invert"
+                  className="prose prose-sm dark:prose-invert max-w-none"
                   dangerouslySetInnerHTML={{ __html: markdownToHtml(draft.body) }}
                 />
                 <AttachmentGallery body={draft.body} projectId={draft.projectId} />
@@ -230,14 +247,16 @@ export function NoteEditor({ noteId }: { noteId: string }) {
                   <button
                     key={t}
                     onClick={() => removeTag(t)}
-                    className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[10px] hover:border-[color:var(--danger)] hover:text-[color:var(--danger)]"
+                    className="border-border bg-surface-2 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] hover:border-[color:var(--danger)] hover:text-[color:var(--danger)]"
                     title="Remove tag"
                   >
                     <Hash className="h-2.5 w-2.5" /> {t}
                   </button>
                 ))}
                 {draft.tags.length === 0 && (
-                  <span className="text-[10px] text-muted-foreground">No tags. Type # in the body or add below.</span>
+                  <span className="text-muted-foreground text-[10px]">
+                    No tags. Type # in the body or add below.
+                  </span>
                 )}
               </div>
               <div className="flex items-center gap-1.5">
@@ -251,7 +270,7 @@ export function NoteEditor({ noteId }: { noteId: string }) {
                     }
                   }}
                   placeholder="add-tag"
-                  className="h-7 flex-1 rounded-md border border-border bg-background px-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="border-border bg-background focus-visible:ring-ring h-7 flex-1 rounded-md border px-2 text-xs outline-none focus-visible:ring-2"
                 />
                 <Button
                   variant="soft"
@@ -265,8 +284,10 @@ export function NoteEditor({ noteId }: { noteId: string }) {
                 </Button>
               </div>
               {existingTags && existingTags.length > 0 && (
-                <div className="border-t border-border pt-2">
-                  <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Suggestions</div>
+                <div className="border-border border-t pt-2">
+                  <div className="text-muted-foreground mb-1 text-[10px] tracking-wider uppercase">
+                    Suggestions
+                  </div>
                   <div className="flex flex-wrap gap-1">
                     {existingTags
                       .filter((t) => !draft.tags.includes(t.name))
@@ -275,7 +296,7 @@ export function NoteEditor({ noteId }: { noteId: string }) {
                         <button
                           key={t.id}
                           onClick={() => addTag(t.name)}
-                          className="inline-flex items-center gap-0.5 rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:border-foreground/30"
+                          className="border-border text-muted-foreground hover:border-foreground/30 inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px]"
                         >
                           + {t.name}
                         </button>
@@ -295,27 +316,27 @@ export function NoteEditor({ noteId }: { noteId: string }) {
             </CardHeader>
             <CardContent className="space-y-2">
               {backlinks.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   No other notes link here yet. Reference this note with{" "}
-                  <code className="rounded bg-muted px-1">[[{draft.title}]]</code>.
+                  <code className="bg-muted rounded px-1">[[{draft.title}]]</code>.
                 </p>
               ) : (
                 backlinks.map((b) => (
                   <Link
                     key={b.sourceNote.id}
                     href={`/brain/${b.sourceNote.id}`}
-                    className="block rounded-md border border-border p-2 transition-colors hover:border-border/80 hover:bg-accent/30"
+                    className="border-border hover:border-border/80 hover:bg-accent/30 block rounded-md border p-2 transition-colors"
                   >
                     <div className="flex items-center gap-2 text-xs">
                       <Badge variant="outline" className="text-[10px]">
                         {b.sourceNote.type}
                       </Badge>
-                      <span className="ml-auto text-[10px] text-muted-foreground">
+                      <span className="text-muted-foreground ml-auto text-[10px]">
                         {formatRelativeTime(b.sourceNote.updatedAt)}
                       </span>
                     </div>
                     <div className="mt-1 text-sm font-medium">{b.sourceNote.title}</div>
-                    <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground text-pretty">
+                    <p className="text-muted-foreground mt-0.5 line-clamp-2 text-[11px] text-pretty">
                       {b.snippet}
                     </p>
                   </Link>
@@ -333,6 +354,29 @@ export function NoteEditor({ noteId }: { noteId: string }) {
               <OutgoingLinks body={draft.body} selfId={draft.id} selfTitle={draft.title} />
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardDescription className="flex items-center gap-1.5">
+                <Share2 className="h-3.5 w-3.5" /> Local graph
+              </CardDescription>
+              <CardTitle className="mt-1 text-sm">1-degree connections</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {allNotes && allNotes.length > 0 ? (
+                <NoteGraph
+                  notes={allNotes}
+                  localNoteId={draft.id}
+                  showMinimap={false}
+                  className="min-h-[220px]"
+                />
+              ) : (
+                <p className="text-muted-foreground text-xs">Loading local graph…</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <ViolationsPanel violations={noteViolations} title="Note standards" />
         </aside>
       </div>
     </div>
@@ -341,10 +385,26 @@ export function NoteEditor({ noteId }: { noteId: string }) {
 
 function SaveIndicator({ state }: { state: SaveState }) {
   const map: Record<SaveState, { icon: React.ReactNode; label: string; color: string }> = {
-    idle: { icon: <CheckCircle2 className="h-3.5 w-3.5" />, label: "Saved", color: "text-muted-foreground" },
-    dirty: { icon: <Pencil className="h-3.5 w-3.5" />, label: "Unsaved", color: "text-[color:var(--warning)]" },
-    saving: { icon: <Save className="h-3.5 w-3.5 animate-pulse" />, label: "Saving…", color: "text-muted-foreground" },
-    saved: { icon: <CheckCircle2 className="h-3.5 w-3.5" />, label: "Saved", color: "text-[color:var(--success)]" },
+    idle: {
+      icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+      label: "Saved",
+      color: "text-muted-foreground",
+    },
+    dirty: {
+      icon: <Pencil className="h-3.5 w-3.5" />,
+      label: "Unsaved",
+      color: "text-[color:var(--warning)]",
+    },
+    saving: {
+      icon: <Save className="h-3.5 w-3.5 animate-pulse" />,
+      label: "Saving…",
+      color: "text-muted-foreground",
+    },
+    saved: {
+      icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+      label: "Saved",
+      color: "text-[color:var(--success)]",
+    },
   };
   const s = map[state];
   return (
@@ -356,14 +416,16 @@ function SaveIndicator({ state }: { state: SaveState }) {
 
 function TypeSelector({ value, onChange }: { value: NoteType; onChange: (t: NoteType) => void }) {
   return (
-    <div className="flex flex-wrap items-center gap-1 rounded-md border border-border bg-surface-2 p-0.5 text-[10px]">
+    <div className="border-border bg-surface-2 flex flex-wrap items-center gap-1 rounded-md border p-0.5 text-[10px]">
       {NOTE_TYPES.map((t) => (
         <button
           key={t}
           onClick={() => onChange(t)}
           className={cn(
             "rounded-sm px-1.5 py-0.5 capitalize transition-colors",
-            value === t ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground",
+            value === t
+              ? "bg-accent text-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           {t}
@@ -383,12 +445,12 @@ function FolderSelector({
   onChange: (id: string | null) => void;
 }) {
   return (
-    <div className="flex items-center gap-1 rounded-md border border-border bg-surface-2 px-1.5 py-0.5 text-[10px]">
-      <Folder className="h-3 w-3 text-muted-foreground" />
+    <div className="border-border bg-surface-2 flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px]">
+      <Folder className="text-muted-foreground h-3 w-3" />
       <select
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value || null)}
-        className="bg-transparent text-foreground outline-none"
+        className="text-foreground bg-transparent outline-none"
       >
         <option value="">No folder</option>
         {folders.map((f) => (
@@ -401,12 +463,20 @@ function FolderSelector({
   );
 }
 
-function OutgoingLinks({ body, selfId, selfTitle }: { body: string; selfId: string; selfTitle: string }) {
+function OutgoingLinks({
+  body,
+  selfId,
+  selfTitle,
+}: {
+  body: string;
+  selfId: string;
+  selfTitle: string;
+}) {
   const project = useActiveProject();
   const notes = useNotes(project?.id);
   const targets = React.useMemo(() => {
     if (!notes) return [];
-    const re = /\[\[([^\[\]\n]+?)\]\]/g;
+    const re = /\[\([^\[\]\n]+?\)\]/g;
     const set = new Map<string, string>();
     let m: RegExpExecArray | null;
     while ((m = re.exec(body)) !== null) {
@@ -418,13 +488,16 @@ function OutgoingLinks({ body, selfId, selfTitle }: { body: string; selfId: stri
         const hit = notes.find((n) => slugify(n.title) === slug);
         return { slug, label, note: hit };
       })
-      .filter((x) => !(x.note && x.note.id === selfId) && x.label.toLowerCase() !== selfTitle.toLowerCase());
+      .filter(
+        (x) =>
+          !(x.note && x.note.id === selfId) && x.label.toLowerCase() !== selfTitle.toLowerCase(),
+      );
   }, [body, notes, selfId, selfTitle]);
 
   if (targets.length === 0) {
     return (
-      <p className="text-xs text-muted-foreground">
-        Reference other notes with <code className="rounded bg-muted px-1">[[Title]]</code>.
+      <p className="text-muted-foreground text-xs">
+        Reference other notes with <code className="bg-muted rounded px-1">[[Title]]</code>.
       </p>
     );
   }
@@ -432,13 +505,15 @@ function OutgoingLinks({ body, selfId, selfTitle }: { body: string; selfId: stri
     <ul className="space-y-1">
       {targets.map((t) => (
         <li key={t.slug} className="flex items-center gap-2 text-xs">
-          <TagIcon className="h-3 w-3 text-muted-foreground" />
+          <TagIcon className="text-muted-foreground h-3 w-3" />
           {t.note ? (
             <Link href={`/brain/${t.note.id}`} className="text-primary hover:underline">
               {t.label}
             </Link>
           ) : (
-            <span className="text-muted-foreground">{t.label} <span className="opacity-60">(unlinked)</span></span>
+            <span className="text-muted-foreground">
+              {t.label} <span className="opacity-60">(unlinked)</span>
+            </span>
           )}
         </li>
       ))}
@@ -451,8 +526,9 @@ function AttachmentGallery({ body, projectId }: { body: string; projectId: strin
   if (targets.length === 0) return null;
   return (
     <div className="mt-5 space-y-2">
-      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-        <Link2 className="h-3 w-3" />Attachments
+      <div className="text-muted-foreground flex items-center gap-1.5 text-[10px] tracking-wider uppercase">
+        <Link2 className="h-3 w-3" />
+        Attachments
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
         {targets.map((t) => {
@@ -472,4 +548,12 @@ function deriveExcerpt(body: string): string {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 160);
+}
+
+async function persistNote(draft: Note) {
+  await getDb().notes.put({
+    ...draft,
+    updatedAt: Date.now(),
+    excerpt: deriveExcerpt(draft.body),
+  });
 }

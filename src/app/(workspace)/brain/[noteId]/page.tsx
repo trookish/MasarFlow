@@ -1,8 +1,9 @@
-"use client";
-import { useParams } from "next/navigation";
-import { NoteEditor } from "@/components/brain/note-editor";
+import ClientPage from "./client-page";
 
-export default function NotePage() {
-  const params = useParams<{ noteId: string }>();
-  return <NoteEditor noteId={params.noteId} />;
+export async function generateStaticParams() {
+  return [{ noteId: "_" }];
+}
+
+export default function NoteDetailRoute() {
+  return <ClientPage />;
 }
